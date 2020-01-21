@@ -1,0 +1,89 @@
+﻿<Window x:Class="Tustler.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Tustler"
+        mc:Ignorable="d"
+        Title="Tustler (Transcriber and Translator)" Height="962" Width="1681">
+
+    <Window.CommandBindings>
+        <CommandBinding Command="{x:Static local:CustomCommands.Exit}" CanExecute="ExitCommand_CanExecute" Executed="ExitCommand_Executed" />
+    </Window.CommandBindings>
+
+    <Window.Resources>
+        <local:BucketViewModel x:Key="bucketsInstance"/>
+        <local:BucketItemViewModel x:Key="bucketItemsInstance"/>
+        <local:SettingsTreeViewDataModel x:Key="settings"/>
+        <local:FunctionsTreeViewDataModel x:Key="functions"/>
+        <local:TasksTreeViewDataModel x:Key="tasks"/>
+
+        <DataTemplate DataType="{x:Type local:Bucket}">
+            <Border Name="border" BorderBrush="DarkGray" BorderThickness="10" Padding="5" Margin="5">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition/>
+                        <RowDefinition/>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Name:"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Path=Name}" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Creation Date:"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path=CreationDate}"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+    </Window.Resources>
+        
+    <DockPanel x:Name="Outer">
+        <StatusBar DockPanel.Dock="Bottom" Height="30">
+            <Label Content="Connected"/>
+        </StatusBar>
+        <DockPanel x:Name="Content" DockPanel.Dock="Top">
+            <DockPanel x:Name="Tabs" DockPanel.Dock="Left" Width="600">
+                <DockPanel.Resources>
+                    <HierarchicalDataTemplate DataType = "{x:Type local:TreeViewItem}" ItemsSource = "{Binding Path=ChildItems}">
+                        <TextBlock Text="{Binding Path=Name}"/>
+                    </HierarchicalDataTemplate>
+                </DockPanel.Resources>
+
+                <Menu x:Name="menu1" DockPanel.Dock="Top" Margin="10,10,10,10">
+                    <MenuItem Header="Application">
+                        <MenuItem Command="{x:Static local:CustomCommands.Exit}" />
+                    </MenuItem>
+
+                    <MenuItem Header="Tasks" ItemsSource="{Binding Source={StaticResource tasks}, Path=TreeViewItems}" />
+                </Menu>
+
+                <TreeView>
+                    <TreeViewItem Header="S3 Management" />
+                    <TreeViewItem Header="Settings" IsExpanded="True" ItemsSource="{Binding Source={StaticResource settings}, Path=TreeViewItems}" />
+                    <TreeViewItem Header="Individual Functions" IsExpanded="True" ItemsSource="{Binding Source={StaticResource functions}, Path=TreeViewItems}" />
+                    <TreeViewItem Header="Tasks" IsExpanded="True" ItemsSource="{Binding Source={StaticResource tasks}, Path=TreeViewItems}" />
+                </TreeView>
+            </DockPanel>
+            <DockPanel x:Name="Controls">
+                <StackPanel>
+                    <TextBlock Name="buckets" FontSize="20" Text="Buckets:"/>
+                    <ListBox Width="400" Margin="10" ItemsSource="{Binding Source={StaticResource bucketsInstance}, Path=Buckets}" HorizontalContentAlignment="Stretch"/>
+
+                    <Button Content="Check Credentials" Width="100" Height="40" Click="Credentials_Button_Click"/>
+                    <Button Content="List Buckets" Width="100" Height="40" Click="ListBuckets_Button_Click"/>
+                    <Button Content="List Tator Objects" Width="100" Height="40" Click="ListBucketItems_Button_Click"/>
+                    <DataGrid x:Name="dgBucketItems" Width="500" Height="200" AutoGenerateColumns="True" ItemsSource="{Binding Source={StaticResource bucketItemsInstance}, Path=BucketItems}" FrozenColumnCount="1" AlternatingRowBackground="Gainsboro"  AlternationCount="2">
+                        <DataGrid.RowDetailsTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Path=Key}" />
+                            </DataTemplate>
+                        </DataGrid.RowDetailsTemplate>
+                    </DataGrid>
+                </StackPanel>
+            </DockPanel>
+        </DockPanel>
+    </DockPanel>
+</Window>
