@@ -13,9 +13,9 @@
     </Window.CommandBindings>
 
     <Window.Resources>
-        <local:SettingsTreeViewDataModel x:Key="settings"/>
+        <!--<local:SettingsTreeViewDataModel x:Key="settings"/>
         <local:FunctionsTreeViewDataModel x:Key="functions"/>
-        <local:TasksTreeViewDataModel x:Key="tasks"/>
+        <local:TasksTreeViewDataModel x:Key="tasks"/>-->
     </Window.Resources>
         
     <DockPanel x:Name="Outer">
@@ -25,27 +25,23 @@
         <DockPanel x:Name="Content" DockPanel.Dock="Top">
             <DockPanel x:Name="Tree" DockPanel.Dock="Left" Width="200">
                 <DockPanel.Resources>
-                    <HierarchicalDataTemplate DataType = "{x:Type local:TreeViewItem}" ItemsSource = "{Binding Path=ChildItems}">
+                    <!--<HierarchicalDataTemplate DataType = "{x:Type local:TreeViewData}" ItemsSource = "{Binding Path=ChildItemDataCollection}">
                         <TextBlock Text="{Binding Path=Name}"/>
-                    </HierarchicalDataTemplate>
+                    </HierarchicalDataTemplate>-->
+                    <!--<HierarchicalDataTemplate DataType = "{x:Type local:TreeViewItemData}" ItemsSource = "{Binding Path=ChildItemDataCollection}">
+                        <TreeViewItem Header="{Binding Path=Name}" Tag="{Binding Path=Tag}"/>
+                    </HierarchicalDataTemplate>-->
                 </DockPanel.Resources>
 
-                <Menu x:Name="menu1" DockPanel.Dock="Top" Margin="10,10,10,10">
+                <Menu x:Name="menuTasks" MenuItem.Click="MenuItem_Click" MenuItem.SubmenuOpened="MenuItem_SubmenuOpenedAsync" DockPanel.Dock="Top" Margin="10,10,10,10">
                     <MenuItem Header="Application">
                         <MenuItem Command="{x:Static local:CustomCommands.Exit}" />
                     </MenuItem>
-
-                    <MenuItem Header="Tasks" ItemsSource="{Binding Source={StaticResource tasks}, Path=TreeViewItems}" />
                 </Menu>
 
-                <TreeView>
-                    <TreeViewItem Header="S3 Management" />
-                    <TreeViewItem Header="Settings" IsExpanded="True" ItemsSource="{Binding Source={StaticResource settings}, Path=TreeViewItems}" />
-                    <TreeViewItem Header="Individual Functions" IsExpanded="True" ItemsSource="{Binding Source={StaticResource functions}, Path=TreeViewItems}" />
-                    <TreeViewItem Header="Tasks" IsExpanded="True" ItemsSource="{Binding Source={StaticResource tasks}, Path=TreeViewItems}" />
-                </TreeView>
+                <TreeView x:Name="tvActions" Margin="10" TreeViewItem.Expanded="TreeViewItem_Expanded" MouseDoubleClick="TreeView_DoubleClick" />
             </DockPanel>
-            <DockPanel x:Name="Controls">
+            <DockPanel x:Name="ControlsContainer">
                 <!--UserControl here-->
                 <usercontrols:S3Management/>
             </DockPanel>

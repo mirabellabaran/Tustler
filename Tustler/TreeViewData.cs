@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Tustler
 {
-    public class TreeViewItem
+    public class TreeViewItemData
     {
         public string Name
         {
@@ -14,7 +14,19 @@ namespace Tustler
             set;
         }
 
-        public ObservableCollection<TreeViewItem> ChildItems
+        public string Tag
+        {
+            get;
+            set;
+        }
+
+        public bool HasChildren
+        {
+            get;
+            set;
+        }
+
+        public ObservableCollection<TreeViewItemData> ChildItemDataCollection
         {
             get;
             set;
@@ -23,73 +35,52 @@ namespace Tustler
 
     public class SettingsTreeViewDataModel
     {
-        //enum SectionType
-        //{
-        //    Settings,
-        //    IndividualFunctions,
-        //    Tasks
-        //}
-
-        public ObservableCollection<TreeViewItem> TreeViewItems
+        public ObservableCollection<TreeViewItemData> TreeViewItemDataCollection
         {
             get;
-            set;
+            private set;
         }
 
         public SettingsTreeViewDataModel()
         {
             var divisions = new string[] { "Setting A", "Setting B", "Setting C" };
-            var divisionItems = from division in divisions select new TreeViewItem { Name = division };
+            var divisionItems = from division in divisions select new TreeViewItemData { Name = division, HasChildren = false };
 
-            //ObservableCollection<TreeViewItem> itemSelector(SectionType header)
-            //{
-            //    return header switch
-            //    {
-            //        SectionType.Settings => new ObservableCollection<TreeViewItem>(divisionItems),
-            //        SectionType.IndividualFunctions => new ObservableCollection<TreeViewItem>(divisionItems),
-            //        SectionType.Tasks => new ObservableCollection<TreeViewItem>(divisionItems),
-            //        _ => throw new ArgumentOutOfRangeException(),
-            //    };
-            //}
-            //var sectionInfo = new (string name, SectionType type)[] { ("Settings", SectionType.Settings), ("Individual Functions", SectionType.IndividualFunctions), ("Tasks", SectionType.Tasks) };
-            //var sections = from info in sectionInfo
-            //               select new TreeViewItem { Name = info.name, ChildItems = itemSelector(info.type) };
-
-            this.TreeViewItems = new ObservableCollection<TreeViewItem>(divisionItems);
+            this.TreeViewItemDataCollection = new ObservableCollection<TreeViewItemData>(divisionItems);
         }
     }
 
     public class FunctionsTreeViewDataModel
     {
-        public ObservableCollection<TreeViewItem> TreeViewItems
+        public ObservableCollection<TreeViewItemData> TreeViewItemDataCollection
         {
             get;
-            set;
+            private set;
         }
 
         public FunctionsTreeViewDataModel()
         {
             var divisions = new string[] { "Function A", "Function B", "Function C" };
-            var divisionItems = from division in divisions select new TreeViewItem { Name = division };
+            var divisionItems = from division in divisions select new TreeViewItemData { Name = division, HasChildren = false };
 
-            this.TreeViewItems = new ObservableCollection<TreeViewItem>(divisionItems);
+            this.TreeViewItemDataCollection = new ObservableCollection<TreeViewItemData>(divisionItems);
         }
     }
 
     public class TasksTreeViewDataModel
     {
-        public ObservableCollection<TreeViewItem> TreeViewItems
+        public ObservableCollection<TreeViewItemData> TreeViewItemDataCollection
         {
             get;
-            set;
+            private set;
         }
 
         public TasksTreeViewDataModel()
         {
-            var divisions = new string[] { "Task A", "Task B", "Task C" };
-            var divisionItems = from division in divisions select new TreeViewItem { Name = division };
+            var tasks = new (string name, string tag)[] { ("Task A", "a"), ("Task B", "b"), ("Task C", "c") };
+            var divisionItems = from task in tasks select new TreeViewItemData { Name = task.name, Tag = task.tag, HasChildren = false };
 
-            this.TreeViewItems = new ObservableCollection<TreeViewItem>(divisionItems);
+            this.TreeViewItemDataCollection = new ObservableCollection<TreeViewItemData>(divisionItems);
         }
     }
 }
