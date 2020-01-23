@@ -14,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Tustler.UserControls;
 
 namespace Tustler
 {
@@ -36,6 +37,37 @@ namespace Tustler
 
         #region Event Handlers
 
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            var accessKey = TustlerAWSLib.Utilities.CheckCredentials();
+            if (accessKey != null)  // MG change to ==
+            {
+                // find the Settings tag
+                var settingsMenuItem = tvActions.Items.Cast<TreeViewItem>().First(item => (item.Tag as string) == "settings");
+
+                // expand it if necessary
+                if ((settingsMenuItem.Items.Count == 1) && (settingsMenuItem.Items[0] is string))
+                {
+                    settingsMenuItem.Items.Clear();
+                    AddItems<TreeViewItem>(CreateTreeItem, settingsMenuItem, new SettingsTreeViewDataModel().TreeViewItemDataCollection);
+
+                    settingsMenuItem.IsExpanded = true;
+                }
+
+                // find the credentials tag (throws InvalidOperationException if not found)
+                var credentialsMenuItem = settingsMenuItem.Items.Cast<TreeViewItem>().First(item => (item.Tag as string) == "credentials");
+
+                // set focus so that the command can execute
+                credentialsMenuItem.Focus();
+
+                // invoke the bound command
+                if (CustomCommands.Switch.CanExecute(null, tvActions))
+                {
+                    CustomCommands.Switch.Execute(null, tvActions);
+                }
+            }
+        }
+
         private void ExitCommand_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
             e.CanExecute = true;
@@ -46,15 +78,26 @@ namespace Tustler
             Application.Current.Shutdown();
         }
 
+        private void SwitchCommand_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = (tvActions?.SelectedItem != null);
+        }
+
+        private void SwitchCommand_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            if (tvActions.SelectedItem is TreeViewItem item)
+            {
+                SwitchForm(item);
+            }
+        }
+
         private void TreeView_DoubleClick(object sender, MouseButtonEventArgs e)
         {
             var tree = sender as TreeView;
 
             if (tree.SelectedItem is TreeViewItem item)
             {
-                //FormattableString message = $"Tree Item {item.Header} {item.Tag}";
-                FormattableString message = $"Tree Item {item.Header}";
-                MessageBox.Show(FormattableString.Invariant(message));
+                SwitchForm(item);
             }
         }
 
@@ -81,6 +124,7 @@ namespace Tustler
 
                 item.Items.Clear();
                 AddItems<TreeViewItem>(CreateTreeItem, item, collection);
+                tvActions.Focus();  // otherwise it is lost on the async fetch
             }
         }
 
@@ -99,7 +143,7 @@ namespace Tustler
 
         private void MenuItem_Click(object sender, RoutedEventArgs e)
         {
-            // Note: menuitem may be 'Loading...'
+            // Note: menuitem may be 'Loading...' or maybe an item on the Edit submenu
             var item = e.OriginalSource as MenuItem;
             FormattableString message = $"Menu Item: {item.Header} with tag: {item.Tag}";
             MessageBox.Show(FormattableString.Invariant(message));
@@ -146,6 +190,26 @@ namespace Tustler
 
             return item;
         }
+
+        private void SwitchForm(TreeViewItem item)
+        {
+            string tag = (item.Tag ?? "") as string;
+
+            panControlsContainer.Children.Clear();
+            switch (tag)
+            {
+                case "s3management":
+                    panControlsContainer.Children.Add(new S3Management());
+                    break;
+                case "credentials":
+                    panControlsContainer.Children.Add(new Credentials());
+                    break;
+                default:
+                    FormattableString message = $"Tree Item {item.Header} {tag}";
+                    MessageBox.Show(FormattableString.Invariant(message));
+                    break;
+            }
+        }
     }
 
     public static class CustomCommands
@@ -161,6 +225,14 @@ namespace Tustler
                 }
             );
 
-        //Define more commands here, just like the one above
+        public static readonly RoutedCommand Switch = new RoutedCommand
+            (
+                "Switch",
+                typeof(CustomCommands),
+                new InputGestureCollection()
+                {
+                    new KeyGesture(Key.Enter)
+                }
+            );
     }
 }

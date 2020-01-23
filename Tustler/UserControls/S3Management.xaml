@@ -35,7 +35,6 @@
         <TextBlock Name="buckets" FontSize="20" Text="Buckets:"/>
         <ListBox Width="400" Margin="10" ItemsSource="{Binding Source={StaticResource bucketsInstance}, Path=Buckets}" HorizontalContentAlignment="Stretch"/>
 
-        <Button Content="Check Credentials" Width="100" Height="40" Click="Credentials_Button_Click"/>
         <Button Content="List Buckets" Width="100" Height="40" Click="ListBuckets_Button_Click"/>
         <Button Content="List Tator Objects" Width="100" Height="40" Click="ListBucketItems_Button_Click"/>
         <DataGrid x:Name="dgBucketItems" Width="500" Height="200" AutoGenerateColumns="True" ItemsSource="{Binding Source={StaticResource bucketItemsInstance}, Path=BucketItems}" FrozenColumnCount="1" AlternatingRowBackground="Gainsboro"  AlternationCount="2">

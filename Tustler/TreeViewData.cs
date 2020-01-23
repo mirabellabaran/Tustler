@@ -43,8 +43,8 @@ namespace Tustler
 
         public SettingsTreeViewDataModel()
         {
-            var divisions = new string[] { "Setting A", "Setting B", "Setting C" };
-            var divisionItems = from division in divisions select new TreeViewItemData { Name = division, HasChildren = false };
+            var divisions = new (string name, string tag)[] { ("Credentials Management", "credentials"), ("Setting B", "b"), ("Setting C", "c") };
+            var divisionItems = from division in divisions select new TreeViewItemData { Name = division.name, Tag = division.tag, HasChildren = false };
 
             this.TreeViewItemDataCollection = new ObservableCollection<TreeViewItemData>(divisionItems);
         }
@@ -60,8 +60,8 @@ namespace Tustler
 
         public FunctionsTreeViewDataModel()
         {
-            var divisions = new string[] { "Function A", "Function B", "Function C" };
-            var divisionItems = from division in divisions select new TreeViewItemData { Name = division, HasChildren = false };
+            var divisions = new (string name, string tag)[] { ("Function A", "a"), ("Function B", "b"), ("Function C", "c") };
+            var divisionItems = from division in divisions select new TreeViewItemData { Name = division.name, Tag = division.tag, HasChildren = false };
 
             this.TreeViewItemDataCollection = new ObservableCollection<TreeViewItemData>(divisionItems);
         }
