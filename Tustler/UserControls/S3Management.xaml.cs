@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -29,11 +30,33 @@ namespace Tustler.UserControls
 
         private async void ListBuckets_Button_Click(object sender, RoutedEventArgs e)
         {
+            await FetchS3Buckets();
+        }
+
+        private async void ListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var listBox = (ListBox)e.Source;
+            Bucket selectedBucket = (Bucket)listBox.SelectedItem;
+
+            await FetchS3BucketItems(selectedBucket.Name);
+        }
+
+        private async void DataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var grid = (DataGrid)e.Source;
+            BucketItem selectedItem = (BucketItem)grid.SelectedItem;
+
+            await FetchS3ItemMetadata("tator", selectedItem.Key);   // TODO should not be hardcoded
+        }
+
+        private async Task FetchS3Buckets()
+        {
             var bucketsResult = await TustlerAWSLib.S3.ListBuckets();
             if (bucketsResult.IsError)
             {
                 if (bucketsResult.Exception is HttpRequestException)
                 {
+                    tbErrors.Text = "Not connected";
                     MessageBox.Show(string.Format("Error: {0}", bucketsResult.Exception.Message), "Not connected");
                 }
                 else
@@ -46,14 +69,25 @@ namespace Tustler.UserControls
                 var buckets = bucketsResult.Result;
                 if (buckets.Count > 0)
                 {
-                    MessageBox.Show(string.Format("Bucket: {0}", buckets[0].BucketName));
+                    static void AppendBucketCollection(ObservableCollection<Bucket> collection, List<Amazon.S3.Model.S3Bucket> buckets)
+                    {
+                        var bucketModelItems = from bucket in buckets select new Bucket { Name = bucket.BucketName, CreationDate = bucket.CreationDate };
+
+                        collection.Clear();
+                        foreach (var bucket in bucketModelItems)
+                        {
+                            collection.Add(bucket);
+                        }
+                    };
+                    BucketViewModel bucketViewModel = this.FindResource("bucketsInstance") as BucketViewModel;
+                    AppendBucketCollection(bucketViewModel.Buckets, buckets);
                 }
             }
         }
 
-        private async void ListBucketItems_Button_Click(object sender, RoutedEventArgs e)
+        private async Task FetchS3BucketItems(string bucketName)
         {
-            var bucketItemsResult = await TustlerAWSLib.S3.ListBucketItems("tator");
+            var bucketItemsResult = await TustlerAWSLib.S3.ListBucketItems(bucketName);
             if (bucketItemsResult.IsError)
             {
                 if (bucketItemsResult.Exception is HttpRequestException)
@@ -71,10 +105,9 @@ namespace Tustler.UserControls
                 if (bucketItems.Count > 0)
                 {
                     var items = from item in bucketItems select new BucketItem { Key = item.Key, Size = item.Size, LastModified = item.LastModified, Owner = item.Owner?.DisplayName };
-                    MessageBox.Show(string.Format("Items: {0}", string.Join("\n", items)));
 
                     ObservableCollection<BucketItem> data = new ObservableCollection<BucketItem>(items);
-                    var bucketItemsInstance = (BucketItemViewModel)this.FindResource("bucketItemsInstance");
+                    var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
                     bucketItemsInstance.BucketItems.Clear();
                     foreach (var item in items)
                     {
@@ -83,5 +116,30 @@ namespace Tustler.UserControls
                 }
             }
         }
+
+        private async Task FetchS3ItemMetadata(string bucketName, string key)
+        {
+            var metadataResult = await TustlerAWSLib.S3.GetItemMetadata(bucketName, key);
+            if (metadataResult.IsError)
+            {
+                if (metadataResult.Exception is HttpRequestException)
+                {
+                    MessageBox.Show(string.Format("Error: {0}", metadataResult.Exception.Message), "Not connected");
+                }
+                else
+                {
+                    MessageBox.Show(string.Format("Error: {0}", metadataResult.Exception));
+                }
+            }
+            else
+            {
+                var metadata = metadataResult.Result;
+                var keys = String.Join(",", metadata.Keys);
+
+                var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+                var currentItem = bucketItemsInstance.BucketItems.First(item => item.Key == key);
+                currentItem.Metadata = keys;
+            }
+        }
     }
-}
+        }

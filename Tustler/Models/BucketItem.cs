@@ -44,5 +44,11 @@ namespace Tustler.Models
             get;
             set;
         }
+
+        public string Metadata
+        {
+            get;
+            set;
+        }
     }
 }

@@ -32,6 +32,11 @@ namespace TustlerAWSLib
             }
         }
 
+        /// <summary>
+        /// Get a list of bucket items for the specified bucket
+        /// </summary>
+        /// <param name="bucketName">The name of the bucket to fetch items from</param>
+        /// <returns></returns>
         public async static Task<AWSResult<List<S3Object>>> ListBucketItems(string bucketName)
         {
             try
@@ -66,21 +71,26 @@ namespace TustlerAWSLib
                 return new AWSResult<List<S3Object>>(null, ex);
             }
         }
+
+        public async static Task<AWSResult<MetadataCollection>> GetItemMetadata(string bucketName, string key)
+        {
+            try
+            {
+                using (var client = new AmazonS3Client())
+                {
+                    var response = await client.GetObjectMetadataAsync(bucketName, key);
+
+                    return new AWSResult<MetadataCollection>(response.Metadata, null);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                return new AWSResult<MetadataCollection>(null, ex);
+            }
+        }
     }
 }
 
-//// S3ListBucketItems Get a list of bucket items for the specified bucket
-//func S3ListBucketItems(s3Service* s3.S3, bucketName string) (*string, error) {
-
-//	result, err := s3Service.ListObjectsV2(&s3.ListObjectsV2Input{Bucket: aws.String(bucketName)})
-//	if err != nil {
-//		msg := fmt.Sprintf("List items failed for bucket %q", bucketName)
-//		return nil, getTatorError("S3ListBucketItems", msg, err)
-//	}
-
-//	items, err := getJSONString(result)
-//	return items, err
-//}
 
 //// S3GetItemMetaData get the user attached metadata for the specified bucket item
 //// (see S3UploadFile)

@@ -4,6 +4,56 @@
              xmlns:local="clr-namespace:Tustler"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <SolidColorBrush x:Key="NormalBackground" Color="#3c3a3b"/>
+            <SolidColorBrush x:Key="ContrastingBackground" Color="#535c60"/>
+            <SolidColorBrush x:Key="DataGridAlternatingBackground" Color="#444c4f"/>
+            <!--<SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#3c3a3b"/>
+            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightColorKey}" Color="#3c3a3b"/>-->
+            <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#535c60"/>
+            <SolidColorBrush x:Key="{x:Static SystemColors.HotTrackColorKey}" Color="#535c60"/>
+            <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#535c60"/>
+            <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="LightGray"/>
+
+            <Style TargetType="TreeView">
+                <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+            </Style>
+
+            <Style TargetType="ListBox">
+                <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+            </Style>
+
+            <Style TargetType="Button">
+                <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+            </Style>
+
+            <Style TargetType="StatusBar">
+                <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+            </Style>
+
+            <Style TargetType="Label">
+                <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+            </Style>
+
+            <Style TargetType="DataGrid">
+                <Setter Property="Background" Value="{StaticResource NormalBackground}" />
+            </Style>
+
+            <Style TargetType="DataGridColumnHeader">
+                <Setter Property="Background" Value="{StaticResource NormalBackground}" />
+                <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+            </Style>
+
+            <Style TargetType="DataGridRowHeader">
+                <Setter Property="Background" Value="{StaticResource NormalBackground}" />
+                <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+            </Style>
+
+            <Style TargetType="TextBlock" x:Key="TextBlockDark">
+                <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+                <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+            </Style>
+            
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

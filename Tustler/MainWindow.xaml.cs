@@ -87,7 +87,10 @@ namespace Tustler
         {
             if (tvActions.SelectedItem is TreeViewItem item)
             {
-                SwitchForm(item);
+                if (CheckIfHandled(item))
+                {
+                    e.Handled = true;
+                }
             }
         }
 
@@ -97,7 +100,10 @@ namespace Tustler
 
             if (tree.SelectedItem is TreeViewItem item)
             {
-                SwitchForm(item);
+                if (CheckIfHandled(item))
+                {
+                    e.Handled = true;
+                }
             }
         }
 
@@ -143,10 +149,12 @@ namespace Tustler
 
         private void MenuItem_Click(object sender, RoutedEventArgs e)
         {
-            // Note: menuitem may be 'Loading...' or maybe an item on the Edit submenu
+            //// Note: menuitem may be 'Loading...' or maybe an item on the Edit submenu
             var item = e.OriginalSource as MenuItem;
-            FormattableString message = $"Menu Item: {item.Header} with tag: {item.Tag}";
-            MessageBox.Show(FormattableString.Invariant(message));
+
+            if (CheckIfHandled(item)) {
+                e.Handled = true;
+            }
         }
 
         #endregion
@@ -191,10 +199,32 @@ namespace Tustler
             return item;
         }
 
-        private void SwitchForm(TreeViewItem item)
+        private bool CheckIfHandled(HeaderedItemsControl item)
         {
-            string tag = (item.Tag ?? "") as string;
+            string tag = (item.Tag ?? "do-not-handle") as string;
+            bool handled = false;
 
+            switch (tag)
+            {
+                case "s3management":
+                    // fallthru
+                case "credentials":
+                    SwitchForm(tag);
+                    handled = true;
+                    break;
+                case "do-not-handle":
+                    break;
+                default:
+                    FormattableString message = $"Menu or Tree Item {item.Header} {tag}";
+                    MessageBox.Show(FormattableString.Invariant(message));
+                    break;
+            }
+
+            return handled;
+        }
+
+        private void SwitchForm(string tag)
+        {
             panControlsContainer.Children.Clear();
             switch (tag)
             {
@@ -203,10 +233,6 @@ namespace Tustler
                     break;
                 case "credentials":
                     panControlsContainer.Children.Add(new Credentials());
-                    break;
-                default:
-                    FormattableString message = $"Tree Item {item.Header} {tag}";
-                    MessageBox.Show(FormattableString.Invariant(message));
                     break;
             }
         }

@@ -6,7 +6,8 @@
         xmlns:local="clr-namespace:Tustler"
         xmlns:usercontrols="clr-namespace:Tustler.UserControls"
         mc:Ignorable="d"
-        Title="Tustler" Height="962" Width="1681">
+        Title="Tustler" Height="962" Width="1681"
+        Background="{StaticResource NormalBackground}">
 
     <Window.CommandBindings>
         <CommandBinding Command="{x:Static local:CustomCommands.Exit}" CanExecute="ExitCommand_CanExecute" Executed="ExitCommand_Executed" />
