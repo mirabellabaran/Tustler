@@ -47,10 +47,14 @@
             <Border DockPanel.Dock="Right" Padding="50">
                 <StackPanel Orientation="Vertical" Background="{StaticResource NormalBackground}">
                     <TextBlock Style="{StaticResource TextBlockDark}" FontSize="16" Text="Bucket Items:"/>
-                    <DataGrid x:Name="dgBucketItems" Width="500" Height="200" Margin="10" AutoGenerateColumns="True" ItemsSource="{Binding Source={StaticResource bucketItemsInstance}, Path=BucketItems}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2" SelectionChanged="DataGrid_SelectionChanged">
+                    <DataGrid x:Name="dgBucketItems" Width="500" Height="200" Margin="10" AutoGenerateColumns="True" ItemsSource="{Binding Source={StaticResource bucketItemsInstance}, Path=BucketItems}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
+                    <!--SelectionChanged="DataGrid_SelectionChanged">-->
                         <DataGrid.RowDetailsTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Path=Metadata}" />
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Path=MimeType}" />
+                                    <TextBlock Text="{Binding Path=Extension}" />
+                                </StackPanel>
                             </DataTemplate>
                         </DataGrid.RowDetailsTemplate>
                     </DataGrid>

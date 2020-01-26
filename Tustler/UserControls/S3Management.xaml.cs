@@ -41,13 +41,13 @@ namespace Tustler.UserControls
             await FetchS3BucketItems(selectedBucket.Name);
         }
 
-        private async void DataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            var grid = (DataGrid)e.Source;
-            BucketItem selectedItem = (BucketItem)grid.SelectedItem;
+        //private async void DataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        //{
+        //    var grid = (DataGrid)e.Source;
+        //    BucketItem selectedItem = (BucketItem)grid.SelectedItem;
 
-            await FetchS3ItemMetadata("tator", selectedItem.Key);   // TODO should not be hardcoded
-        }
+        //    await FetchS3ItemMetadata("tator", selectedItem.Key);   // TODO should not be hardcoded
+        //}
 
         private async Task FetchS3Buckets()
         {
@@ -112,6 +112,8 @@ namespace Tustler.UserControls
                     foreach (var item in items)
                     {
                         bucketItemsInstance.BucketItems.Add(item);
+
+                        await FetchS3ItemMetadata("tator", item.Key);   // TODO should not be hardcoded
                     }
                 }
             }
@@ -134,12 +136,14 @@ namespace Tustler.UserControls
             else
             {
                 var metadata = metadataResult.Result;
-                var keys = String.Join(",", metadata.Keys);
 
                 var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+
+                // patch the current item with the returned metadata
                 var currentItem = bucketItemsInstance.BucketItems.First(item => item.Key == key);
-                currentItem.Metadata = keys;
+                currentItem.MimeType = metadata["MimeType"];
+                currentItem.Extension = metadata["Extension"];
             }
         }
     }
-        }
+}

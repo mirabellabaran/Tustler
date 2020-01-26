@@ -4,8 +4,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.0.29613.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tustler", "Tustler\Tustler.csproj", "{E0F1490F-6B8F-4769-8E94-E4C886B09E8E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F13D5BA2-96B9-4EE6-A782-2A878BE547C6} = {F13D5BA2-96B9-4EE6-A782-2A878BE547C6}
+	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TustlerAWSLib", "TustkerAWSLib\TustlerAWSLib.csproj", "{2D212CA2-B36F-488E-81ED-8AFEE5E539A8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TustlerAWSLib", "TustlerAWSLib\TustlerAWSLib.csproj", "{F13D5BA2-96B9-4EE6-A782-2A878BE547C6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +20,10 @@ Global
 		{E0F1490F-6B8F-4769-8E94-E4C886B09E8E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E0F1490F-6B8F-4769-8E94-E4C886B09E8E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E0F1490F-6B8F-4769-8E94-E4C886B09E8E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2D212CA2-B36F-488E-81ED-8AFEE5E539A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2D212CA2-B36F-488E-81ED-8AFEE5E539A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2D212CA2-B36F-488E-81ED-8AFEE5E539A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2D212CA2-B36F-488E-81ED-8AFEE5E539A8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F13D5BA2-96B9-4EE6-A782-2A878BE547C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F13D5BA2-96B9-4EE6-A782-2A878BE547C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F13D5BA2-96B9-4EE6-A782-2A878BE547C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F13D5BA2-96B9-4EE6-A782-2A878BE547C6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

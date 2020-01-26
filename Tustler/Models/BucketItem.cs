@@ -45,7 +45,13 @@ namespace Tustler.Models
             set;
         }
 
-        public string Metadata
+        public string MimeType
+        {
+            get;
+            set;
+        }
+
+        public string Extension
         {
             get;
             set;

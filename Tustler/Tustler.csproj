@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TustkerAWSLib\TustlerAWSLib.csproj" />
+    <ProjectReference Include="..\TustlerAWSLib\TustlerAWSLib.csproj" />
   </ItemGroup>
 
 </Project>
