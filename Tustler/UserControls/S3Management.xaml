@@ -7,8 +7,6 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
-        <local:BucketViewModel x:Key="bucketsInstance"/>
-        <local:BucketItemViewModel x:Key="bucketItemsInstance"/>
 
         <DataTemplate DataType="{x:Type local:Bucket}">
             <Border Name="border" BorderBrush="DarkGray" BorderThickness="10" Padding="5" Margin="5">
@@ -29,11 +27,56 @@
                 </Grid>
             </Border>
         </DataTemplate>
+
+        <DataTemplate DataType="{x:Type local:ApplicationErrorInfo}">
+            <StackPanel Orientation="Horizontal" Height="40">
+                <StackPanel.Resources>
+                    <BooleanToVisibilityConverter x:Key="boolConverter" />
+
+                    <Style x:Key="toggleContent" TargetType="ToggleButton">
+                        <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+                        <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+                        <Style.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Content" Value="Show less" />
+                            </Trigger>
+
+                            <Trigger Property="IsChecked" Value="False">
+                                <Setter Property="Content" Value="Show more" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+
+                    <!--<Style x:Key="ItemsControlStyle1" TargetType="Border">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="{x:Type ItemsControl}">
+                                    <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>-->
+                </StackPanel.Resources>
+                <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
+                    <TextBlock Text="{Binding Path=Message}" VerticalAlignment="Center" Style="{StaticResource TextBlockDark}" />
+                </Border>
+                <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2" Visibility="{Binding ElementName=showHide, Path=IsChecked, Converter={StaticResource boolConverter}}">
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                        <TextBlock Text="{Binding Path=Exception.StackTrace}" Style="{StaticResource TextBlockDark}" />
+                    </ScrollViewer>
+                </Border>
+                <ToggleButton x:Name="showHide" Height="30" Style="{StaticResource toggleContent}" />
+            </StackPanel>
+        </DataTemplate>
     </UserControl.Resources>
 
     <DockPanel>
         <Border DockPanel.Dock="Top" Padding="20,20,20,0">
-            <TextBlock x:Name="tbErrors" Style="{StaticResource TextBlockDark}" DockPanel.Dock="Top" Height="30" HorizontalAlignment="Stretch" />
+            <ListBox DockPanel.Dock="Top" Height="50" HorizontalAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemsSource="{Binding Source={StaticResource applicationErrors}, Path=Errors}" />
         </Border>
         <DockPanel DockPanel.Dock="Bottom" Background="{StaticResource ContrastingBackground}" Margin="20">
             <Border DockPanel.Dock="Left" Padding="50">
@@ -41,19 +84,28 @@
                     <TextBlock Style="{StaticResource TextBlockDark}" FontSize="16" Text="Buckets:"/>
                     <ListBox Width="300" Height="200" Margin="10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding Source={StaticResource bucketsInstance}, Path=Buckets}" SelectionChanged="ListBox_SelectionChanged"/>
 
-                    <Button Content="List Buckets" Width="100" Height="40" Click="ListBuckets_Button_Click"/>
+                    <Button Content="List Buckets" Width="100" Height="40" Style="{StaticResource ButtonDark}" Click="ListBuckets_Button_Click"/>
                 </StackPanel>
             </Border>
             <Border DockPanel.Dock="Right" Padding="50">
                 <StackPanel Orientation="Vertical" Background="{StaticResource NormalBackground}">
                     <TextBlock Style="{StaticResource TextBlockDark}" FontSize="16" Text="Bucket Items:"/>
                     <DataGrid x:Name="dgBucketItems" Width="500" Height="200" Margin="10" AutoGenerateColumns="True" ItemsSource="{Binding Source={StaticResource bucketItemsInstance}, Path=BucketItems}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
-                    <!--SelectionChanged="DataGrid_SelectionChanged">-->
                         <DataGrid.RowDetailsTemplate>
                             <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{Binding Path=MimeType}" />
-                                    <TextBlock Text="{Binding Path=Extension}" />
+                                <StackPanel Orientation="Horizontal" Background="LightGray">
+                                    <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Foreground="Black" Text="Mime Type: " />
+                                            <TextBlock Foreground="Black" Text="{Binding Path=MimeType}" />
+                                        </StackPanel>
+                                    </Border>
+                                    <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Foreground="Black" Text="Extension: " />
+                                            <TextBlock Foreground="Black" Text="{Binding Path=Extension}" />
+                                        </StackPanel>
+                                    </Border>
                                 </StackPanel>
                             </DataTemplate>
                         </DataGrid.RowDetailsTemplate>
