@@ -88,25 +88,39 @@ namespace TustlerAWSLib
                 return new AWSResult<MetadataCollection>(null, ex);
             }
         }
+
+        public async static Task<AWSResult<bool?>> DeleteBucketItem(string bucketName, string key)
+        {
+            try
+            {
+                var deleteObjectRequest = new DeleteObjectRequest
+                {
+                    BucketName = bucketName,
+                    Key = key
+                };
+
+                using (var client = new AmazonS3Client())
+                {
+                    var response = await client.DeleteObjectAsync(deleteObjectRequest);
+                    if (response.HttpStatusCode != System.Net.HttpStatusCode.NoContent) // default return code
+                    {
+                        return new AWSResult<bool?>(null, new ApplicationException($"Request returned status code: {response.HttpStatusCode}"));
+                    }
+                    else
+                    {
+                        return new AWSResult<bool?>(true, null);
+                    }
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                return new AWSResult<bool?>(null, ex);
+            }
+        }
     }
 }
 
 
-//// S3GetItemMetaData get the user attached metadata for the specified bucket item
-//// (see S3UploadFile)
-//func S3GetItemMetaData(s3Service* s3.S3, bucketName string, itemName string) (*string, error) {
-//	result, err := s3Service.HeadObject(&s3.HeadObjectInput{
-//		Bucket: aws.String(bucketName),
-//		Key:    aws.String(itemName),
-//	})
-//	if err != nil {
-//		msg := fmt.Sprintf("Get item metadata failed for bucket %q, item %q", bucketName, itemName)
-//		return nil, getTatorError("S3GetItemMetaData", msg, err)
-//	}
-
-//	metadata, err := getJSONString(result)
-//	return metadata, err
-//}
 
 //// S3UploadFile upload the contents of the given file to an S3 bucket
 //func S3UploadFile(session* session.Session, bucketName string, filename string) (*string, error) {

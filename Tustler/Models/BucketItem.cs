@@ -1,18 +1,36 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Data;
 
 namespace Tustler.Models
 {
     public class BucketItemViewModel
     {
+        public enum MediaType
+        {
+            All,
+            Audio,
+            Video,
+            Text,
+            Defined     // the mime type is non-null
+        }
+
+        private MediaType filteredMediaType;
+
         public ObservableCollection<BucketItem> BucketItems
         {
             get;
             private set;
+        }
+
+        public ICollectionView BucketItemsView
+        {
+            get { return CollectionViewSource.GetDefaultView(BucketItems); }
         }
 
         public bool NeedsRefresh
@@ -21,10 +39,36 @@ namespace Tustler.Models
             set;
         }
 
+        public string CurrentBucketName
+        {
+            get;
+            set;
+        }
+
+        public MediaType FilteredMediaType
+        {
+            get
+            {
+                return filteredMediaType;
+            }
+            set
+            {
+                filteredMediaType = value;
+                SetFilter(filteredMediaType);
+            }
+        }
+
         public BucketItemViewModel()
         {
             this.BucketItems = new ObservableCollection<BucketItem>();
             this.NeedsRefresh = true;
+            this.CurrentBucketName = null;
+        }
+
+        public async void Refresh(ApplicationErrorList errorList)
+        {
+            this.NeedsRefresh = true;
+            Refresh(errorList, CurrentBucketName);
         }
 
         public async void Refresh(ApplicationErrorList errorList, string bucketName)
@@ -32,6 +76,58 @@ namespace Tustler.Models
             if (NeedsRefresh)
             {
                 await FetchS3BucketItems(errorList, bucketName);
+                CurrentBucketName = bucketName;
+            }
+        }
+
+        public async void DeleteItem(ApplicationErrorList errorList, string key)
+        {
+            await DeleteBucketItem(errorList, CurrentBucketName, key);
+        }
+
+        /// <summary>
+        /// Set a filter on the view, showing only the specified mime types e.g. audio
+        /// </summary>
+        /// <param name="requiredMediaType"></param>
+        private void SetFilter(MediaType selectedMediaType)
+        {
+            static bool CheckTypeIs(string mimeType, string type)
+            {
+                if (mimeType == null)
+                    return false;
+                else
+                    return mimeType.Contains(type, StringComparison.InvariantCulture);
+            }
+            Func<string, bool> isRquiredMediaType = (selectedMediaType) switch
+            {
+                MediaType.All => (mimeType => true),
+                MediaType.Audio => (mimeType => CheckTypeIs(mimeType, "audio")),
+                MediaType.Video => (mimeType => CheckTypeIs(mimeType, "video")),
+                MediaType.Text => (mimeType => CheckTypeIs(mimeType, "text")),
+                MediaType.Defined => (mimeType => (mimeType != null)),
+                _ => (mimeType => true),
+            };
+
+            BucketItemsView.Filter = new Predicate<object>(item => isRquiredMediaType((item as BucketItem).MimeType));
+            BucketItemsView.Refresh();
+        }
+
+        private async Task DeleteBucketItem(ApplicationErrorList errorList, string bucketName, string key)
+        {
+            var deleteResult = await TustlerAWSLib.S3.DeleteBucketItem(bucketName, key);
+
+            if (deleteResult.IsError)
+            {
+                errorList.HandleError(deleteResult);
+            }
+            else
+            {
+                var success = deleteResult.Result;
+                if (success.HasValue && success.Value)
+                {
+                    NeedsRefresh = true;
+                    Refresh(errorList, bucketName);
+                }
             }
         }
 
@@ -59,6 +155,7 @@ namespace Tustler.Models
                     }
                 }
 
+                this.FilteredMediaType = MediaType.All;
                 NeedsRefresh = false;
             }
         }

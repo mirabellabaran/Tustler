@@ -4,8 +4,23 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:Tustler.Models"
+             xmlns:uc="clr-namespace:Tustler.UserControls"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.CommandBindings>
+        <CommandBinding Command="{x:Static uc:CustomCommands.FilterBucketItems}" CanExecute="FilterBucketItems_CanExecute" Executed="FilterBucketItems_Executed" />
+        <CommandBinding Command="{x:Static uc:CustomCommands.DeleteBucketItem}" CanExecute="DeleteBucketItem_CanExecute" Executed="DeleteBucketItem_Executed" />
+        <CommandBinding Command="{x:Static uc:CustomCommands.UploadItem}" CanExecute="UploadItem_CanExecute" Executed="UploadItem_Executed" />
+        <CommandBinding Command="{x:Static uc:CustomCommands.DownloadItem}" CanExecute="DownloadItem_CanExecute" Executed="DownloadItem_Executed" />
+        <CommandBinding Command="{x:Static uc:CustomCommands.RefreshItems}" CanExecute="RefreshItems_CanExecute" Executed="RefreshItems_Executed" />
+    </UserControl.CommandBindings>
+
+    <UserControl.InputBindings>
+        <KeyBinding Key="R"
+              Modifiers="Control" 
+              Command="{x:Static uc:CustomCommands.RefreshItems}" />
+    </UserControl.InputBindings>
+    
     <UserControl.Resources>
 
         <DataTemplate DataType="{x:Type local:Bucket}">
@@ -47,19 +62,6 @@
                         </Style.Triggers>
                     </Style>
 
-                    <!--<Style x:Key="ItemsControlStyle1" TargetType="Border">
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="{x:Type ItemsControl}">
-                                    <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
-                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
-                                        </ScrollViewer>
-                                    </Border>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>-->
                 </StackPanel.Resources>
                 <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
                     <TextBlock Text="{Binding Path=Message}" VerticalAlignment="Center" Style="{StaticResource TextBlockDark}" />
@@ -90,26 +92,74 @@
             <Border DockPanel.Dock="Right" Padding="50">
                 <StackPanel Orientation="Vertical" Background="{StaticResource NormalBackground}">
                     <TextBlock Style="{StaticResource TextBlockDark}" FontSize="16" Text="Bucket Items:"/>
-                    <DataGrid x:Name="dgBucketItems" Width="500" Height="200" Margin="10" AutoGenerateColumns="True" ItemsSource="{Binding Source={StaticResource bucketItemsInstance}, Path=BucketItems}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
-                        <DataGrid.RowDetailsTemplate>
+                    <DataGrid x:Name="dgBucketItems" Width="500" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource bucketItemsInstance}, Path=BucketItemsView}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
+                        <DataGrid.RowHeaderTemplate>
                             <DataTemplate>
-                                <StackPanel Orientation="Horizontal" Background="LightGray">
-                                    <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Foreground="Black" Text="Mime Type: " />
-                                            <TextBlock Foreground="Black" Text="{Binding Path=MimeType}" />
-                                        </StackPanel>
-                                    </Border>
-                                    <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Foreground="Black" Text="Extension: " />
-                                            <TextBlock Foreground="Black" Text="{Binding Path=Extension}" />
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
+                                <Button Content="Delete" Command="{x:Static uc:CustomCommands.DeleteBucketItem}" Tag="{Binding DataContext.Key, RelativeSource={RelativeSource AncestorType=DataGridRow}}"></Button>
                             </DataTemplate>
-                        </DataGrid.RowDetailsTemplate>
+                        </DataGrid.RowHeaderTemplate>
                     </DataGrid>
+                    <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="10, 0, 10, 0">
+                        <Grid HorizontalAlignment="Stretch" >
+                            <Grid.RowDefinitions>
+                                <RowDefinition/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                                <ColumnDefinition />
+                                <ColumnDefinition />
+                                <ColumnDefinition />
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <RadioButton x:Name="rbFilterAll" Grid.Row="0" Grid.Column="0" Content="All" HorizontalAlignment="Center" GroupName="rbBucketItemsFilter" IsChecked="True" Command="{x:Static uc:CustomCommands.FilterBucketItems}"/>
+                            <RadioButton x:Name="rbFilterAudio" Grid.Row="0" Grid.Column="1" Content="Audio" HorizontalAlignment="Center" GroupName="rbBucketItemsFilter" IsChecked="False" Command="{x:Static uc:CustomCommands.FilterBucketItems}"/>
+                            <RadioButton x:Name="rbFilterVideo" Grid.Row="0" Grid.Column="2" Content="Video" HorizontalAlignment="Center" GroupName="rbBucketItemsFilter" IsChecked="False" Command="{x:Static uc:CustomCommands.FilterBucketItems}"/>
+                            <RadioButton x:Name="rbFilterText" Grid.Row="0" Grid.Column="3" Content="Text" HorizontalAlignment="Center" GroupName="rbBucketItemsFilter" IsChecked="False" Command="{x:Static uc:CustomCommands.FilterBucketItems}"/>
+                            <RadioButton x:Name="rbFilterDefined" Grid.Row="0" Grid.Column="4" Content="Defined" HorizontalAlignment="Center" GroupName="rbBucketItemsFilter" IsChecked="False" Command="{x:Static uc:CustomCommands.FilterBucketItems}"/>
+                        </Grid>
+                    </Border>
+                    <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="10, 10, 10, 0">
+                        <Grid ShowGridLines="False">
+                            <Grid.Resources>
+                                <Style x:Key="buttonStyles" TargetType="Button">
+                                    <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+                                    <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+                                    <Setter Property="Margin" Value="10" />
+                                </Style>
+                                <Style x:Key="textBlockStyles" TargetType="TextBlock">
+                                    <Setter Property="Width" Value="40" />
+                                    <Setter Property="TextAlignment" Value="Center" />
+                                    <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+                                    <Setter Property="Margin" Value="0, 10, 0, 10" />
+                                </Style>
+                                <Style x:Key="textBoxStyles" TargetType="TextBox">
+                                    <Setter Property="Margin" Value="10" />
+                                </Style>
+                            </Grid.Resources>
+                            <Grid.RowDefinitions>
+                                <RowDefinition />
+                                <RowDefinition />
+                                <RowDefinition />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120 "/>
+                                <ColumnDefinition Width="60" />
+                                <ColumnDefinition />
+                                <ColumnDefinition Width="40" />
+                            </Grid.ColumnDefinitions>
+                            <Button Content="Refresh Items" Grid.Row="0" Grid.Column="0" Style="{StaticResource buttonStyles}" Command="{x:Static uc:CustomCommands.RefreshItems}" />
+
+                            <Button Content="Upload" Grid.Row="1" Grid.Column="0" Style="{StaticResource buttonStyles}" Command="{x:Static uc:CustomCommands.UploadItem}" />
+                            <TextBlock Text="from" Grid.Row="1" Grid.Column="1" Style="{StaticResource textBlockStyles}" />
+                            <TextBox x:Name="tbUploadPath" Grid.Row="1" Grid.Column="2" Style="{StaticResource textBoxStyles}" />
+                            <Button Content="..." Grid.Row="1" Grid.Column="3" Style="{StaticResource buttonStyles}" Click="UploadFilePicker_Click" />
+
+                            <Button Content="Download" Grid.Row="2" Grid.Column="0" Style="{StaticResource buttonStyles}" Command="{x:Static uc:CustomCommands.DownloadItem}" />
+                            <TextBlock Text="to" Grid.Row="2" Grid.Column="1" Style="{StaticResource textBlockStyles}" />
+                            <TextBox x:Name="tbDownloadPath" Grid.Row="2" Grid.Column="2" Style="{StaticResource textBoxStyles}" />
+                            <Button Content="..." Grid.Row="2" Grid.Column="3" Style="{StaticResource buttonStyles}" Click="DownloadFilePicker_Click" />
+                        </Grid>
+                    </Border>
                 </StackPanel>
             </Border>
         </DockPanel>
