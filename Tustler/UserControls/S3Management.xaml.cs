@@ -163,7 +163,7 @@ namespace Tustler.UserControls
             //dlg.FileName = "Document"; // Default file name
             dlg.Title = "Choose a file to upload";
             dlg.Multiselect = false;
-            //dlg.InitialDirectory
+            dlg.InitialDirectory = ApplicationSettings.FileCachePath;
             //dlg.DefaultExt = ".txt"; // Default file extension
             //dlg.Filter = "Text documents (.txt)|*.txt"; // Filter files by extension
 
@@ -178,6 +178,7 @@ namespace Tustler.UserControls
         {
             Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
             dlg.Title = "Choose a download destination";
+            dlg.InitialDirectory = ApplicationSettings.FileCachePath;
             //dlg.FileName = "Document"; // Default file name
             //dlg.DefaultExt = ".txt"; // Default file extension
             //dlg.Filter = "Text documents (.txt)|*.txt"; // Filter files by extension

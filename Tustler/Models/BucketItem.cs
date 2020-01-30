@@ -65,7 +65,7 @@ namespace Tustler.Models
             this.CurrentBucketName = null;
         }
 
-        public async void Refresh(ApplicationErrorList errorList)
+        public void Refresh(ApplicationErrorList errorList)
         {
             this.NeedsRefresh = true;
             Refresh(errorList, CurrentBucketName);
