@@ -1,24 +1,11 @@
-﻿using Amazon.S3.Model;
-using Microsoft.Win32;
+﻿using Microsoft.Win32;
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using Tustler.Models;
-using TustlerAWSLib;
+using Path = System.IO.Path;
 
 namespace Tustler.UserControls
 {
@@ -27,19 +14,20 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class S3Management : UserControl
     {
-        private readonly ApplicationErrorList errorList;
+        private readonly NotificationsList errorList;
 
         public S3Management()
         {
             InitializeComponent();
 
-            errorList = this.FindResource("applicationErrors") as ApplicationErrorList;
+            errorList = this.FindResource("applicationNotifications") as NotificationsList;
         }
 
         private void ListBuckets_Button_Click(object sender, RoutedEventArgs e)
         {
             BucketViewModel bucketViewModel = this.FindResource("bucketsInstance") as BucketViewModel;
 
+            Helpers.UIServices.SetBusyState();
             bucketViewModel.Refresh(errorList);
         }
 
@@ -50,6 +38,7 @@ namespace Tustler.UserControls
 
             var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
 
+            Helpers.UIServices.SetBusyState();
             bucketItemsInstance.Refresh(errorList, selectedBucket.Name);
 
             // enable the headers
@@ -125,18 +114,31 @@ namespace Tustler.UserControls
 
         private void UploadItem_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            MessageBox.Show($"Will upload from {tbUploadPath.Text}");
+            var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+            bucketItemsInstance.UploadItem(errorList, tbUploadPath.Text);
         }
 
         private void DownloadItem_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            if (tbDownloadPath == null)
+            if (tbDownloadPath == null || tbDownloadPath.Text.Length == 0)
             {
                 e.CanExecute = false;
             }
             else
             {
-                e.CanExecute = (tbDownloadPath.Text.Length > 0) && File.Exists(tbDownloadPath.Text);
+                if (tbDownloadPath.Text.Length > 0)
+                {
+                    if (Directory.Exists(tbDownloadPath.Text))
+                    {
+                        e.CanExecute = false;       // need a full file path, not just a directory
+                    }
+                    else
+                    {
+                        var downloadFolder = Path.GetDirectoryName(tbDownloadPath.Text);
+                        var filename = Path.GetFileName(tbDownloadPath.Text);
+                        e.CanExecute = !string.IsNullOrEmpty(filename) && Directory.Exists(downloadFolder);
+                    }
+                }
             }
         }
 

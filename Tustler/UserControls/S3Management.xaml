@@ -43,14 +43,20 @@
             </Border>
         </DataTemplate>
 
+        <DataTemplate DataType="{x:Type local:ApplicationMessageInfo}">
+            <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
+                <TextBlock Text="{Binding Path=Message}" VerticalAlignment="Center" Style="{StaticResource TextBlockDark}" />
+            </Border>
+        </DataTemplate>
+
         <DataTemplate DataType="{x:Type local:ApplicationErrorInfo}">
             <StackPanel Orientation="Horizontal" Height="40">
                 <StackPanel.Resources>
                     <BooleanToVisibilityConverter x:Key="boolConverter" />
 
-                    <Style x:Key="toggleContent" TargetType="ToggleButton">
-                        <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
-                        <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+                    <Style x:Key="toggleContent" TargetType="ToggleButton" BasedOn="{StaticResource ToggleButtonDark}">
+                        <Setter Property="FontSize" Value="10" />
+                        <Setter Property="Width" Value="70" />
                         <Style.Triggers>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter Property="Content" Value="Show less" />
@@ -78,7 +84,7 @@
 
     <DockPanel>
         <Border DockPanel.Dock="Top" Padding="20,20,20,0">
-            <ListBox DockPanel.Dock="Top" Height="50" HorizontalAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemsSource="{Binding Source={StaticResource applicationErrors}, Path=Errors}" />
+            <ListBox DockPanel.Dock="Top" Height="50" HorizontalAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemsSource="{Binding Source={StaticResource applicationNotifications}, Path=Notifications}" />
         </Border>
         <DockPanel DockPanel.Dock="Bottom" Background="{StaticResource ContrastingBackground}" Margin="20">
             <Border DockPanel.Dock="Left" Padding="50">
@@ -95,7 +101,7 @@
                     <DataGrid x:Name="dgBucketItems" Width="500" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource bucketItemsInstance}, Path=BucketItemsView}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
                         <DataGrid.RowHeaderTemplate>
                             <DataTemplate>
-                                <Button Content="Delete" Command="{x:Static uc:CustomCommands.DeleteBucketItem}" Tag="{Binding DataContext.Key, RelativeSource={RelativeSource AncestorType=DataGridRow}}"></Button>
+                                <Button Content="Delete" Style="{StaticResource ButtonDark}" Command="{x:Static uc:CustomCommands.DeleteBucketItem}" Tag="{Binding DataContext.Key, RelativeSource={RelativeSource AncestorType=DataGridRow}}"></Button>
                             </DataTemplate>
                         </DataGrid.RowHeaderTemplate>
                     </DataGrid>
@@ -121,10 +127,8 @@
                     <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="10, 10, 10, 0">
                         <Grid ShowGridLines="False">
                             <Grid.Resources>
-                                <Style x:Key="buttonStyles" TargetType="Button">
-                                    <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
-                                    <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
-                                    <Setter Property="Margin" Value="10" />
+                                <Style x:Key="buttonStyles" TargetType="Button" BasedOn="{StaticResource ButtonDark}">
+                                    <Setter Property="Margin" Value="5" />
                                 </Style>
                                 <Style x:Key="textBlockStyles" TargetType="TextBlock">
                                     <Setter Property="Width" Value="40" />
@@ -132,8 +136,8 @@
                                     <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
                                     <Setter Property="Margin" Value="0, 10, 0, 10" />
                                 </Style>
-                                <Style x:Key="textBoxStyles" TargetType="TextBox">
-                                    <Setter Property="Margin" Value="10" />
+                                <Style x:Key="textBoxStyles" TargetType="TextBox" BasedOn="{StaticResource TextBoxDark}">
+                                    <Setter Property="Margin" Value="5" />
                                 </Style>
                             </Grid.Resources>
                             <Grid.RowDefinitions>
@@ -148,6 +152,7 @@
                                 <ColumnDefinition Width="40" />
                             </Grid.ColumnDefinitions>
                             <Button Content="Refresh Items" Grid.Row="0" Grid.Column="0" Style="{StaticResource buttonStyles}" Command="{x:Static uc:CustomCommands.RefreshItems}" />
+                            <TextBlock Text="" Grid.Row="0" Grid.Column="1" Style="{StaticResource textBlockStyles}" />
 
                             <Button Content="Upload" Grid.Row="1" Grid.Column="0" Style="{StaticResource buttonStyles}" Command="{x:Static uc:CustomCommands.UploadItem}" />
                             <TextBlock Text="from" Grid.Row="1" Grid.Column="1" Style="{StaticResource textBlockStyles}" />

@@ -65,13 +65,13 @@ namespace Tustler.Models
             this.CurrentBucketName = null;
         }
 
-        public void Refresh(ApplicationErrorList errorList)
+        public void Refresh(NotificationsList errorList)
         {
             this.NeedsRefresh = true;
             Refresh(errorList, CurrentBucketName);
         }
 
-        public async void Refresh(ApplicationErrorList errorList, string bucketName)
+        public async void Refresh(NotificationsList errorList, string bucketName)
         {
             if (NeedsRefresh)
             {
@@ -80,9 +80,14 @@ namespace Tustler.Models
             }
         }
 
-        public async void DeleteItem(ApplicationErrorList errorList, string key)
+        public async void DeleteItem(NotificationsList errorList, string key)
         {
             await DeleteBucketItem(errorList, CurrentBucketName, key);
+        }
+
+        public async void UploadItem(NotificationsList errorList, string filePath)
+        {
+            await UploadS3Item(errorList, CurrentBucketName, filePath);
         }
 
         /// <summary>
@@ -112,7 +117,7 @@ namespace Tustler.Models
             BucketItemsView.Refresh();
         }
 
-        private async Task DeleteBucketItem(ApplicationErrorList errorList, string bucketName, string key)
+        private async Task DeleteBucketItem(NotificationsList errorList, string bucketName, string key)
         {
             var deleteResult = await TustlerAWSLib.S3.DeleteBucketItem(bucketName, key);
 
@@ -125,13 +130,12 @@ namespace Tustler.Models
                 var success = deleteResult.Result;
                 if (success.HasValue && success.Value)
                 {
-                    NeedsRefresh = true;
                     Refresh(errorList, bucketName);
                 }
             }
         }
 
-        private async Task FetchS3BucketItems(ApplicationErrorList errorList, string bucketName)
+        private async Task FetchS3BucketItems(NotificationsList errorList, string bucketName)
         {
             var bucketItemsResult = await TustlerAWSLib.S3.ListBucketItems(bucketName);
             if (bucketItemsResult.IsError)
@@ -160,7 +164,7 @@ namespace Tustler.Models
             }
         }
 
-        private async Task FetchS3ItemMetadata(ApplicationErrorList errorList, string bucketName, string key)
+        private async Task FetchS3ItemMetadata(NotificationsList errorList, string bucketName, string key)
         {
             var metadataResult = await TustlerAWSLib.S3.GetItemMetadata(bucketName, key);
             if (metadataResult.IsError)
@@ -181,6 +185,24 @@ namespace Tustler.Models
             NeedsRefresh = false;
         }
 
+        private async Task UploadS3Item(NotificationsList errorList, string bucketName, string filePath)
+        {
+            var uploadResult = await TustlerAWSLib.S3.UploadItem(bucketName, filePath);
+            if (uploadResult.IsError)
+            {
+                errorList.HandleError(uploadResult);
+            }
+            else
+            {
+                var resultFlag = uploadResult.Result;
+                var success = (resultFlag.HasValue && resultFlag.Value);
+                var successStr = success ? "succeeded" : "failed";
+                var message = $"Upload {successStr}";
+                errorList.ShowMessage(message, "Upload item to S3 task");
+
+                Refresh(errorList, bucketName);
+            }
+        }
     }
 
     public class BucketItem

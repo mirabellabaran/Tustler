@@ -27,7 +27,7 @@ namespace Tustler.Models
             this.NeedsRefresh = true;
         }
 
-        public async void Refresh(ApplicationErrorList errorList)
+        public async void Refresh(NotificationsList errorList)
         {
             if (NeedsRefresh)
             {
@@ -35,7 +35,7 @@ namespace Tustler.Models
             }
         }
 
-        private async Task FetchS3Buckets(ApplicationErrorList errorList)
+        private async Task FetchS3Buckets(NotificationsList errorList)
         {
             var bucketsResult = await TustlerAWSLib.S3.ListBuckets();
             if (bucketsResult.IsError)

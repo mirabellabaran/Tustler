@@ -8,7 +8,7 @@
 
             <local:BucketViewModel x:Key="bucketsInstance"/>
             <local:BucketItemViewModel x:Key="bucketItemsInstance"/>
-            <local:ApplicationErrorList x:Key="applicationErrors" />
+            <local:NotificationsList x:Key="applicationNotifications" />
 
             <SolidColorBrush x:Key="NormalBackground" Color="#3c3a3b"/>
             <SolidColorBrush x:Key="ContrastingBackground" Color="#535c60"/>
@@ -25,10 +25,6 @@
             </Style>
 
             <Style TargetType="ListBox">
-                <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
-            </Style>
-
-            <Style TargetType="Button">
                 <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
             </Style>
 
@@ -59,9 +55,58 @@
                 <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
             </Style>
 
+            <Style TargetType="TextBox" x:Key="TextBoxDark">
+                <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+                <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+            </Style>
+
             <Style TargetType="Button" x:Key="ButtonDark">
                 <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
                 <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type Button}">
+                            <Border Background="{TemplateBinding Background}" BorderBrush="Black" BorderThickness="1">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Foreground" Value="White"/>
+                    </Trigger>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter Property="Background" Value="{StaticResource ContrastingBackground}"/>
+                        <Setter Property="BorderBrush" Value="{StaticResource ContrastingBackground}"/>
+                        <Setter Property="TextElement.Foreground" Value="{x:Static SystemColors.GrayTextBrush}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style TargetType="ToggleButton" x:Key="ToggleButtonDark">
+                <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+                <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type ToggleButton}">
+                            <Border Background="{TemplateBinding Background}" BorderBrush="Black" BorderThickness="1">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Foreground" Value="White"/>
+                    </Trigger>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter Property="Background" Value="{StaticResource ContrastingBackground}"/>
+                        <Setter Property="BorderBrush" Value="{StaticResource ContrastingBackground}"/>
+                        <Setter Property="TextElement.Foreground" Value="{x:Static SystemColors.GrayTextBrush}"/>
+                    </Trigger>
+                </Style.Triggers>
             </Style>
 
         </ResourceDictionary>

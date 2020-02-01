@@ -1,5 +1,6 @@
 ﻿using Amazon.S3;
 using Amazon.S3.Model;
+using Amazon.S3.Transfer;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -110,6 +111,36 @@ namespace TustlerAWSLib
                     {
                         return new AWSResult<bool?>(true, null);
                     }
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                return new AWSResult<bool?>(null, ex);
+            }
+        }
+
+        public async static Task<AWSResult<bool?>> UploadItem(string bucketName, string filePath)
+        {
+            try
+            {
+                var fileTransferUtilityRequest = new TransferUtilityUploadRequest
+                {
+                    BucketName = bucketName,
+                    FilePath = filePath,
+                    StorageClass = S3StorageClass.Standard,
+                    //PartSize = 6291456, // 6 MB.
+                    //Key = keyName,
+                    //CannedACL = S3CannedACL.BucketOwnerFullControl
+                };
+                //fileTransferUtilityRequest.Metadata.Add("param1", "Value1");
+                //fileTransferUtilityRequest.Metadata.Add("param2", "Value2");
+
+                using (var client = new AmazonS3Client())
+                {
+                    var fileTransferUtility = new TransferUtility(client);
+
+                    await fileTransferUtility.UploadAsync(fileTransferUtilityRequest);
+                    return new AWSResult<bool?>(true, null);
                 }
             }
             catch (HttpRequestException ex)
