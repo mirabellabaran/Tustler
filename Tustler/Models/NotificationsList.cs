@@ -48,7 +48,7 @@ namespace Tustler.Models
 
         public void ShowMessage(string message, string detail)
         {
-            this.Add(new ApplicationMessageInfo { Message = message });
+            this.Add(new ApplicationMessageInfo { Message = message, Detail = detail, Timestamp = DateTime.Now });
         }
     }
 
@@ -75,6 +75,18 @@ namespace Tustler.Models
     public sealed class ApplicationMessageInfo : Notification
     {
         public string Message
+        {
+            get;
+            set;
+        }
+
+        public string Detail
+        {
+            get;
+            set;
+        }
+
+        public DateTime Timestamp
         {
             get;
             set;

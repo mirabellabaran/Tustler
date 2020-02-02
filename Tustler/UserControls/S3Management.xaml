@@ -44,9 +44,17 @@
         </DataTemplate>
 
         <DataTemplate DataType="{x:Type local:ApplicationMessageInfo}">
-            <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
-                <TextBlock Text="{Binding Path=Message}" VerticalAlignment="Center" Style="{StaticResource TextBlockDark}" />
-            </Border>
+            <StackPanel>
+                <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
+                    <TextBlock Text="{Binding Path=Message}" VerticalAlignment="Center" Style="{StaticResource TextBlockDark}" />
+                </Border>
+                <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
+                    <TextBlock Text="{Binding Path=Detail}" VerticalAlignment="Center" Style="{StaticResource TextBlockDark}" />
+                </Border>
+                <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
+                    <TextBlock Text="{Binding Path=Timestamp}" VerticalAlignment="Center" Style="{StaticResource TextBlockDark}" />
+                </Border>
+            </StackPanel>
         </DataTemplate>
 
         <DataTemplate DataType="{x:Type local:ApplicationErrorInfo}">

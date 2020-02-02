@@ -148,6 +148,32 @@ namespace TustlerAWSLib
                 return new AWSResult<bool?>(null, ex);
             }
         }
+
+        public async static Task<AWSResult<bool?>> DownloadItem(string bucketName, string key, string filePath)
+        {
+            try
+            {
+                var fileTransferUtilityRequest = new TransferUtilityDownloadRequest
+                {
+                    FilePath = filePath,
+                    BucketName = bucketName,
+                    Key = key,
+                };
+
+                using (var client = new AmazonS3Client())
+                {
+                    var fileTransferUtility = new TransferUtility(client);
+
+                    await fileTransferUtility.DownloadAsync(fileTransferUtilityRequest);
+                    return new AWSResult<bool?>(true, null);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                return new AWSResult<bool?>(null, ex);
+            }
+        }
+
     }
 }
 

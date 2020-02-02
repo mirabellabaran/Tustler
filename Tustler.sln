@@ -10,6 +10,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tustler", "Tustler\Tustler.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TustlerAWSLib", "TustlerAWSLib\TustlerAWSLib.csproj", "{F13D5BA2-96B9-4EE6-A782-2A878BE547C6}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{F1FB7832-ADF4-4769-918D-1A50C816DE04}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

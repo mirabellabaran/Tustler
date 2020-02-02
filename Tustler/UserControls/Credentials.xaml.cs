@@ -21,6 +21,9 @@ namespace Tustler.UserControls
         public Credentials()
         {
             InitializeComponent();
+
+            string path = @"C:\Users\Zev\Projects\C#\Tustler\Tustler\bin\Debug\netcoreapp3.1\FileCache\poo.poo";
+            Helpers.FileServices.GetMimeType(path);
         }
 
         private void Credentials_Button_Click(object sender, RoutedEventArgs e)

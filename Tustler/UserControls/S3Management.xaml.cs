@@ -14,13 +14,13 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class S3Management : UserControl
     {
-        private readonly NotificationsList errorList;
+        private readonly NotificationsList notifications;
 
         public S3Management()
         {
             InitializeComponent();
 
-            errorList = this.FindResource("applicationNotifications") as NotificationsList;
+            notifications = this.FindResource("applicationNotifications") as NotificationsList;
         }
 
         private void ListBuckets_Button_Click(object sender, RoutedEventArgs e)
@@ -28,7 +28,7 @@ namespace Tustler.UserControls
             BucketViewModel bucketViewModel = this.FindResource("bucketsInstance") as BucketViewModel;
 
             Helpers.UIServices.SetBusyState();
-            bucketViewModel.Refresh(errorList);
+            bucketViewModel.Refresh(notifications);
         }
 
         private void ListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -39,7 +39,7 @@ namespace Tustler.UserControls
             var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
 
             Helpers.UIServices.SetBusyState();
-            bucketItemsInstance.Refresh(errorList, selectedBucket.Name);
+            bucketItemsInstance.Refresh(notifications, selectedBucket.Name);
 
             // enable the headers
             dgBucketItems.HeadersVisibility = DataGridHeadersVisibility.All;
@@ -95,7 +95,7 @@ namespace Tustler.UserControls
             {
                 case MessageBoxResult.OK:
                     var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
-                    bucketItemsInstance.DeleteItem(errorList, buttonSourceTag);
+                    bucketItemsInstance.DeleteItem(notifications, buttonSourceTag);
                     break;
             }
         }
@@ -115,36 +115,46 @@ namespace Tustler.UserControls
         private void UploadItem_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
-            bucketItemsInstance.UploadItem(errorList, tbUploadPath.Text);
+            bucketItemsInstance.UploadItem(notifications, tbUploadPath.Text);
         }
 
         private void DownloadItem_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            if (tbDownloadPath == null || tbDownloadPath.Text.Length == 0)
+            if (tbDownloadPath == null || tbDownloadPath.Text.Length == 0 || Directory.Exists(tbDownloadPath.Text))
             {
+                // need a full file path, not just a directory
                 e.CanExecute = false;
             }
             else
             {
-                if (tbDownloadPath.Text.Length > 0)
+                // must have a selection (ie the item to download)
+                var selectedItem = dgBucketItems.SelectedCells.Count > 0 ? dgBucketItems.SelectedCells[0].Item as BucketItem : null;
+                if (selectedItem == null)
                 {
-                    if (Directory.Exists(tbDownloadPath.Text))
-                    {
-                        e.CanExecute = false;       // need a full file path, not just a directory
-                    }
-                    else
-                    {
-                        var downloadFolder = Path.GetDirectoryName(tbDownloadPath.Text);
-                        var filename = Path.GetFileName(tbDownloadPath.Text);
-                        e.CanExecute = !string.IsNullOrEmpty(filename) && Directory.Exists(downloadFolder);
-                    }
+                    e.CanExecute = false;
+                }
+                else {
+                    // the folder must exist and a filename must be included
+                    var downloadFolder = Path.GetDirectoryName(tbDownloadPath.Text);
+                    var filename = Path.GetFileName(tbDownloadPath.Text);
+                    e.CanExecute = !string.IsNullOrEmpty(filename) && Directory.Exists(downloadFolder);
                 }
             }
         }
 
         private void DownloadItem_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            MessageBox.Show($"Will download to folder {tbDownloadPath.Text}");
+            var selectedItem = dgBucketItems.SelectedCells[0].Item as BucketItem;
+            if (selectedItem != null)
+            {
+                var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+                var key = selectedItem.Key;
+                var absolutePath = Path.GetFullPath(tbDownloadPath.Text);
+                var filePath = string.IsNullOrEmpty(selectedItem.Extension) ?
+                    absolutePath :
+                    Path.ChangeExtension(absolutePath, selectedItem.Extension);
+                bucketItemsInstance.DownloadItem(notifications, key, filePath);
+            }
         }
 
         private void RefreshItems_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -156,7 +166,7 @@ namespace Tustler.UserControls
         private void RefreshItems_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
-            bucketItemsInstance.Refresh(errorList);
+            bucketItemsInstance.Refresh(notifications);
         }
 
         private void UploadFilePicker_Click(object sender, RoutedEventArgs e)
