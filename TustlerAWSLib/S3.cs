@@ -119,7 +119,15 @@ namespace TustlerAWSLib
             }
         }
 
-        public async static Task<AWSResult<bool?>> UploadItem(string bucketName, string filePath)
+        /// <summary>
+        /// Upload a file to an S3 bucket
+        /// </summary>
+        /// <param name="bucketName">The name of the bucket</param>
+        /// <param name="filePath">The path of the file to upload</param>
+        /// <param name="mimetype">The mimetype of the file (may be null)</param>
+        /// <param name="extension">The file extension of the file (may be null)</param>
+        /// <returns></returns>
+        public async static Task<AWSResult<bool?>> UploadItem(string bucketName, string filePath, string mimetype, string extension)
         {
             try
             {
@@ -128,12 +136,15 @@ namespace TustlerAWSLib
                     BucketName = bucketName,
                     FilePath = filePath,
                     StorageClass = S3StorageClass.Standard,
-                    //PartSize = 6291456, // 6 MB.
-                    //Key = keyName,
-                    //CannedACL = S3CannedACL.BucketOwnerFullControl
                 };
-                //fileTransferUtilityRequest.Metadata.Add("param1", "Value1");
-                //fileTransferUtilityRequest.Metadata.Add("param2", "Value2");
+                if (!string.IsNullOrEmpty(mimetype))
+                {
+                    fileTransferUtilityRequest.Metadata.Add("mimetype", mimetype);
+                }
+                if (!string.IsNullOrEmpty(extension))
+                {
+                    fileTransferUtilityRequest.Metadata.Add("extension", extension);
+                }
 
                 using (var client = new AmazonS3Client())
                 {

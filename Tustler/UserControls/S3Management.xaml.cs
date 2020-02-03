@@ -108,14 +108,64 @@ namespace Tustler.UserControls
             }
             else
             {
-                e.CanExecute = (tbUploadPath.Text.Length > 0) && File.Exists(tbUploadPath.Text);
+                var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+                var bucketNameIsSet = bucketItemsInstance.CurrentBucketName != null;
+                e.CanExecute = (tbUploadPath.Text.Length > 0) && File.Exists(tbUploadPath.Text) && bucketNameIsSet;
             }
         }
 
         private void UploadItem_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
-            bucketItemsInstance.UploadItem(notifications, tbUploadPath.Text);
+            static (bool proceed, string path, string mimetype, string extension) CheckAddExtension(string path)
+            {
+                var mimetype = Helpers.FileServices.GetMimeType(path);
+                var extension = Path.GetExtension(path);
+
+                if (string.IsNullOrEmpty(extension))
+                {
+                    extension = TustlerServicesLib.MimeTypeDictionary.GetExtensionFromMimeType(mimetype);
+
+                    if (string.IsNullOrEmpty(extension))
+                    {
+                        // extension cannot be inferred
+                        MessageBoxResult result = MessageBox.Show($"No file extension was supplied and the extension cannot be inferred. Select OK to upload the file without an extension, or Cancel to add your own extension.", "Proceed without an extension", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+                        var proceed = (result) switch
+                        {
+                            MessageBoxResult.OK => true,
+                            MessageBoxResult.Cancel => false,
+                            _ => false
+                        };
+
+                        return (proceed, path, mimetype, extension);
+                    }
+                    else
+                    {
+                        MessageBoxResult result = MessageBox.Show($"The inferred mimetype is {mimetype} with extension {extension}. Select Yes to upload the file with this extension, or No to add your own extension.", "Add a file extension", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                        switch (result)
+                        {
+                            case MessageBoxResult.Yes:
+                                var newpath = Path.ChangeExtension(path, extension);
+                                return (true, newpath, mimetype, extension);
+                            case MessageBoxResult.No:
+                                return (false, path, mimetype, extension);
+                            default:
+                                return (false, path, mimetype, extension);
+                        }
+                    }
+                }
+                else
+                {
+                    extension = extension.Substring(1).ToLowerInvariant();
+                    return (true, path, mimetype, extension);
+                }
+            }
+
+            (bool proceed, string path, string mimetype, string extension) = CheckAddExtension(tbUploadPath.Text);
+            if (proceed)
+            {
+                var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+                bucketItemsInstance.UploadItem(notifications, path, mimetype, extension);
+            }
         }
 
         private void DownloadItem_CanExecute(object sender, CanExecuteRoutedEventArgs e)

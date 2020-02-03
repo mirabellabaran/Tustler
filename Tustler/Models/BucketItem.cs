@@ -85,9 +85,9 @@ namespace Tustler.Models
             await DeleteBucketItem(notifications, CurrentBucketName, key);
         }
 
-        public async void UploadItem(NotificationsList notifications, string filePath)
+        public async void UploadItem(NotificationsList notifications, string filePath, string mimetype, string extension)
         {
-            await UploadS3Item(notifications, CurrentBucketName, filePath);
+            await UploadS3Item(notifications, CurrentBucketName, filePath, mimetype, extension);
         }
 
         public async void DownloadItem(NotificationsList notifications, string key, string filePath)
@@ -190,9 +190,9 @@ namespace Tustler.Models
             NeedsRefresh = false;
         }
 
-        private async Task UploadS3Item(NotificationsList notifications, string bucketName, string filePath)
+        private async Task UploadS3Item(NotificationsList notifications, string bucketName, string filePath, string mimetype, string extension)
         {
-            var uploadResult = await TustlerAWSLib.S3.UploadItem(bucketName, filePath);
+            var uploadResult = await TustlerAWSLib.S3.UploadItem(bucketName, filePath, mimetype, extension);
             if (uploadResult.IsError)
             {
                 notifications.HandleError(uploadResult);
