@@ -50,6 +50,7 @@ namespace TustlerAWSLib
                 ListObjectsV2Response response;
                 using (var client = new AmazonS3Client())
                 {
+                    var combinedResponse = new List<S3Object>(request.MaxKeys);
                     do
                     {
                         response = await client.ListObjectsV2Async(request);
@@ -57,14 +58,20 @@ namespace TustlerAWSLib
                         // Process the response.
                         foreach (S3Object entry in response.S3Objects)
                         {
-                            Console.WriteLine("key = {0} size = {1}",
-                                entry.Key, entry.Size);
+                            combinedResponse.Add(new S3Object {
+                                BucketName = entry.BucketName,
+                                Key = entry.Key,
+                                Owner = entry.Owner,
+                                ETag = entry.ETag,
+                                LastModified = entry.LastModified,
+                                Size = entry.Size,
+                                StorageClass = entry.StorageClass
+                            });
                         }
-                        Console.WriteLine("Next Continuation Token: {0}", response.NextContinuationToken);
                         request.ContinuationToken = response.NextContinuationToken;
                     } while (response.IsTruncated);
 
-                    return new AWSResult<List<S3Object>>(response.S3Objects, null);
+                    return new AWSResult<List<S3Object>>(combinedResponse, null);
                 }
             }
             catch (HttpRequestException ex)

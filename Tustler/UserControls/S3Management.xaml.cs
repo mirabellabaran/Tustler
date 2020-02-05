@@ -1,6 +1,7 @@
 ﻿using Microsoft.Win32;
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -23,15 +24,16 @@ namespace Tustler.UserControls
             notifications = this.FindResource("applicationNotifications") as NotificationsList;
         }
 
-        private void ListBuckets_Button_Click(object sender, RoutedEventArgs e)
+        private async void ListBuckets_Button_Click(object sender, RoutedEventArgs e)
         {
             BucketViewModel bucketViewModel = this.FindResource("bucketsInstance") as BucketViewModel;
 
             Helpers.UIServices.SetBusyState();
-            bucketViewModel.Refresh(notifications);
+            //await Dispatcher.InvokeAsync<Task>(() => bucketViewModel.Refresh(notifications));
+            await bucketViewModel.Refresh(notifications).ConfigureAwait(true);
         }
 
-        private void ListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private async void ListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var listBox = (ListBox)e.Source;
             Bucket selectedBucket = (Bucket)listBox.SelectedItem;
@@ -39,10 +41,10 @@ namespace Tustler.UserControls
             var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
 
             Helpers.UIServices.SetBusyState();
-            bucketItemsInstance.Refresh(notifications, selectedBucket.Name);
 
-            // enable the headers
-            dgBucketItems.HeadersVisibility = DataGridHeadersVisibility.All;
+            // refresh and then enable the headers
+            await bucketItemsInstance.Refresh(notifications, selectedBucket.Name)
+                .ContinueWith(task => dgBucketItems.HeadersVisibility = DataGridHeadersVisibility.All, TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
         }
 
         private void FilterBucketItems_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -87,7 +89,7 @@ namespace Tustler.UserControls
             }
         }
 
-        private void DeleteBucketItem_Executed(object sender, ExecutedRoutedEventArgs e)
+        private async void DeleteBucketItem_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             var buttonSourceTag = (e.OriginalSource as Button).Tag as string;
             MessageBoxResult result = MessageBox.Show($"Selecting OK will permanently delete the file named: {buttonSourceTag}", "Confirm delete", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
@@ -95,7 +97,7 @@ namespace Tustler.UserControls
             {
                 case MessageBoxResult.OK:
                     var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
-                    bucketItemsInstance.DeleteItem(notifications, buttonSourceTag);
+                    await bucketItemsInstance.DeleteItem(notifications, buttonSourceTag).ConfigureAwait(false);
                     break;
             }
         }
@@ -114,7 +116,7 @@ namespace Tustler.UserControls
             }
         }
 
-        private void UploadItem_Executed(object sender, ExecutedRoutedEventArgs e)
+        private async void UploadItem_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             static (bool proceed, string path, string mimetype, string extension) CheckAddExtension(string path)
             {
@@ -164,7 +166,9 @@ namespace Tustler.UserControls
             if (proceed)
             {
                 var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
-                bucketItemsInstance.UploadItem(notifications, path, mimetype, extension);
+
+                Helpers.UIServices.SetBusyState();
+                await bucketItemsInstance.UploadItem(notifications, path, mimetype, extension).ConfigureAwait(false);
             }
         }
 
@@ -192,10 +196,9 @@ namespace Tustler.UserControls
             }
         }
 
-        private void DownloadItem_Executed(object sender, ExecutedRoutedEventArgs e)
+        private async void DownloadItem_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var selectedItem = dgBucketItems.SelectedCells[0].Item as BucketItem;
-            if (selectedItem != null)
+            if (dgBucketItems.SelectedCells[0].Item is BucketItem selectedItem)
             {
                 var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
                 var key = selectedItem.Key;
@@ -203,7 +206,9 @@ namespace Tustler.UserControls
                 var filePath = string.IsNullOrEmpty(selectedItem.Extension) ?
                     absolutePath :
                     Path.ChangeExtension(absolutePath, selectedItem.Extension);
-                bucketItemsInstance.DownloadItem(notifications, key, filePath);
+
+                Helpers.UIServices.SetBusyState();
+                await bucketItemsInstance.DownloadItem(notifications, key, filePath).ConfigureAwait(false);
             }
         }
 
@@ -213,21 +218,22 @@ namespace Tustler.UserControls
             e.CanExecute = bucketItemsInstance.CurrentBucketName != null;
         }
 
-        private void RefreshItems_Executed(object sender, ExecutedRoutedEventArgs e)
+        private async void RefreshItems_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
-            bucketItemsInstance.Refresh(notifications);
+
+            Helpers.UIServices.SetBusyState();
+            await bucketItemsInstance.RefreshAsync(notifications).ConfigureAwait(true);
         }
 
         private void UploadFilePicker_Click(object sender, RoutedEventArgs e)
         {
-            OpenFileDialog dlg = new Microsoft.Win32.OpenFileDialog();
-            //dlg.FileName = "Document"; // Default file name
-            dlg.Title = "Choose a file to upload";
-            dlg.Multiselect = false;
-            dlg.InitialDirectory = ApplicationSettings.FileCachePath;
-            //dlg.DefaultExt = ".txt"; // Default file extension
-            //dlg.Filter = "Text documents (.txt)|*.txt"; // Filter files by extension
+            OpenFileDialog dlg = new OpenFileDialog
+            {
+                Title = "Choose a file to upload",
+                Multiselect = false,
+                InitialDirectory = ApplicationSettings.FileCachePath
+            };
 
             Nullable<bool> result = dlg.ShowDialog();
             if (result == true)
@@ -238,12 +244,11 @@ namespace Tustler.UserControls
 
         private void DownloadFilePicker_Click(object sender, RoutedEventArgs e)
         {
-            Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
-            dlg.Title = "Choose a download destination";
-            dlg.InitialDirectory = ApplicationSettings.FileCachePath;
-            //dlg.FileName = "Document"; // Default file name
-            //dlg.DefaultExt = ".txt"; // Default file extension
-            //dlg.Filter = "Text documents (.txt)|*.txt"; // Filter files by extension
+            SaveFileDialog dlg = new SaveFileDialog
+            {
+                Title = "Choose a download destination",
+                InitialDirectory = ApplicationSettings.FileCachePath
+            };
 
             Nullable<bool> result = dlg.ShowDialog();
             if (result == true)

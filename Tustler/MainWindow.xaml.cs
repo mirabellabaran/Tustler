@@ -114,7 +114,7 @@ namespace Tustler
             {
                 static async Task<ObservableCollection<TreeViewItemData>> GetTasks()
                 {
-                    await Task.Delay(2000);
+                    await Task.Delay(2000).ConfigureAwait(false);
 
                     var tasks = new TasksTreeViewDataModel();
                     return tasks.TreeViewItemDataCollection;
@@ -124,7 +124,7 @@ namespace Tustler
                 {
                     "settings" => new SettingsTreeViewDataModel().TreeViewItemDataCollection,
                     "functions" => new FunctionsTreeViewDataModel().TreeViewItemDataCollection,
-                    "tasks" => await GetTasks(),
+                    "tasks" => await GetTasks().ConfigureAwait(false),
                     _ => throw new ArgumentException("TreeView Expansion: Unexpected item tag")
                 };
 
@@ -136,7 +136,7 @@ namespace Tustler
 
         private async void MenuItem_SubmenuOpenedAsync(object sender, RoutedEventArgs e)
         {
-            await Task.Delay(2000);
+            await Task.Delay(2000).ConfigureAwait(false);
             MenuItem item = e.OriginalSource as MenuItem;
             if ((item.Items.Count == 1) && (item.Items[0] is string))
             {

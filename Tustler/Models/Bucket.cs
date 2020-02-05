@@ -27,17 +27,18 @@ namespace Tustler.Models
             this.NeedsRefresh = true;
         }
 
-        public async void Refresh(NotificationsList errorList)
+        public async Task Refresh(NotificationsList notifications)
         {
             if (NeedsRefresh)
             {
-                await FetchS3Buckets(errorList);
+                // the underlying collection must be refreshed from the Dispatcher thread, not from within the awaited method
+                var bucketsResult = await TustlerAWSLib.S3.ListBuckets().ConfigureAwait(true);
+                ProcessS3Buckets(notifications, bucketsResult);
             }
         }
 
-        private async Task FetchS3Buckets(NotificationsList errorList)
+        private void ProcessS3Buckets(NotificationsList errorList, TustlerAWSLib.AWSResult<List<Amazon.S3.Model.S3Bucket>> bucketsResult)
         {
-            var bucketsResult = await TustlerAWSLib.S3.ListBuckets();
             if (bucketsResult.IsError)
             {
                 errorList.HandleError(bucketsResult);

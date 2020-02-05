@@ -43,7 +43,7 @@ namespace Tustler.Helpers
 
                 if (IsBusy)
                 {
-                    new DispatcherTimer(TimeSpan.FromSeconds(0), DispatcherPriority.ApplicationIdle, dispatcherTimer_Tick, Application.Current.Dispatcher);
+                    var _ = new DispatcherTimer(TimeSpan.FromSeconds(0), DispatcherPriority.ApplicationIdle, dispatcherTimer_Tick, Application.Current.Dispatcher);
                 }
             }
         }
