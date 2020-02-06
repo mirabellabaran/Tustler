@@ -124,7 +124,7 @@ namespace Tustler
                 {
                     "settings" => new SettingsTreeViewDataModel().TreeViewItemDataCollection,
                     "functions" => new FunctionsTreeViewDataModel().TreeViewItemDataCollection,
-                    "tasks" => await GetTasks().ConfigureAwait(false),
+                    "tasks" => await GetTasks().ConfigureAwait(true),
                     _ => throw new ArgumentException("TreeView Expansion: Unexpected item tag")
                 };
 

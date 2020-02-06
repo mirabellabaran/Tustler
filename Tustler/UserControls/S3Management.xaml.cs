@@ -91,13 +91,21 @@ namespace Tustler.UserControls
 
         private async void DeleteBucketItem_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var buttonSourceTag = (e.OriginalSource as Button).Tag as string;
-            MessageBoxResult result = MessageBox.Show($"Selecting OK will permanently delete the file named: {buttonSourceTag}", "Confirm delete", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+            var key = (e.OriginalSource as Button).Tag as string;
+            MessageBoxResult result = MessageBox.Show($"Selecting OK will permanently delete the file named: {key}", "Confirm delete", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
             switch (result)
             {
                 case MessageBoxResult.OK:
                     var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
-                    await bucketItemsInstance.DeleteItem(notifications, buttonSourceTag).ConfigureAwait(false);
+                    var bucketName = bucketItemsInstance.CurrentBucketName;
+
+                    var deleteResult = await Helpers.TransferManager.DeleteItem(bucketName, key).ConfigureAwait(true);
+
+                    var success = Helpers.TransferManager.ProcessDeleteBucketItemResult(notifications, deleteResult, key);
+                    if (success)
+                    {
+                        await bucketItemsInstance.RefreshAsync(notifications).ConfigureAwait(true);
+                    }
                     break;
             }
         }
@@ -166,9 +174,13 @@ namespace Tustler.UserControls
             if (proceed)
             {
                 var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+                var bucketName = bucketItemsInstance.CurrentBucketName;
 
                 Helpers.UIServices.SetBusyState();
-                await bucketItemsInstance.UploadItem(notifications, path, mimetype, extension).ConfigureAwait(false);
+                var uploadResult = await Helpers.TransferManager.UploadItem(bucketName, path, mimetype, extension).ConfigureAwait(true);
+                Helpers.TransferManager.ProcessUploadItemResult(notifications, uploadResult);
+
+                await bucketItemsInstance.RefreshAsync(notifications).ConfigureAwait(true);
             }
         }
 
@@ -201,6 +213,7 @@ namespace Tustler.UserControls
             if (dgBucketItems.SelectedCells[0].Item is BucketItem selectedItem)
             {
                 var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+                var bucketName = bucketItemsInstance.CurrentBucketName;
                 var key = selectedItem.Key;
                 var absolutePath = Path.GetFullPath(tbDownloadPath.Text);
                 var filePath = string.IsNullOrEmpty(selectedItem.Extension) ?
@@ -208,7 +221,8 @@ namespace Tustler.UserControls
                     Path.ChangeExtension(absolutePath, selectedItem.Extension);
 
                 Helpers.UIServices.SetBusyState();
-                await bucketItemsInstance.DownloadItem(notifications, key, filePath).ConfigureAwait(false);
+                var downloadResult = await Helpers.TransferManager.DownloadItem(bucketName, key, filePath).ConfigureAwait(true);
+                Helpers.TransferManager.ProcessDownloadItemResult(notifications, downloadResult);
             }
         }
 

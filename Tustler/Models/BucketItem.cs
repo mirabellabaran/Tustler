@@ -12,7 +12,7 @@ using System.Windows.Data;
 namespace Tustler.Models
 {
     public class BucketItemsCollection: ObservableCollection<BucketItem>{
-        Dictionary<string, BucketItem> keyLookup;
+        readonly Dictionary<string, BucketItem> keyLookup;
 
         public BucketItemsCollection() => keyLookup = new Dictionary<string, BucketItem>();
 
@@ -37,8 +37,7 @@ namespace Tustler.Models
 
         public void UpdateItem(string key, string mimetype, string extension)
         {
-            BucketItem currentItem;
-            keyLookup.TryGetValue(key, out currentItem);
+            keyLookup.TryGetValue(key, out BucketItem currentItem);
 
             currentItem.MimeType = mimetype;
             currentItem.Extension = extension;
@@ -129,21 +128,6 @@ namespace Tustler.Models
             }
         }
 
-        public async Task DeleteItem(NotificationsList notifications, string key)
-        {
-            await DeleteBucketItem(notifications, CurrentBucketName, key).ConfigureAwait(false);
-        }
-
-        public async Task UploadItem(NotificationsList notifications, string filePath, string mimetype, string extension)
-        {
-            await UploadS3Item(notifications, CurrentBucketName, filePath, mimetype, extension).ConfigureAwait(false);
-        }
-
-        public async Task DownloadItem(NotificationsList notifications, string key, string filePath)
-        {
-            await DownloadS3Item(notifications, CurrentBucketName, key, filePath).ConfigureAwait(false);
-        }
-
         /// <summary>
         /// Set a filter on the view, showing only the specified mime types e.g. audio
         /// </summary>
@@ -169,24 +153,6 @@ namespace Tustler.Models
 
             BucketItemsView.Filter = new Predicate<object>(item => isRquiredMediaType((item as BucketItem).MimeType));
             BucketItemsView.Refresh();
-        }
-
-        private async Task DeleteBucketItem(NotificationsList notifications, string bucketName, string key)
-        {
-            var deleteResult = await TustlerAWSLib.S3.DeleteBucketItem(bucketName, key).ConfigureAwait(false);
-
-            if (deleteResult.IsError)
-            {
-                notifications.HandleError(deleteResult);
-            }
-            else
-            {
-                var success = deleteResult.Result;
-                if (success.HasValue && success.Value)
-                {
-                    await RefreshAsync(notifications).ConfigureAwait(false);
-                }
-            }
         }
 
         private void ProcessS3BucketItems(NotificationsList notifications, TustlerAWSLib.AWSResult<List<S3Object>> bucketItemsResult)
@@ -230,42 +196,6 @@ namespace Tustler.Models
             }
 
             NeedsRefresh = false;
-        }
-
-        private async Task UploadS3Item(NotificationsList notifications, string bucketName, string filePath, string mimetype, string extension)
-        {
-            var uploadResult = await TustlerAWSLib.S3.UploadItem(bucketName, filePath, mimetype, extension).ConfigureAwait(false);
-            if (uploadResult.IsError)
-            {
-                notifications.HandleError(uploadResult);
-            }
-            else
-            {
-                var resultFlag = uploadResult.Result;
-                var success = (resultFlag.HasValue && resultFlag.Value);
-                var successStr = success ? "succeeded" : "failed";
-                var message = $"Upload {successStr}";
-                notifications.ShowMessage(message, "Upload item to S3 task");
-
-                await RefreshAsync(notifications).ConfigureAwait(false);
-            }
-        }
-
-        private async static Task DownloadS3Item(NotificationsList notifications, string bucketName, string key, string filePath)
-        {
-            var downloadResult = await TustlerAWSLib.S3.DownloadItem(bucketName, key, filePath).ConfigureAwait(false);
-            if (downloadResult.IsError)
-            {
-                notifications.HandleError(downloadResult);
-            }
-            else
-            {
-                var resultFlag = downloadResult.Result;
-                var success = (resultFlag.HasValue && resultFlag.Value);
-                var successStr = success ? "succeeded" : "failed";
-                var message = $"Download {successStr}";
-                notifications.ShowMessage(message, "Download item to S3 task");
-            }
         }
 
     }

@@ -43,59 +43,11 @@
             </Border>
         </DataTemplate>
 
-        <DataTemplate DataType="{x:Type local:ApplicationMessageInfo}">
-            <StackPanel>
-                <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
-                    <TextBlock Text="{Binding Path=Message}" VerticalAlignment="Center" Style="{StaticResource TextBlockDark}" />
-                </Border>
-                <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
-                    <TextBlock Text="{Binding Path=Detail}" VerticalAlignment="Center" Style="{StaticResource TextBlockDark}" />
-                </Border>
-                <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
-                    <TextBlock Text="{Binding Path=Timestamp}" VerticalAlignment="Center" Style="{StaticResource TextBlockDark}" />
-                </Border>
-            </StackPanel>
-        </DataTemplate>
-
-        <DataTemplate DataType="{x:Type local:ApplicationErrorInfo}">
-            <StackPanel Orientation="Horizontal" Height="40">
-                <StackPanel.Resources>
-                    <BooleanToVisibilityConverter x:Key="boolConverter" />
-
-                    <Style x:Key="toggleContent" TargetType="ToggleButton" BasedOn="{StaticResource ToggleButtonDark}">
-                        <Setter Property="FontSize" Value="10" />
-                        <Setter Property="Width" Value="70" />
-                        <Style.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter Property="Content" Value="Show less" />
-                            </Trigger>
-
-                            <Trigger Property="IsChecked" Value="False">
-                                <Setter Property="Content" Value="Show more" />
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-
-                </StackPanel.Resources>
-                <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
-                    <TextBlock Text="{Binding Path=Message}" VerticalAlignment="Center" Style="{StaticResource TextBlockDark}" />
-                </Border>
-                <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2" Visibility="{Binding ElementName=showHide, Path=IsChecked, Converter={StaticResource boolConverter}}">
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                        <TextBlock Text="{Binding Path=Exception.StackTrace}" Style="{StaticResource TextBlockDark}" />
-                    </ScrollViewer>
-                </Border>
-                <ToggleButton x:Name="showHide" Height="30" Style="{StaticResource toggleContent}" />
-            </StackPanel>
-        </DataTemplate>
     </UserControl.Resources>
 
     <DockPanel>
-        <Border DockPanel.Dock="Top" Padding="20,20,20,0">
-            <ListBox DockPanel.Dock="Top" Height="50" HorizontalAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemsSource="{Binding Source={StaticResource applicationNotifications}, Path=Notifications}" />
-        </Border>
         <DockPanel DockPanel.Dock="Bottom" Background="{StaticResource ContrastingBackground}" Margin="20">
-            <Border DockPanel.Dock="Left" Padding="50">
+            <Border DockPanel.Dock="Left" Padding="50, 20, 50, 20">
                 <StackPanel Orientation="Vertical" Background="{StaticResource NormalBackground}">
                     <TextBlock Style="{StaticResource TextBlockDark}" FontSize="16" Text="Buckets:"/>
                     <ListBox Width="300" Height="200" Margin="10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding Source={StaticResource bucketsInstance}, Path=Buckets}" SelectionChanged="ListBox_SelectionChanged"/>
@@ -103,7 +55,7 @@
                     <Button Content="List Buckets" Width="100" Height="40" Style="{StaticResource ButtonDark}" Click="ListBuckets_Button_Click"/>
                 </StackPanel>
             </Border>
-            <Border DockPanel.Dock="Right" Padding="50">
+            <Border DockPanel.Dock="Right" Padding="50, 20, 50, 20">
                 <StackPanel Orientation="Vertical" Background="{StaticResource NormalBackground}">
                     <TextBlock Style="{StaticResource TextBlockDark}" FontSize="16" Text="Bucket Items:"/>
                     <DataGrid x:Name="dgBucketItems" Width="500" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource bucketItemsInstance}, Path=BucketItemsView}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">

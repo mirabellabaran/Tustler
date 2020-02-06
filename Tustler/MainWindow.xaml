@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Tustler"
+        xmlns:models="clr-namespace:Tustler.Models"
         xmlns:usercontrols="clr-namespace:Tustler.UserControls"
         mc:Ignorable="d"
         Title="Tustler" Height="962" Width="1681"
@@ -15,9 +16,58 @@
     </Window.CommandBindings>
     
     <Window.Resources>
-        <!--<local:SettingsTreeViewDataModel x:Key="settings"/>
-        <local:FunctionsTreeViewDataModel x:Key="functions"/>
-        <local:TasksTreeViewDataModel x:Key="tasks"/>-->
+        <DataTemplate DataType="{x:Type models:ApplicationMessageInfo}">
+            <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
+                <Border.Resources>
+                    <Style x:Key="textBlockHeaderStyles" TargetType="TextBlock" >
+                        <Setter Property="Background" Value="{StaticResource NormalBackground}" />
+                        <Setter Property="Padding" Value="2" />
+                        <Setter Property="Margin" Value="10, 0, 0, 0" />
+                    </Style>
+                    <Style x:Key="textBlockStyles" TargetType="TextBlock" >
+                        <Setter Property="Margin" Value="10, 0, 0, 0" />
+                    </Style>
+                </Border.Resources>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding Path=Message}" VerticalAlignment="Center" Style="{StaticResource textBlockHeaderStyles}" />
+                    <TextBlock Text="{Binding Path=Detail}" VerticalAlignment="Center" Style="{StaticResource textBlockStyles}" />
+                    <TextBlock Text="{Binding Path=Timestamp}" VerticalAlignment="Center" Style="{StaticResource textBlockStyles}" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type models:ApplicationErrorInfo}">
+            <StackPanel Orientation="Horizontal" Height="40">
+                <StackPanel.Resources>
+                    <BooleanToVisibilityConverter x:Key="boolConverter" />
+
+                    <Style x:Key="toggleContent" TargetType="ToggleButton" BasedOn="{StaticResource ToggleButtonDark}">
+                        <Setter Property="FontSize" Value="10" />
+                        <Setter Property="Width" Value="70" />
+                        <Style.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Content" Value="Show less" />
+                            </Trigger>
+
+                            <Trigger Property="IsChecked" Value="False">
+                                <Setter Property="Content" Value="Show more" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+
+                </StackPanel.Resources>
+                <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
+                    <TextBlock Text="{Binding Path=Message}" VerticalAlignment="Center" Style="{StaticResource TextBlockDark}" />
+                </Border>
+                <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2" Visibility="{Binding ElementName=showHide, Path=IsChecked, Converter={StaticResource boolConverter}}">
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                        <TextBlock Text="{Binding Path=Exception.StackTrace}" Style="{StaticResource TextBlockDark}" />
+                    </ScrollViewer>
+                </Border>
+                <ToggleButton x:Name="showHide" Height="30" Style="{StaticResource toggleContent}" />
+            </StackPanel>
+        </DataTemplate>
+
     </Window.Resources>
         
     <DockPanel>
@@ -49,9 +99,14 @@
                 <!--<Button Content="Select Action" Width="50" Height="20" Command="{x:Static local:CustomCommands.Switch}" CommandTarget="{Binding ElementName=tvActions}" />-->
                 <TreeView x:Name="tvActions" DockPanel.Dock="Top" Margin="10" TreeViewItem.Expanded="TreeViewItem_Expanded" MouseDoubleClick="TreeView_DoubleClick" />
             </DockPanel>
-            <DockPanel x:Name="panControlsContainer">
-                <!--UserControl here-->
-                <!--<usercontrols:S3Management/>-->
+            <DockPanel>
+                <Border DockPanel.Dock="Top" Padding="20,20,20,0">
+                    <ListBox DockPanel.Dock="Top" Height="90" HorizontalAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemsSource="{Binding Source={StaticResource applicationNotifications}, Path=Notifications}" />
+                </Border>
+                <DockPanel x:Name="panControlsContainer">
+                    <!--UserControl here-->
+                    <!--<usercontrols:S3Management/>-->
+                </DockPanel>
             </DockPanel>
         </DockPanel>
     </DockPanel>
