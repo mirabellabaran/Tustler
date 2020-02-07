@@ -7,9 +7,9 @@ using Tustler.Models;
 namespace Tustler.Helpers
 {
     /// <summary>
-    /// Manages uploads and downloads from an S3 bucket
+    /// Manages S3 services such as uploads and downloads from an S3 bucket
     /// </summary>
-    public static class TransferManager
+    public static class S3Services
     {
         public static async Task<TustlerAWSLib.AWSResult<bool?>> UploadItem(string bucketName, string filePath, string mimetype, string extension)
         {

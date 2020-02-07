@@ -11,8 +11,8 @@
         Background="{StaticResource NormalBackground}">
 
     <Window.CommandBindings>
-        <CommandBinding Command="{x:Static local:CustomCommands.Exit}" CanExecute="ExitCommand_CanExecute" Executed="ExitCommand_Executed" />
-        <CommandBinding Command="{x:Static local:CustomCommands.Switch}" CanExecute="SwitchCommand_CanExecute" Executed="SwitchCommand_Executed" />
+        <CommandBinding Command="{x:Static local:MainWindowCommands.Exit}" CanExecute="ExitCommand_CanExecute" Executed="ExitCommand_Executed" />
+        <CommandBinding Command="{x:Static local:MainWindowCommands.Switch}" CanExecute="SwitchCommand_CanExecute" Executed="SwitchCommand_Executed" />
     </Window.CommandBindings>
     
     <Window.Resources>
@@ -87,7 +87,7 @@
 
                 <Menu x:Name="menuTasks" DockPanel.Dock="Top" Margin="10,10,10,10" MenuItem.Click="MenuItem_Click" MenuItem.SubmenuOpened="MenuItem_SubmenuOpenedAsync">
                     <MenuItem Header="Application">
-                        <MenuItem Command="{x:Static local:CustomCommands.Exit}" />
+                        <MenuItem Command="{x:Static local:MainWindowCommands.Exit}" />
                     </MenuItem>
                     <MenuItem Header="Edit" Loaded="Window_Loaded">
                         <MenuItem Command="ApplicationCommands.Cut" />
@@ -96,7 +96,7 @@
                     </MenuItem>
                 </Menu>
 
-                <!--<Button Content="Select Action" Width="50" Height="20" Command="{x:Static local:CustomCommands.Switch}" CommandTarget="{Binding ElementName=tvActions}" />-->
+                <!--<Button Content="Select Action" Width="50" Height="20" Command="{x:Static local:MainWindowCommands.Switch}" CommandTarget="{Binding ElementName=tvActions}" />-->
                 <TreeView x:Name="tvActions" DockPanel.Dock="Top" Margin="10" TreeViewItem.Expanded="TreeViewItem_Expanded" MouseDoubleClick="TreeView_DoubleClick" />
             </DockPanel>
             <DockPanel>

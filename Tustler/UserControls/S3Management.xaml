@@ -8,17 +8,17 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.CommandBindings>
-        <CommandBinding Command="{x:Static uc:CustomCommands.FilterBucketItems}" CanExecute="FilterBucketItems_CanExecute" Executed="FilterBucketItems_Executed" />
-        <CommandBinding Command="{x:Static uc:CustomCommands.DeleteBucketItem}" CanExecute="DeleteBucketItem_CanExecute" Executed="DeleteBucketItem_Executed" />
-        <CommandBinding Command="{x:Static uc:CustomCommands.UploadItem}" CanExecute="UploadItem_CanExecute" Executed="UploadItem_Executed" />
-        <CommandBinding Command="{x:Static uc:CustomCommands.DownloadItem}" CanExecute="DownloadItem_CanExecute" Executed="DownloadItem_Executed" />
-        <CommandBinding Command="{x:Static uc:CustomCommands.RefreshItems}" CanExecute="RefreshItems_CanExecute" Executed="RefreshItems_Executed" />
+        <CommandBinding Command="{x:Static uc:S3Commands.FilterBucketItems}" CanExecute="FilterBucketItems_CanExecute" Executed="FilterBucketItems_Executed" />
+        <CommandBinding Command="{x:Static uc:S3Commands.DeleteBucketItem}" CanExecute="DeleteBucketItem_CanExecute" Executed="DeleteBucketItem_Executed" />
+        <CommandBinding Command="{x:Static uc:S3Commands.UploadItem}" CanExecute="UploadItem_CanExecute" Executed="UploadItem_Executed" />
+        <CommandBinding Command="{x:Static uc:S3Commands.DownloadItem}" CanExecute="DownloadItem_CanExecute" Executed="DownloadItem_Executed" />
+        <CommandBinding Command="{x:Static uc:S3Commands.RefreshItems}" CanExecute="RefreshItems_CanExecute" Executed="RefreshItems_Executed" />
     </UserControl.CommandBindings>
 
     <UserControl.InputBindings>
         <KeyBinding Key="R"
               Modifiers="Control" 
-              Command="{x:Static uc:CustomCommands.RefreshItems}" />
+              Command="{x:Static uc:S3Commands.RefreshItems}" />
     </UserControl.InputBindings>
     
     <UserControl.Resources>
@@ -61,7 +61,7 @@
                     <DataGrid x:Name="dgBucketItems" Width="500" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource bucketItemsInstance}, Path=BucketItemsView}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
                         <DataGrid.RowHeaderTemplate>
                             <DataTemplate>
-                                <Button Content="Delete" Style="{StaticResource ButtonDark}" Command="{x:Static uc:CustomCommands.DeleteBucketItem}" Tag="{Binding DataContext.Key, RelativeSource={RelativeSource AncestorType=DataGridRow}}"></Button>
+                                <Button Content="Delete" Style="{StaticResource ButtonDark}" Command="{x:Static uc:S3Commands.DeleteBucketItem}" Tag="{Binding DataContext.Key, RelativeSource={RelativeSource AncestorType=DataGridRow}}"></Button>
                             </DataTemplate>
                         </DataGrid.RowHeaderTemplate>
                     </DataGrid>
@@ -77,11 +77,11 @@
                                 <ColumnDefinition />
                                 <ColumnDefinition />
                             </Grid.ColumnDefinitions>
-                            <RadioButton x:Name="rbFilterAll" Grid.Row="0" Grid.Column="0" Content="All" HorizontalAlignment="Center" GroupName="rbBucketItemsFilter" IsChecked="True" Command="{x:Static uc:CustomCommands.FilterBucketItems}"/>
-                            <RadioButton x:Name="rbFilterAudio" Grid.Row="0" Grid.Column="1" Content="Audio" HorizontalAlignment="Center" GroupName="rbBucketItemsFilter" IsChecked="False" Command="{x:Static uc:CustomCommands.FilterBucketItems}"/>
-                            <RadioButton x:Name="rbFilterVideo" Grid.Row="0" Grid.Column="2" Content="Video" HorizontalAlignment="Center" GroupName="rbBucketItemsFilter" IsChecked="False" Command="{x:Static uc:CustomCommands.FilterBucketItems}"/>
-                            <RadioButton x:Name="rbFilterText" Grid.Row="0" Grid.Column="3" Content="Text" HorizontalAlignment="Center" GroupName="rbBucketItemsFilter" IsChecked="False" Command="{x:Static uc:CustomCommands.FilterBucketItems}"/>
-                            <RadioButton x:Name="rbFilterDefined" Grid.Row="0" Grid.Column="4" Content="Defined" HorizontalAlignment="Center" GroupName="rbBucketItemsFilter" IsChecked="False" Command="{x:Static uc:CustomCommands.FilterBucketItems}"/>
+                            <RadioButton x:Name="rbFilterAll" Grid.Row="0" Grid.Column="0" Content="All" HorizontalAlignment="Center" GroupName="rbBucketItemsFilter" IsChecked="True" Command="{x:Static uc:S3Commands.FilterBucketItems}"/>
+                            <RadioButton x:Name="rbFilterAudio" Grid.Row="0" Grid.Column="1" Content="Audio" HorizontalAlignment="Center" GroupName="rbBucketItemsFilter" IsChecked="False" Command="{x:Static uc:S3Commands.FilterBucketItems}"/>
+                            <RadioButton x:Name="rbFilterVideo" Grid.Row="0" Grid.Column="2" Content="Video" HorizontalAlignment="Center" GroupName="rbBucketItemsFilter" IsChecked="False" Command="{x:Static uc:S3Commands.FilterBucketItems}"/>
+                            <RadioButton x:Name="rbFilterText" Grid.Row="0" Grid.Column="3" Content="Text" HorizontalAlignment="Center" GroupName="rbBucketItemsFilter" IsChecked="False" Command="{x:Static uc:S3Commands.FilterBucketItems}"/>
+                            <RadioButton x:Name="rbFilterDefined" Grid.Row="0" Grid.Column="4" Content="Defined" HorizontalAlignment="Center" GroupName="rbBucketItemsFilter" IsChecked="False" Command="{x:Static uc:S3Commands.FilterBucketItems}"/>
                         </Grid>
                     </Border>
                     <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="10, 10, 10, 0">
@@ -111,15 +111,15 @@
                                 <ColumnDefinition />
                                 <ColumnDefinition Width="40" />
                             </Grid.ColumnDefinitions>
-                            <Button Content="Refresh Items" Grid.Row="0" Grid.Column="0" Style="{StaticResource buttonStyles}" Command="{x:Static uc:CustomCommands.RefreshItems}" />
+                            <Button Content="Refresh Items" Grid.Row="0" Grid.Column="0" Style="{StaticResource buttonStyles}" Command="{x:Static uc:S3Commands.RefreshItems}" />
                             <TextBlock Text="" Grid.Row="0" Grid.Column="1" Style="{StaticResource textBlockStyles}" />
 
-                            <Button Content="Upload" Grid.Row="1" Grid.Column="0" Style="{StaticResource buttonStyles}" Command="{x:Static uc:CustomCommands.UploadItem}" />
+                            <Button Content="Upload" Grid.Row="1" Grid.Column="0" Style="{StaticResource buttonStyles}" Command="{x:Static uc:S3Commands.UploadItem}" />
                             <TextBlock Text="from" Grid.Row="1" Grid.Column="1" Style="{StaticResource textBlockStyles}" />
                             <TextBox x:Name="tbUploadPath" Grid.Row="1" Grid.Column="2" Style="{StaticResource textBoxStyles}" />
                             <Button Content="..." Grid.Row="1" Grid.Column="3" Style="{StaticResource buttonStyles}" Click="UploadFilePicker_Click" />
 
-                            <Button Content="Download" Grid.Row="2" Grid.Column="0" Style="{StaticResource buttonStyles}" Command="{x:Static uc:CustomCommands.DownloadItem}" />
+                            <Button Content="Download" Grid.Row="2" Grid.Column="0" Style="{StaticResource buttonStyles}" Command="{x:Static uc:S3Commands.DownloadItem}" />
                             <TextBlock Text="to" Grid.Row="2" Grid.Column="1" Style="{StaticResource textBlockStyles}" />
                             <TextBox x:Name="tbDownloadPath" Grid.Row="2" Grid.Column="2" Style="{StaticResource textBoxStyles}" />
                             <Button Content="..." Grid.Row="2" Grid.Column="3" Style="{StaticResource buttonStyles}" Click="DownloadFilePicker_Click" />

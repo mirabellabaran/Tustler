@@ -61,9 +61,9 @@ namespace Tustler
                 credentialsMenuItem.Focus();
 
                 // invoke the bound command
-                if (CustomCommands.Switch.CanExecute(null, tvActions))
+                if (MainWindowCommands.Switch.CanExecute(null, tvActions))
                 {
-                    CustomCommands.Switch.Execute(null, tvActions);
+                    MainWindowCommands.Switch.Execute(null, tvActions);
                 }
             }
         }
@@ -209,6 +209,8 @@ namespace Tustler
                 case "s3management":
                     // fallthru
                 case "credentials":
+                // fallthru
+                case "polly":
                     SwitchForm(tag);
                     handled = true;
                     break;
@@ -234,17 +236,20 @@ namespace Tustler
                 case "credentials":
                     panControlsContainer.Children.Add(new Credentials());
                     break;
+                case "polly":
+                    panControlsContainer.Children.Add(new PollyFunctions());
+                    break;
             }
         }
     }
 
-    public static class CustomCommands
+    public static class MainWindowCommands
     {
         public static readonly RoutedUICommand Exit = new RoutedUICommand
             (
                 "Exit",
                 "Exit",
-                typeof(CustomCommands),
+                typeof(MainWindowCommands),
                 new InputGestureCollection()
                 {
                     new KeyGesture(Key.F4, ModifierKeys.Alt)
@@ -254,7 +259,7 @@ namespace Tustler
         public static readonly RoutedCommand Switch = new RoutedCommand
             (
                 "Switch",
-                typeof(CustomCommands),
+                typeof(MainWindowCommands),
                 new InputGestureCollection()
                 {
                     new KeyGesture(Key.Enter)

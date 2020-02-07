@@ -99,9 +99,9 @@ namespace Tustler.UserControls
                     var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
                     var bucketName = bucketItemsInstance.CurrentBucketName;
 
-                    var deleteResult = await Helpers.TransferManager.DeleteItem(bucketName, key).ConfigureAwait(true);
+                    var deleteResult = await Helpers.S3Services.DeleteItem(bucketName, key).ConfigureAwait(true);
 
-                    var success = Helpers.TransferManager.ProcessDeleteBucketItemResult(notifications, deleteResult, key);
+                    var success = Helpers.S3Services.ProcessDeleteBucketItemResult(notifications, deleteResult, key);
                     if (success)
                     {
                         await bucketItemsInstance.RefreshAsync(notifications).ConfigureAwait(true);
@@ -177,8 +177,8 @@ namespace Tustler.UserControls
                 var bucketName = bucketItemsInstance.CurrentBucketName;
 
                 Helpers.UIServices.SetBusyState();
-                var uploadResult = await Helpers.TransferManager.UploadItem(bucketName, path, mimetype, extension).ConfigureAwait(true);
-                Helpers.TransferManager.ProcessUploadItemResult(notifications, uploadResult);
+                var uploadResult = await Helpers.S3Services.UploadItem(bucketName, path, mimetype, extension).ConfigureAwait(true);
+                Helpers.S3Services.ProcessUploadItemResult(notifications, uploadResult);
 
                 await bucketItemsInstance.RefreshAsync(notifications).ConfigureAwait(true);
             }
@@ -221,8 +221,8 @@ namespace Tustler.UserControls
                     Path.ChangeExtension(absolutePath, selectedItem.Extension);
 
                 Helpers.UIServices.SetBusyState();
-                var downloadResult = await Helpers.TransferManager.DownloadItem(bucketName, key, filePath).ConfigureAwait(true);
-                Helpers.TransferManager.ProcessDownloadItemResult(notifications, downloadResult);
+                var downloadResult = await Helpers.S3Services.DownloadItem(bucketName, key, filePath).ConfigureAwait(true);
+                Helpers.S3Services.ProcessDownloadItemResult(notifications, downloadResult);
             }
         }
 
@@ -272,13 +272,13 @@ namespace Tustler.UserControls
         }
     }
 
-    public static class CustomCommands
+    public static class S3Commands
     {
         public static readonly RoutedUICommand FilterBucketItems = new RoutedUICommand
             (
                 "FilterBucketItems",
                 "FilterBucketItems",
-                typeof(CustomCommands),
+                typeof(S3Commands),
                 null
             );
 
@@ -286,7 +286,7 @@ namespace Tustler.UserControls
             (
                 "DeleteBucketItem",
                 "DeleteBucketItem",
-                typeof(CustomCommands),
+                typeof(S3Commands),
                 null
             );
 
@@ -294,7 +294,7 @@ namespace Tustler.UserControls
             (
                 "UploadItem",
                 "UploadItem",
-                typeof(CustomCommands),
+                typeof(S3Commands),
                 null
             );
 
@@ -302,7 +302,7 @@ namespace Tustler.UserControls
             (
                 "DownloadItem",
                 "DownloadItem",
-                typeof(CustomCommands),
+                typeof(S3Commands),
                 null
             );
 
@@ -310,7 +310,7 @@ namespace Tustler.UserControls
             (
                 "RefreshItems",
                 "RefreshItems",
-                typeof(CustomCommands),
+                typeof(S3Commands),
                 null
             );
     }
