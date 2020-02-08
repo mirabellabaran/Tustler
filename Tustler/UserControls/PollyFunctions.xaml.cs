@@ -44,6 +44,18 @@ namespace Tustler.UserControls
             await voicesInstance.Refresh(notifications, languageCode)
                 .ContinueWith(task => dgVoices.HeadersVisibility = DataGridHeadersVisibility.All, TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
         }
+
+        private void GetLexicon_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = !string.IsNullOrEmpty(tbLexiconName.Text);
+        }
+
+        private async void GetLexicon_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            var attributesInstance = this.FindResource("lexiconAttributesInstance") as LexiconAttributesViewModel;
+            
+            await attributesInstance.Refresh(notifications, tbLexiconName.Text).ConfigureAwait(true);
+        }
     }
 
     public static class PollyCommands
@@ -52,6 +64,14 @@ namespace Tustler.UserControls
             (
                 "ListVoices",
                 "ListVoices",
+                typeof(PollyCommands),
+                null
+            );
+
+        public static readonly RoutedUICommand GetLexicon = new RoutedUICommand
+            (
+                "GetLexicon",
+                "GetLexicon",
                 typeof(PollyCommands),
                 null
             );

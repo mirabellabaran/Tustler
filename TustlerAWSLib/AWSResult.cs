@@ -13,7 +13,7 @@ namespace TustlerAWSLib
     //        this.ex = ex;
     //    }
 
-    //    public Exception Exception
+    //    public T Exception
     //    {
     //        get
     //        {
@@ -25,9 +25,9 @@ namespace TustlerAWSLib
     public class AWSResult<T>
     {
         T result;
-        Exception ex;
+        AWSException ex;
 
-        public AWSResult(T result, Exception ex)
+        public AWSResult(T result, AWSException ex)
         {
             this.result = result;
             this.ex = ex;
@@ -49,7 +49,7 @@ namespace TustlerAWSLib
             }
         }
 
-        public Exception Exception
+        public AWSException Exception
         {
             get
             {

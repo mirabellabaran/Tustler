@@ -36,14 +36,9 @@ namespace Tustler.Models
 
         public void HandleError<T>(AWSResult<T> result)
         {
-            if (result.Exception is HttpRequestException)
-            {
-                this.Add(new ApplicationErrorInfo { Message = "Not connected", Exception = result.Exception });
-            }
-            else
-            {
-                this.Add(new ApplicationErrorInfo { Message = result.Exception.Message, Exception = result.Exception });
-            }
+            var ex = result.Exception;
+
+            this.Add(new ApplicationErrorInfo { Context = ex.Context, Message = ex.Message, Exception = ex.InnerException});
         }
 
         public void ShowMessage(string message, string detail)
@@ -58,16 +53,22 @@ namespace Tustler.Models
 
     public sealed class ApplicationErrorInfo : Notification
     {
+        public string Context
+        {
+            get;
+            internal set;
+        }
+
         public string Message
         {
             get;
-            set;
+            internal set;
         }
 
         public Exception Exception
         {
             get;
-            set;
+            internal set;
         }
 
     }
@@ -77,13 +78,13 @@ namespace Tustler.Models
         public string Message
         {
             get;
-            set;
+            internal set;
         }
 
         public string Detail
         {
             get;
-            set;
+            internal set;
         }
 
     }

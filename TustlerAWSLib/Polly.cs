@@ -40,26 +40,50 @@ namespace TustlerAWSLib
             }
             catch (HttpRequestException ex)
             {
-                return new AWSResult<List<Voice>>(null, ex);
+                return new AWSResult<List<Voice>>(null, new AWSException("DescribeVoices", "Not connected.", ex));
+            }
+            catch (InvalidNextTokenException ex)
+            {
+                return new AWSResult<List<Voice>>(null, new AWSException("DescribeVoices", "Invalid next token", ex));
+            }
+            catch (ServiceFailureException ex)
+            {
+                return new AWSResult<List<Voice>>(null, new AWSException("DescribeVoices", "An unknown condition has caused a service failure.", ex));
             }
         }
 
+        public async static Task<AWSResult<LexiconAttributes>> GetLexicon(string lexiconName)
+        {
+            try
+            {
+                var request = new GetLexiconRequest
+                    {
+                        Name = lexiconName
+                    };
+                using (var client = new AmazonPollyClient())
+                {
+                    var response = await client.GetLexiconAsync(request);
+
+                    return new AWSResult<LexiconAttributes>(response.LexiconAttributes, null);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                return new AWSResult<LexiconAttributes>(null, new AWSException("ListLexicons", "Not connected.", ex));
+            }
+            catch (LexiconNotFoundException ex)
+            {
+                return new AWSResult<LexiconAttributes>(null, new AWSException("ListLexicons", "Amazon Polly can't find the specified lexicon.", ex));
+            }
+            catch (ServiceFailureException ex)
+            {
+                return new AWSResult<LexiconAttributes>(null, new AWSException("ListLexicons", "An unknown condition has caused a service failure.", ex));
+            }
+        }
     }
+
 }
 
-//// PollyDescribeVoices list and describe the voices that are available in the configured region
-//func PollyDescribeVoices(pollyService* polly.Polly, languageCode string) (*string, error) {
-//	input := &polly.DescribeVoicesInput{LanguageCode: aws.String(languageCode)}
-//	result, err := pollyService.DescribeVoices(input)
-
-//	if err != nil {
-//		msg := fmt.Sprintf("Unable to list voices for language code %q\nTry a different code or change the configured region", languageCode)
-//		return nil, getTatorError("PollyDescribeVoices", msg, err)
-//	}
-
-//	voices, err := getJSONString(result)
-//	return voices, err
-//}
 
 //// PollyListLexicons list the available lexicons (alphabets and language codes)
 //func PollyListLexicons(pollyService* polly.Polly) (*string, error) {

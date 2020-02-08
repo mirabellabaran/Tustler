@@ -26,19 +26,24 @@ namespace Tustler
         public MainWindow()
         {
             InitializeComponent();
-
-            tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "S3 Management", Tag = "s3management", HasChildren = false }));
-            tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "Settings", Tag = "settings", HasChildren = true }));
-            tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "Individual Functions", Tag = "functions", HasChildren = true }));
-            tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "Tasks", Tag = "tasks", HasChildren = true }));
-
-            menuTasks.Items.Add(CreateMenuItem(new TreeViewItemData { Name = "Tasks", Tag = "tasks", HasChildren = true }));
         }
 
         #region Event Handlers
 
-        private void Window_Loaded(object sender, RoutedEventArgs e)
+        private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "S3 Management", Tag = "s3management", HasChildren = false }));
+            tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "Settings", Tag = "settings", HasChildren = true }));
+
+            var functionSubTree = CreateTreeItem(new TreeViewItemData { Name = "Individual Functions", Tag = "functions", HasChildren = true });
+            tvActions.Items.Add(functionSubTree);
+            await CreateSubTree(functionSubTree).ConfigureAwait(true);
+            functionSubTree.IsExpanded = true;
+
+            tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "Tasks", Tag = "tasks", HasChildren = true }));
+
+            menuTasks.Items.Add(CreateMenuItem(new TreeViewItemData { Name = "Tasks", Tag = "tasks", HasChildren = true }));
+
             var accessKey = TustlerAWSLib.Utilities.CheckCredentials();
             if (accessKey != null)  // MG change to ==
             {
@@ -112,24 +117,7 @@ namespace Tustler
             TreeViewItem item = e.OriginalSource as TreeViewItem;
             if ((item.Items.Count == 1) && (item.Items[0] is string))
             {
-                static async Task<ObservableCollection<TreeViewItemData>> GetTasks()
-                {
-                    await Task.Delay(2000).ConfigureAwait(false);
-
-                    var tasks = new TasksTreeViewDataModel();
-                    return tasks.TreeViewItemDataCollection;
-                }
-
-                var collection = (item.Tag) switch
-                {
-                    "settings" => new SettingsTreeViewDataModel().TreeViewItemDataCollection,
-                    "functions" => new FunctionsTreeViewDataModel().TreeViewItemDataCollection,
-                    "tasks" => await GetTasks().ConfigureAwait(true),
-                    _ => throw new ArgumentException("TreeView Expansion: Unexpected item tag")
-                };
-
-                item.Items.Clear();
-                AddItems<TreeViewItem>(CreateTreeItem, item, collection);
+                await CreateSubTree(item).ConfigureAwait(true);
                 tvActions.Focus();  // otherwise it is lost on the async fetch
             }
         }
@@ -181,6 +169,28 @@ namespace Tustler
             }
 
             return item;
+        }
+
+        private static async Task CreateSubTree(TreeViewItem parentItem)
+        {
+            static async Task<ObservableCollection<TreeViewItemData>> GetTasks()
+            {
+                await Task.Delay(2000).ConfigureAwait(false);
+
+                var tasks = new TasksTreeViewDataModel();
+                return tasks.TreeViewItemDataCollection;
+            }
+
+            var collection = (parentItem.Tag) switch
+            {
+                "settings" => new SettingsTreeViewDataModel().TreeViewItemDataCollection,
+                "functions" => new FunctionsTreeViewDataModel().TreeViewItemDataCollection,
+                "tasks" => await GetTasks().ConfigureAwait(true),
+                _ => throw new ArgumentException("TreeView Expansion: Unexpected item tag")
+            };
+
+            parentItem.Items.Clear();
+            AddItems<TreeViewItem>(CreateTreeItem, parentItem, collection);
         }
 
         private static MenuItem CreateMenuItem(TreeViewItemData itemData)

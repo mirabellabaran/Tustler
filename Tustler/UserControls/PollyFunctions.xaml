@@ -10,24 +10,26 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <local:VoicesViewModel x:Key="voicesInstance" />
+            <local:LexiconAttributesViewModel x:Key="lexiconAttributesInstance" />
         </ResourceDictionary>
     </UserControl.Resources>
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static uc:PollyCommands.ListVoices}" CanExecute="ListVoices_CanExecute" Executed="ListVoices_Executed" />
+        <CommandBinding Command="{x:Static uc:PollyCommands.GetLexicon}" CanExecute="GetLexicon_CanExecute" Executed="GetLexicon_Executed" />
     </UserControl.CommandBindings>
 
     <DockPanel>
         <DockPanel DockPanel.Dock="Bottom" Background="{StaticResource ContrastingBackground}" Margin="20">
             <TextBlock Style="{StaticResource TextBlockDark}" FontSize="16" Text="Voices:"/>
             <DataGrid x:Name="dgVoices" Width="500" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource voicesInstance}, Path=Voices}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
-                <!--<DataGrid.RowHeaderTemplate>
-                    <DataTemplate>
-                        <Button Content="Delete" Style="{StaticResource ButtonDark}" Command="{x:Static uc:S3Commands.DeleteBucketItem}" Tag="{Binding DataContext.Key, RelativeSource={RelativeSource AncestorType=DataGridRow}}"></Button>
-                    </DataTemplate>
-                </DataGrid.RowHeaderTemplate>-->
             </DataGrid>
 
             <Button Content="List Voices" Command="{x:Static uc:PollyCommands.ListVoices}" Width="100" Height="40" Style="{StaticResource ButtonDark}" />
+
+            <TextBox x:Name="tbLexiconName" Style="{StaticResource TextBoxDark}" Width="100" Height="30"/>
+            <Button Content="Get Lexicon" Command="{x:Static uc:PollyCommands.GetLexicon}" Width="100" Height="40" Style="{StaticResource ButtonDark}" />
+            <DataGrid x:Name="dgLexiconAttributes" Width="500" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource lexiconAttributesInstance}, Path=Attributes}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
+            </DataGrid>
         </DockPanel>
     </DockPanel>
 </UserControl>

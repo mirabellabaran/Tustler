@@ -29,7 +29,7 @@ namespace TustlerAWSLib
             }
             catch (HttpRequestException ex)
             {
-                return new AWSResult<List<S3Bucket>>(null, ex);
+                return new AWSResult<List<S3Bucket>>(null, new AWSException("ListBuckets", "Not connected.", ex));
             }
         }
 
@@ -76,7 +76,7 @@ namespace TustlerAWSLib
             }
             catch (HttpRequestException ex)
             {
-                return new AWSResult<List<S3Object>>(null, ex);
+                return new AWSResult<List<S3Object>>(null, new AWSException("ListBucketItems", "Not connected.", ex));
             }
         }
 
@@ -93,7 +93,7 @@ namespace TustlerAWSLib
             }
             catch (HttpRequestException ex)
             {
-                return new AWSResult<MetadataCollection>(null, ex);
+                return new AWSResult<MetadataCollection>(null, new AWSException("GetItemMetadata", "Not connected.", ex));
             }
         }
 
@@ -112,7 +112,7 @@ namespace TustlerAWSLib
                     var response = await client.DeleteObjectAsync(deleteObjectRequest);
                     if (response.HttpStatusCode != System.Net.HttpStatusCode.NoContent) // default return code
                     {
-                        return new AWSResult<bool?>(null, new ApplicationException($"Request returned status code: {response.HttpStatusCode}"));
+                        return new AWSResult<bool?>(null, new AWSException("DeleteBucketItem", $"Request returned status code: {response.HttpStatusCode}", null));
                     }
                     else
                     {
@@ -122,7 +122,7 @@ namespace TustlerAWSLib
             }
             catch (HttpRequestException ex)
             {
-                return new AWSResult<bool?>(null, ex);
+                return new AWSResult<bool?>(null, new AWSException("DeleteBucketItem", "Not connected.", ex));
             }
         }
 
@@ -163,7 +163,7 @@ namespace TustlerAWSLib
             }
             catch (HttpRequestException ex)
             {
-                return new AWSResult<bool?>(null, ex);
+                return new AWSResult<bool?>(null, new AWSException("UploadItem", "Not connected.", ex));
             }
         }
 
@@ -188,7 +188,7 @@ namespace TustlerAWSLib
             }
             catch (HttpRequestException ex)
             {
-                return new AWSResult<bool?>(null, ex);
+                return new AWSResult<bool?>(null, new AWSException("DownloadItem", "Not connected.", ex));
             }
         }
 
