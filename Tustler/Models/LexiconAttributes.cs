@@ -54,6 +54,8 @@ namespace Tustler.Models
                     LexiconArn = attributes.LexiconArn,
                     Size = attributes.Size
                 });
+
+                NeedsRefresh = false;
             }
         }
 

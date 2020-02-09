@@ -18,13 +18,14 @@ namespace TustlerAWSLib
         {
             try
             {
-                var request = languageCode is null?
-                    new DescribeVoicesRequest() :
-                    new DescribeVoicesRequest {
-                        LanguageCode = languageCode
-                    };
                 using (var client = new AmazonPollyClient())
                 {
+                    var request = languageCode is null ?
+                        new DescribeVoicesRequest() :
+                        new DescribeVoicesRequest
+                        {
+                            LanguageCode = languageCode
+                        };
                     var result = new List<Voice>();
                     DescribeVoicesResponse response;
                     do
@@ -44,7 +45,7 @@ namespace TustlerAWSLib
             }
             catch (InvalidNextTokenException ex)
             {
-                return new AWSResult<List<Voice>>(null, new AWSException("DescribeVoices", "Invalid next token", ex));
+                return new AWSResult<List<Voice>>(null, new AWSException("DescribeVoices", "Invalid next token.", ex));
             }
             catch (ServiceFailureException ex)
             {
@@ -56,12 +57,12 @@ namespace TustlerAWSLib
         {
             try
             {
-                var request = new GetLexiconRequest
+                using (var client = new AmazonPollyClient())
+                {
+                    var request = new GetLexiconRequest
                     {
                         Name = lexiconName
                     };
-                using (var client = new AmazonPollyClient())
-                {
                     var response = await client.GetLexiconAsync(request);
 
                     return new AWSResult<LexiconAttributes>(response.LexiconAttributes, null);
@@ -69,15 +70,49 @@ namespace TustlerAWSLib
             }
             catch (HttpRequestException ex)
             {
-                return new AWSResult<LexiconAttributes>(null, new AWSException("ListLexicons", "Not connected.", ex));
+                return new AWSResult<LexiconAttributes>(null, new AWSException("GetLexicon", "Not connected.", ex));
             }
             catch (LexiconNotFoundException ex)
             {
-                return new AWSResult<LexiconAttributes>(null, new AWSException("ListLexicons", "Amazon Polly can't find the specified lexicon.", ex));
+                return new AWSResult<LexiconAttributes>(null, new AWSException("GetLexicon", "Amazon Polly can't find the specified lexicon.", ex));
             }
             catch (ServiceFailureException ex)
             {
-                return new AWSResult<LexiconAttributes>(null, new AWSException("ListLexicons", "An unknown condition has caused a service failure.", ex));
+                return new AWSResult<LexiconAttributes>(null, new AWSException("GetLexicon", "An unknown condition has caused a service failure.", ex));
+            }
+        }
+
+        public async static Task<AWSResult<List<LexiconDescription>>> ListLexicons()
+        {
+            try
+            {
+                using (var client = new AmazonPollyClient())
+                {
+                    var request = new ListLexiconsRequest();
+                    var result = new List<LexiconDescription>();
+                    ListLexiconsResponse response;
+                    do
+                    {
+                        response = await client.ListLexiconsAsync(request);
+                        request.NextToken = response.NextToken;
+
+                        result.AddRange(response.Lexicons);
+                    } while (response.NextToken != null);
+
+                    return new AWSResult<List<LexiconDescription>>(result, null);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                return new AWSResult<List<LexiconDescription>>(null, new AWSException("ListLexicons", "Not connected.", ex));
+            }
+            catch (InvalidNextTokenException ex)
+            {
+                return new AWSResult<List<LexiconDescription>>(null, new AWSException("ListLexicons", "Invalid next token.", ex));
+            }
+            catch (ServiceFailureException ex)
+            {
+                return new AWSResult<List<LexiconDescription>>(null, new AWSException("ListLexicons", "An unknown condition has caused a service failure.", ex));
             }
         }
     }

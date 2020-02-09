@@ -10,26 +10,45 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <local:VoicesViewModel x:Key="voicesInstance" />
+            <local:LexiconsViewModel x:Key="lexiconsInstance" />
             <local:LexiconAttributesViewModel x:Key="lexiconAttributesInstance" />
         </ResourceDictionary>
     </UserControl.Resources>
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static uc:PollyCommands.ListVoices}" CanExecute="ListVoices_CanExecute" Executed="ListVoices_Executed" />
         <CommandBinding Command="{x:Static uc:PollyCommands.GetLexicon}" CanExecute="GetLexicon_CanExecute" Executed="GetLexicon_Executed" />
+        <CommandBinding Command="{x:Static uc:PollyCommands.ListLexicons}" CanExecute="ListLexicons_CanExecute" Executed="ListLexicons_Executed" />
     </UserControl.CommandBindings>
 
     <DockPanel>
         <DockPanel DockPanel.Dock="Bottom" Background="{StaticResource ContrastingBackground}" Margin="20">
-            <TextBlock Style="{StaticResource TextBlockDark}" FontSize="16" Text="Voices:"/>
-            <DataGrid x:Name="dgVoices" Width="500" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource voicesInstance}, Path=Voices}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
-            </DataGrid>
+            <StackPanel Orientation="Horizontal">
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Style="{StaticResource TextBlockDark}" FontSize="16" Text="Voices:"/>
+                    <Button Content="List Voices" Command="{x:Static uc:PollyCommands.ListVoices}" Width="100" Height="40" Style="{StaticResource ButtonDark}" />
+                    <DataGrid x:Name="dgVoices" Width="250" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource voicesInstance}, Path=Voices}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
+                    </DataGrid>
+                </StackPanel>
 
-            <Button Content="List Voices" Command="{x:Static uc:PollyCommands.ListVoices}" Width="100" Height="40" Style="{StaticResource ButtonDark}" />
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Style="{StaticResource TextBlockDark}" FontSize="16" Text="Lexicons:"/>
+                    <Button Content="List Lexicons" Command="{x:Static uc:PollyCommands.ListLexicons}" Width="100" Height="40" Style="{StaticResource ButtonDark}" />
+                    <DataGrid x:Name="dgLexicons" Width="250" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource lexiconsInstance}, Path=Lexicons}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2"></DataGrid>
+                </StackPanel>
 
-            <TextBox x:Name="tbLexiconName" Style="{StaticResource TextBoxDark}" Width="100" Height="30"/>
-            <Button Content="Get Lexicon" Command="{x:Static uc:PollyCommands.GetLexicon}" Width="100" Height="40" Style="{StaticResource ButtonDark}" />
-            <DataGrid x:Name="dgLexiconAttributes" Width="500" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource lexiconAttributesInstance}, Path=Attributes}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
-            </DataGrid>
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Style="{StaticResource TextBlockDark}" FontSize="16" Text="Lexicon Attributes:"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox x:Name="tbLexiconName" Style="{StaticResource TextBoxDark}" Margin="10, 0, 10, 0" Width="100" Height="30"/>
+                        <Button Content="Get Lexicon" Command="{x:Static uc:PollyCommands.GetLexicon}" Width="100" Height="40" Style="{StaticResource ButtonDark}" />
+                    </StackPanel>
+                    <DataGrid x:Name="dgLexiconAttributes" Width="250" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource lexiconAttributesInstance}, Path=Attributes}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
+                        <!--<ItemsControl.ItemsSource>
+                            <col
+                        </ItemsControl.ItemsSource>-->
+                    </DataGrid>
+                </StackPanel>
+            </StackPanel>
         </DockPanel>
     </DockPanel>
 </UserControl>

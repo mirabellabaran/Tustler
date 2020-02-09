@@ -9,7 +9,7 @@ namespace Tustler.Models
 {
     public class VoicesViewModel
     {
-        public ObservableCollection<Voice> Voices
+        public ObservableCollection<Voices> Voices
         {
             get;
             private set;
@@ -23,7 +23,7 @@ namespace Tustler.Models
 
         public VoicesViewModel()
         {
-            this.Voices = new ObservableCollection<Voice>();
+            this.Voices = new ObservableCollection<Voices>();
             this.NeedsRefresh = true;
         }
 
@@ -47,9 +47,9 @@ namespace Tustler.Models
                 var voices = result.Result;
                 if (voices.Count > 0)
                 {
-                    static void AppendBucketCollection(ObservableCollection<Voice> collection, List<Amazon.Polly.Model.Voice> voices)
+                    static void AppendCollection(ObservableCollection<Voices> collection, List<Amazon.Polly.Model.Voice> voices)
                     {
-                        var items = from voice in voices select new Voice { Name = voice.LanguageName, LanguageCode = voice.LanguageCode.Value, Gender = voice.Gender.Value, SupportedEngines = voice.SupportedEngines };
+                        var items = from voice in voices select new Voices { Name = voice.LanguageName, LanguageCode = voice.LanguageCode.Value, Gender = voice.Gender.Value, SupportedEngines = voice.SupportedEngines };
 
                         collection.Clear();
                         foreach (var voice in items)
@@ -57,7 +57,7 @@ namespace Tustler.Models
                             collection.Add(voice);
                         }
                     };
-                    AppendBucketCollection(this.Voices, voices);
+                    AppendCollection(this.Voices, voices);
                 }
 
                 NeedsRefresh = false;
@@ -66,7 +66,7 @@ namespace Tustler.Models
 
     }
 
-    public class Voice
+    public class Voices
     {
         public string Name
         {

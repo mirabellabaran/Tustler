@@ -54,7 +54,21 @@ namespace Tustler.UserControls
         {
             var attributesInstance = this.FindResource("lexiconAttributesInstance") as LexiconAttributesViewModel;
             
-            await attributesInstance.Refresh(notifications, tbLexiconName.Text).ConfigureAwait(true);
+            await attributesInstance.Refresh(notifications, tbLexiconName.Text)
+                .ContinueWith(task => dgLexiconAttributes.HeadersVisibility = DataGridHeadersVisibility.All, TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
+        }
+
+        private void ListLexicons_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = true;
+        }
+
+        private async void ListLexicons_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            var lexiconsInstance = this.FindResource("lexiconsInstance") as LexiconsViewModel;
+
+            await lexiconsInstance.Refresh(notifications)
+                .ContinueWith(task => dgLexicons.HeadersVisibility = DataGridHeadersVisibility.All, TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
         }
     }
 
@@ -72,6 +86,14 @@ namespace Tustler.UserControls
             (
                 "GetLexicon",
                 "GetLexicon",
+                typeof(PollyCommands),
+                null
+            );
+
+        public static readonly RoutedUICommand ListLexicons = new RoutedUICommand
+            (
+                "ListLexicons",
+                "ListLexicons",
                 typeof(PollyCommands),
                 null
             );
