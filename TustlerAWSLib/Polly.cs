@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Amazon.Polly;
@@ -53,6 +54,11 @@ namespace TustlerAWSLib
             }
         }
 
+        /// <summary>
+        /// Get a user-defined lexicon by name
+        /// </summary>
+        /// <param name="lexiconName">The name of the user-defined lexicon</param>
+        /// <returns></returns>
         public async static Task<AWSResult<LexiconAttributes>> GetLexicon(string lexiconName)
         {
             try
@@ -82,6 +88,10 @@ namespace TustlerAWSLib
             }
         }
 
+        /// <summary>
+        /// List all user-defined lexicons
+        /// </summary>
+        /// <returns></returns>
         public async static Task<AWSResult<List<LexiconDescription>>> ListLexicons()
         {
             try
@@ -115,23 +125,68 @@ namespace TustlerAWSLib
                 return new AWSResult<List<LexiconDescription>>(null, new AWSException("ListLexicons", "An unknown condition has caused a service failure.", ex));
             }
         }
+
+        /// <summary>
+        /// Synthesize speech from the specified text and using the specified engine and voice
+        /// </summary>
+        /// <param name="text">The text to convert to an audio stream</param>
+        /// <param name="engine">The speech synthesis engine (standard or neural)</param>
+        /// <param name="voiceId">The Id of the voice to use for synthesis</param>
+        /// <returns></returns>
+        public async static Task<AWSResult<PollyResponse>> SynthesizeSpeech(string text, Engine engine, string voiceId = "Joanna")
+        {
+            var methodName = nameof(SynthesizeSpeech);
+            try
+            {
+                using (var client = new AmazonPollyClient())
+                {
+                    var request = new SynthesizeSpeechRequest
+                    {
+                        OutputFormat = "mp3",
+                        //SampleRate = "24000",     // use default: 22050 or 24000, depending on the engine type
+                        VoiceId = voiceId,
+                        Engine = engine,
+                        Text = text
+                    };
+                    var response = await client.SynthesizeSpeechAsync(request);
+
+                    MemoryStream audioStream = new MemoryStream();
+                    response.AudioStream.CopyTo(audioStream);
+
+                    var contentType = response.ContentType;
+                    var contentLength = response.ContentLength;
+
+                    // write to file and return the file path and content type
+                    return new AWSResult<PollyResponse>(new PollyResponse(audioStream, contentType, contentLength), null);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                return new AWSResult<PollyResponse>(null, new AWSException(methodName, "Not connected.", ex));
+            }
+            catch (LexiconNotFoundException ex)
+            {
+                return new AWSResult<PollyResponse>(null, new AWSException("SynthesizeSpeech", "Amazon Polly can't find the specified lexicon.", ex));
+            }
+            catch (EngineNotSupportedException ex)
+            {
+                return new AWSResult<PollyResponse>(null, new AWSException("SynthesizeSpeech", "This engine is not compatible with the voice that you have designated.", ex));
+            }
+            catch (TextLengthExceededException ex)
+            {
+                return new AWSResult<PollyResponse>(null, new AWSException("SynthesizeSpeech", "The supplied text is longer than the accepted limit of 6000 characters.", ex));
+            }
+            catch (ServiceFailureException ex)
+            {
+                return new AWSResult<PollyResponse>(null, new AWSException("SynthesizeSpeech", "An unknown condition has caused a service failure.", ex));
+            }
+        }
+
     }
 
 }
 
 
-//// PollyListLexicons list the available lexicons (alphabets and language codes)
-//func PollyListLexicons(pollyService* polly.Polly) (*string, error) {
-//	result, err := pollyService.ListLexicons(nil)
-
-//	if err != nil {
-//		msg := fmt.Sprintf("Unable to list lexicons\nTry changing the configured region")
-//		return nil, getTatorError("PollyListLexicons", msg, err)
-//	}
-
-//	lexicons, err := getJSONString(result)
-//	return lexicons, err
-//}
 
 //// PollySynthesizeSpeech create an audio file from the specified text file
 //func PollySynthesizeSpeech(pollyService* polly.Polly, inputString string, outputfileName string, outputFormat string, voiceID string) error {

@@ -18,6 +18,7 @@
         <CommandBinding Command="{x:Static uc:PollyCommands.ListVoices}" CanExecute="ListVoices_CanExecute" Executed="ListVoices_Executed" />
         <CommandBinding Command="{x:Static uc:PollyCommands.GetLexicon}" CanExecute="GetLexicon_CanExecute" Executed="GetLexicon_Executed" />
         <CommandBinding Command="{x:Static uc:PollyCommands.ListLexicons}" CanExecute="ListLexicons_CanExecute" Executed="ListLexicons_Executed" />
+        <CommandBinding Command="{x:Static uc:PollyCommands.SynthesizeSpeech}" CanExecute="SynthesizeSpeech_CanExecute" Executed="SynthesizeSpeech_Executed" />
     </UserControl.CommandBindings>
 
     <DockPanel>
@@ -28,6 +29,10 @@
                     <Button Content="List Voices" Command="{x:Static uc:PollyCommands.ListVoices}" Width="100" Height="40" Style="{StaticResource ButtonDark}" />
                     <DataGrid x:Name="dgVoices" Width="250" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource voicesInstance}, Path=Voices}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
                     </DataGrid>
+
+                    <MediaElement Name="mePlayer" LoadedBehavior="Manual" Stretch="None" />
+                    <TextBox x:Name="tbSpeechText" Style="{StaticResource TextBoxDark}" Margin="10, 0, 10, 0" Width="100" Height="30"/>
+                    <Button Content="Synthesize Speech" Command="{x:Static uc:PollyCommands.SynthesizeSpeech}" Width="100" Height="40" Style="{StaticResource ButtonDark}" />
                 </StackPanel>
 
                 <StackPanel Orientation="Vertical">
