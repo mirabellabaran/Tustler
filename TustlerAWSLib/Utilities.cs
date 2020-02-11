@@ -230,87 +230,9 @@ namespace TustlerAWSLib
 
 
 
-//// SNSListTopics list the SNS topics
-//func SNSListTopics(snsService* sns.SNS) (*string, error) {
-//	result, err := snsService.ListTopics(nil)
-//	if err != nil {
-//		msg := "List SNS topics failed"
-//		return nil, getTatorError("SNSListTopics", msg, err)
-//	}
 
-//	topics, err := getJSONString(result)
-//	return topics, err
-//}
 
-//// SNSSendMessageToTopic send a message to the specified topic
-//func SNSSendMessageToTopic(snsService* sns.SNS, topicARN string, message string) (*string, error) {
-//	input := &sns.PublishInput{
-//		Message:  aws.String(message),
-//		TopicArn: aws.String(topicARN),
-//	}
 
-//	result, err := snsService.Publish(input)
-//	if err != nil {
-//		msg := fmt.Sprintf("Failed to send message to topic %s", topicARN)
-//		return nil, getTatorError("SNSSendMessageToTopic", msg, err)
-//	}
-
-//	// return the MessageId
-//	output, err := getJSONString(result)
-//	return output, err
-//}
-
-//// SQSListQueues list the SQS queues
-//func SQSListQueues(sqsService* sqs.SQS) (*string, error) {
-//	result, err := sqsService.ListQueues(nil)
-//	if err != nil {
-//		msg := "List SQS queues failed"
-//		return nil, getTatorError("SQSListQueues", msg, err)
-//	}
-
-//	queues, err := getJSONString(result)
-//	return queues, err
-//}
-
-//// SQSReceiveMessage wait on a single message from the specified queue in long poll mode
-//// Note that this function can return both a result AND an error if the receive succeeds but the delete from queue fails
-//func SQSReceiveMessage(sqsService* sqs.SQS, queueURL string) (*string, error) {
-//	input := &sqs.ReceiveMessageInput{
-//		AttributeNames: []* string{
-//			aws.String(sqs.MessageSystemAttributeNameSentTimestamp),
-//		},
-//		MessageAttributeNames: []* string{
-//			aws.String(sqs.QueueAttributeNameAll),
-//		},
-//		QueueUrl:            &queueURL,
-//		MaxNumberOfMessages: aws.Int64(1),
-//		VisibilityTimeout:   aws.Int64(20), // seconds
-//		WaitTimeSeconds:     aws.Int64(20), // seconds
-//	}
-
-//	result, err := sqsService.ReceiveMessage(input)
-//	if err != nil {
-//		msg := fmt.Sprintf("Failed on receive message from queue %s", queueURL)
-//		return nil, getTatorError("SQSReceiveMessage", msg, err)
-//	}
-
-//	messages, err := getJSONString(result)
-
-//	// delete the message from the queue (note: MaxNumberOfMessages set to one above)
-//	if len(result.Messages) > 0 {
-//		_, err := sqsService.DeleteMessage(&sqs.DeleteMessageInput{
-//			QueueUrl:      &queueURL,
-//			ReceiptHandle: result.Messages[0].ReceiptHandle,
-//		})
-
-//		if err != nil {
-//			msg := fmt.Sprintf("Failed on delete message from queue %s", queueURL)
-//			return messages, getTatorError("SQSReceiveMessage", msg, err)
-//		}
-//	}
-
-//	return messages, err
-//}
 
 //// TranslateText translate the supplied text from the specified source language to the target language
 //func TranslateText(translateService* translate.Translate, sourceLanguageCode string, targetLanguageCode string, text string) (*string, error) {

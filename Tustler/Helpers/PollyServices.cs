@@ -15,23 +15,23 @@ namespace Tustler.Helpers
     /// </summary>
     public static class PollyServices
     {
-        public static async Task<AWSResult<PollyResponse>> SynthesizeSpeech(string text, bool useNeural, string voiceId = "Joanna")
+        public static async Task<AWSResult<PollyAudioStream>> SynthesizeSpeech(string text, bool useNeural, string voiceId = "Joanna")
         {
             return await Polly.SynthesizeSpeech(text, useNeural ? Engine.Neural : Engine.Standard, voiceId).ConfigureAwait(true);
         }
 
-        public static (MemoryStream AudioStream, string ContentType, long ContentLength) ProcessSynthesizeSpeechResult(NotificationsList notifications, AWSResult<PollyResponse> result)
+        public static (MemoryStream AudioStream, string ContentType) ProcessSynthesizeSpeechResult(NotificationsList notifications, AWSResult<PollyAudioStream> result)
         {
             if (result.IsError)
             {
                 notifications.HandleError(result);
-                return (null, null, 0);
+                return (null, null);
             }
             else
             {
                 var response = result.Result;
 
-                return (response.AudioStream, response.ContentType, response.ContentLength);
+                return (response.AudioStream, response.ContentType);
             }
         }
     }

@@ -26,7 +26,6 @@ namespace Tustler.UserControls
         // fields related to audio streaming
         private MemoryStream audioStream = null;
         private string contentType;
-        private long contentLength;
 
         public PollyFunctions()
         {
@@ -86,7 +85,7 @@ namespace Tustler.UserControls
         {
             var result = await Helpers.PollyServices.SynthesizeSpeech(tbSpeechText.Text, useNeural: true).ConfigureAwait(true);
 
-            (audioStream, contentType, contentLength) = Helpers.PollyServices.ProcessSynthesizeSpeechResult(notifications, result);
+            (audioStream, contentType) = Helpers.PollyServices.ProcessSynthesizeSpeechResult(notifications, result);
 
             if (audioStream != null)
             {

@@ -5,13 +5,13 @@ using System.Text;
 
 namespace TustlerAWSLib
 {
-    public class PollyResponse
+    public class PollyAudioStream
     {
-        public PollyResponse(MemoryStream audioStream, string contentType, long contentLength)
+        public PollyAudioStream(MemoryStream audioStream, string contentType)
         {
             this.AudioStream = audioStream;
             this.ContentType = contentType;
-            this.ContentLength = contentLength;
+            //this.ContentLength = contentLength;
         }
 
         public MemoryStream AudioStream
@@ -26,10 +26,10 @@ namespace TustlerAWSLib
             internal set;
         }
 
-        public long ContentLength
-        {
-            get;
-            internal set;
-        }
+        //public long ContentLength
+        //{
+        //    get;
+        //    internal set;
+        //}
     }
 }
