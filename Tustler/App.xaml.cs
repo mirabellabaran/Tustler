@@ -54,10 +54,18 @@ namespace Tustler
                 Directory.CreateDirectory(fileCachePath);
             }
 
-            // prepare the configuration
+            // prepare the configuration (file cache folder path, default S3 bucket name and the ARN for SNS notifications)
             var escapedPath = fileCachePath.Replace(@"\", @"/", StringComparison.InvariantCulture);
-            var folderConfig = $"\t\"{fileCacheFolderName}\": \"{escapedPath}\"";
-            string[] lines = { "{", folderConfig, "}" };
+            var fileCacheFolderConfig = $"\t\"{fileCacheFolderName}\": \"{escapedPath}\",";
+            var defaultBucketConfig = $"\t\"DefaultBucketName\": \"tator\",";
+            var notificationsARNConfig = $"\t\"NotificationsARN\": \"poo\"";
+            string[] lines = {
+                "{",
+                fileCacheFolderConfig,
+                defaultBucketConfig,
+                notificationsARNConfig,
+                "}"
+            };
 
             // write the configuration
             using (StreamWriter outputFile = new StreamWriter(appSettingsFileName))

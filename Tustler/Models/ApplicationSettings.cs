@@ -19,6 +19,22 @@ namespace Tustler.Models
             }
         }
 
+        public static string DefaultBucketName
+        {
+            get
+            {
+                return GetAppConfig().GetValue<string>("DefaultBucketName");
+            }
+        }
+
+        public static string NotificationsARN
+        {
+            get
+            {
+                return GetAppConfig().GetValue<string>("NotificationsARN");
+            }
+        }
+
         private static IConfigurationRoot GetAppConfig()
         {
             App current = Application.Current as App;

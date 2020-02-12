@@ -1,0 +1,75 @@
+﻿<UserControl x:Class="Tustler.UserControls.PollyFunctionSpeechTasks"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Tustler.Models"
+             xmlns:uc="clr-namespace:Tustler.UserControls"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <local:SpeechSynthesisTasksViewModel x:Key="speechTasksInstance" />
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <UserControl.CommandBindings>
+        <CommandBinding Command="{x:Static uc:PollyCommands.StartSpeechTask}" CanExecute="StartSpeechTask_CanExecute" Executed="StartSpeechTask_Executed" />
+    </UserControl.CommandBindings>
+    
+    <DockPanel Background="{StaticResource ContrastingBackground}" Margin="20">
+        <Grid ShowGridLines="True">
+            <Grid.Resources>
+                <!--<SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#535c60" />-->
+                <Style x:Key="buttonStyles" TargetType="Button" BasedOn="{StaticResource ButtonDark}">
+                    <Setter Property="Margin" Value="5" />
+                </Style>
+                <Style x:Key="textBlockStyles" TargetType="TextBlock">
+                    <Setter Property="Width" Value="300" />
+                    <Setter Property="TextAlignment" Value="Left" />
+                    <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+                    <Setter Property="VerticalAlignment" Value="Bottom" />
+                    <Setter Property="Margin" Value="0, 10, 0, 0" />
+                </Style>
+                <Style x:Key="textBoxStyles" TargetType="TextBox" BasedOn="{StaticResource TextBoxDark}">
+                    <Setter Property="Margin" Value="5" />
+                </Style>
+                <Style x:Key="comboBoxStyles" TargetType="ComboBox" BasedOn="{StaticResource ComboBoxDark}">
+                    <Setter Property="Margin" Value="10" />
+                </Style>
+            </Grid.Resources>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="40" />
+                <RowDefinition Height="40" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300 "/>
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="100" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Text="Path to a text file:" Grid.Row="0" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
+            <TextBox x:Name="tbTextFilePath" Grid.Row="1" Grid.Column="0" Style="{StaticResource textBoxStyles}" />
+
+            <TextBlock Text="Engine type:" Width="300" Grid.Row="0" Grid.Column="1" Style="{StaticResource textBlockStyles}" />
+            <ComboBox x:Name="cbEngine" Grid.Row="1" Grid.Column="1" Style="{StaticResource comboBoxStyles}">
+                <ComboBox.ItemContainerStyle>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Background" Value="Yellow"/>
+                        <Setter Property="Foreground" Value="Red"/>
+                    </Style>
+                </ComboBox.ItemContainerStyle>
+                <ComboBoxItem IsSelected="True" Tag="neural">Neural</ComboBoxItem>
+                <ComboBoxItem Tag="standard">Standard</ComboBoxItem>
+            </ComboBox>
+
+            <TextBlock Text="Voice Identifier:" Width="300" Grid.Row="0" Grid.Column="2" Style="{StaticResource textBlockStyles}" />
+            <ComboBox x:Name="cbVoice" Grid.Row="1" Grid.Column="2" Style="{StaticResource comboBoxStyles}">
+                <ComboBoxItem IsSelected="True">Joanna</ComboBoxItem>
+            </ComboBox>
+            <Button Content="Start Task" Grid.Row="1" Grid.Column="3" Style="{StaticResource buttonStyles}" Command="{x:Static uc:PollyCommands.StartSpeechTask}" />
+        </Grid>
+
+        <DataGrid x:Name="dgSpeechSynthesisTasks" Width="250" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource speechTasksInstance}, Path=SpeechSynthesisTasks}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2" />
+    </DockPanel>
+</UserControl>

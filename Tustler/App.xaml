@@ -20,6 +20,10 @@
             <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#535c60"/>
             <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="LightGray"/>
 
+            <Style TargetType="TabControl">
+                <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+            </Style>
+
             <Style TargetType="TreeView">
                 <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
             </Style>
@@ -51,6 +55,16 @@
             </Style>
 
             <Style TargetType="TextBlock" x:Key="TextBlockDark">
+                <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+                <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+            </Style>
+
+            <Style TargetType="ComboBox" x:Key="ComboBoxDark">
+                <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+                <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+            </Style>
+
+            <Style TargetType="ComboBoxItem" x:Key="ComboBoxItemDark">
                 <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
                 <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
             </Style>
