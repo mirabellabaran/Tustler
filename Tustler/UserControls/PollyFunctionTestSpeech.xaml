@@ -5,52 +5,61 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:uc="clr-namespace:Tustler.UserControls"
              xmlns:local="clr-namespace:Tustler.Models"
+             xmlns:ffme="clr-namespace:Unosquare.FFME;assembly=ffme.win"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
         <ResourceDictionary>
             <local:VoicesViewModel x:Key="voicesInstance" />
-            <local:LexiconsViewModel x:Key="lexiconsInstance" />
-            <local:LexiconAttributesViewModel x:Key="lexiconAttributesInstance" />
         </ResourceDictionary>
     </UserControl.Resources>
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static uc:PollyCommands.ListVoices}" CanExecute="ListVoices_CanExecute" Executed="ListVoices_Executed" />
-        <CommandBinding Command="{x:Static uc:PollyCommands.GetLexicon}" CanExecute="GetLexicon_CanExecute" Executed="GetLexicon_Executed" />
-        <CommandBinding Command="{x:Static uc:PollyCommands.ListLexicons}" CanExecute="ListLexicons_CanExecute" Executed="ListLexicons_Executed" />
         <CommandBinding Command="{x:Static uc:PollyCommands.SynthesizeSpeech}" CanExecute="SynthesizeSpeech_CanExecute" Executed="SynthesizeSpeech_Executed" />
     </UserControl.CommandBindings>
 
-    <DockPanel DockPanel.Dock="Bottom" Background="{StaticResource ContrastingBackground}" Margin="20">
+    <DockPanel Background="{StaticResource ContrastingBackground}" Margin="20">
         <StackPanel Orientation="Horizontal">
             <StackPanel Orientation="Vertical">
-                <TextBlock Style="{StaticResource TextBlockDark}" FontSize="16" Text="Voices:"/>
                 <Button Content="List Voices" Command="{x:Static uc:PollyCommands.ListVoices}" Width="100" Height="40" Style="{StaticResource ButtonDark}" />
-                <DataGrid x:Name="dgVoices" Width="250" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource voicesInstance}, Path=Voices}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
-                </DataGrid>
-
-                <MediaElement Name="mePlayer" LoadedBehavior="Manual" Stretch="None" />
-                <TextBox x:Name="tbSpeechText" Style="{StaticResource TextBoxDark}" Margin="10, 0, 10, 0" Width="100" Height="30"/>
-                <Button Content="Synthesize Speech" Command="{x:Static uc:PollyCommands.SynthesizeSpeech}" Width="100" Height="40" Style="{StaticResource ButtonDark}" />
+                <DataGrid x:Name="dgVoices" Width="400" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource voicesInstance}, Path=Voices}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2"></DataGrid>
             </StackPanel>
-
             <StackPanel Orientation="Vertical">
-                <TextBlock Style="{StaticResource TextBlockDark}" FontSize="16" Text="Lexicons:"/>
-                <Button Content="List Lexicons" Command="{x:Static uc:PollyCommands.ListLexicons}" Width="100" Height="40" Style="{StaticResource ButtonDark}" />
-                <DataGrid x:Name="dgLexicons" Width="250" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource lexiconsInstance}, Path=Lexicons}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2"></DataGrid>
-            </StackPanel>
+                <ffme:MediaElement Name="mePlayer" LoadedBehavior="Play" UnloadedBehavior="Manual" Stretch="None" MediaFailed="mePlayer_MediaFailed" />
 
-            <StackPanel Orientation="Vertical">
-                <TextBlock Style="{StaticResource TextBlockDark}" FontSize="16" Text="Lexicon Attributes:"/>
-                <StackPanel Orientation="Horizontal">
-                    <TextBox x:Name="tbLexiconName" Style="{StaticResource TextBoxDark}" Margin="10, 0, 10, 0" Width="100" Height="30"/>
-                    <Button Content="Get Lexicon" Command="{x:Static uc:PollyCommands.GetLexicon}" Width="100" Height="40" Style="{StaticResource ButtonDark}" />
-                </StackPanel>
-                <DataGrid x:Name="dgLexiconAttributes" Width="250" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource lexiconAttributesInstance}, Path=Attributes}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
-                    <!--<ItemsControl.ItemsSource>
-                            <col
-                        </ItemsControl.ItemsSource>-->
-                </DataGrid>
+                <Grid ShowGridLines="False" Margin="30, 10, 0, 0">
+                    <Grid.Resources>
+                        <Style x:Key="buttonStyles" TargetType="Button" BasedOn="{StaticResource ButtonDark}">
+                            <Setter Property="Margin" Value="5" />
+                            <Setter Property="Width" Value="130" />
+                            <Setter Property="Height" Value="40" />
+                        </Style>
+                        <Style x:Key="textBlockStyles" TargetType="TextBlock">
+                            <Setter Property="Width" Value="500" />
+                            <Setter Property="VerticalAlignment" Value="Top" />
+                            <Setter Property="TextAlignment" Value="Left" />
+                            <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+                            <Setter Property="Margin" Value="0, 50, 0, 0" />
+                        </Style>
+                        <Style x:Key="textBoxStyles" TargetType="TextBox" BasedOn="{StaticResource TextBoxDark}">
+                            <Setter Property="Margin" Value="5" />
+                            <Setter Property="Width" Value="500" />
+                            <Setter Property="Height" Value="30" />
+                        </Style>
+                    </Grid.Resources>
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                        <RowDefinition />
+                        <RowDefinition Height="100" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Enter some text:" Grid.Row="0" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
+
+                    <TextBox x:Name="tbSpeechText" Grid.Row="1" Grid.Column="0" Style="{StaticResource textBoxStyles}" />
+                    <Button Content="Synthesize Speech" Grid.Row="2" Grid.Column="0" Command="{x:Static uc:PollyCommands.SynthesizeSpeech}" Style="{StaticResource buttonStyles}" />
+                </Grid>
             </StackPanel>
         </StackPanel>
     </DockPanel>

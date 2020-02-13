@@ -42,6 +42,9 @@ namespace Tustler
                 .AddJsonFile(appSettingsFileName, optional: true, reloadOnChange: true);
 
             appConfig = builder.Build();
+
+            // set the path to the FFmpeg directory
+            Unosquare.FFME.Library.FFmpegDirectory = @"C:\Users\Zev\Downloads\ffmpeg-20191122-27c6c92-win64-shared\bin";
         }
 
         private void PrepareConfigurationFirstTimeExecution(string baseDirectory, string appSettingsFileName)

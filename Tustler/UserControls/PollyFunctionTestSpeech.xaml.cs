@@ -41,32 +41,6 @@ namespace Tustler.UserControls
                 .ContinueWith(task => dgVoices.HeadersVisibility = DataGridHeadersVisibility.All, TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
         }
 
-        private void GetLexicon_CanExecute(object sender, CanExecuteRoutedEventArgs e)
-        {
-            e.CanExecute = !string.IsNullOrEmpty(tbLexiconName.Text);
-        }
-
-        private async void GetLexicon_Executed(object sender, ExecutedRoutedEventArgs e)
-        {
-            var attributesInstance = this.FindResource("lexiconAttributesInstance") as LexiconAttributesViewModel;
-
-            await attributesInstance.Refresh(notifications, tbLexiconName.Text)
-                .ContinueWith(task => dgLexiconAttributes.HeadersVisibility = DataGridHeadersVisibility.All, TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
-        }
-
-        private void ListLexicons_CanExecute(object sender, CanExecuteRoutedEventArgs e)
-        {
-            e.CanExecute = true;
-        }
-
-        private async void ListLexicons_Executed(object sender, ExecutedRoutedEventArgs e)
-        {
-            var lexiconsInstance = this.FindResource("lexiconsInstance") as LexiconsViewModel;
-
-            await lexiconsInstance.Refresh(notifications)
-                .ContinueWith(task => dgLexicons.HeadersVisibility = DataGridHeadersVisibility.All, TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
-        }
-
         private void SynthesizeSpeech_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
             e.CanExecute = !string.IsNullOrEmpty(tbSpeechText.Text);
@@ -74,21 +48,31 @@ namespace Tustler.UserControls
 
         private async void SynthesizeSpeech_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var result = await Helpers.PollyServices.SynthesizeSpeech(tbSpeechText.Text, useNeural: true).ConfigureAwait(true);
+            var selectedVoice = (dgVoices.SelectedCells.Count > 0) ? (dgVoices.SelectedCells[0].Item as Voice) : null;
+            var voiceId = (selectedVoice is null) ? null : selectedVoice.Id;
+            var useNeural = (selectedVoice is null) ? true : selectedVoice.SupportedEngines.Contains("neural", StringComparison.InvariantCulture);
+
+            var result = await Helpers.PollyServices.SynthesizeSpeech(tbSpeechText.Text, useNeural, voiceId).ConfigureAwait(true);
 
             (audioStream, contentType) = Helpers.PollyServices.ProcessSynthesizeSpeechResult(notifications, result);
 
             if (audioStream != null)
             {
-                Helpers.AudioStreamer.StreamAudio(audioStream);
+                var prefix = "http://localhost:8000/audiostreamer/";    // must end in '/'
+                var task = Task.Run(() =>
+                {
+                    return Helpers.AudioStreamer.StreamAudioAsync(audioStream, contentType, prefix, notifications);
+                });
+
                 await Task.Delay(1000).ConfigureAwait(false);   // wait for socket to come alive
 
-                var uri = new Uri("http://127.0.0.0:12");
-
-                mePlayer.Source = uri;
-                mePlayer.Play();
+                await mePlayer.Open(new Uri(prefix));
             }
         }
 
+        private void mePlayer_MediaFailed(object sender, Unosquare.FFME.Common.MediaFailedEventArgs e)
+        {
+            notifications.HandleError("SynthesizeSpeech_Executed", "Audio streamer failed", e.ErrorException);
+        }
     }
 }

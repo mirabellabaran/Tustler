@@ -41,6 +41,11 @@ namespace Tustler.Models
             this.Add(new ApplicationErrorInfo { Context = ex.Context, Message = ex.Message, Exception = ex.InnerException});
         }
 
+        public void HandleError<T>(string context, string message, T ex) where T: Exception
+        {
+            this.Add(new ApplicationErrorInfo { Context = context, Message = message, Exception = ex });
+        }
+
         public void ShowMessage(string message, string detail)
         {
             this.Add(new ApplicationMessageInfo { Message = message, Detail = detail });
