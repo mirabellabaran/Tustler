@@ -16,6 +16,8 @@
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static uc:PollyCommands.ListVoices}" CanExecute="ListVoices_CanExecute" Executed="ListVoices_Executed" />
         <CommandBinding Command="{x:Static uc:PollyCommands.SynthesizeSpeech}" CanExecute="SynthesizeSpeech_CanExecute" Executed="SynthesizeSpeech_Executed" />
+        <CommandBinding Command="{x:Static uc:PollyCommands.ReplaySpeech}" CanExecute="ReplaySpeech_CanExecute" Executed="ReplaySpeech_Executed" />
+        <CommandBinding Command="{x:Static uc:PollyCommands.SaveSynthesizedSpeech}" CanExecute="SaveSynthesizedSpeech_CanExecute" Executed="SaveSynthesizedSpeech_Executed" />
     </UserControl.CommandBindings>
 
     <DockPanel Background="{StaticResource ContrastingBackground}" Margin="20">
@@ -39,12 +41,30 @@
                             <Setter Property="VerticalAlignment" Value="Top" />
                             <Setter Property="TextAlignment" Value="Left" />
                             <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
-                            <Setter Property="Margin" Value="0, 50, 0, 0" />
+                            <Setter Property="Margin" Value="0, 20, 0, 0" />
                         </Style>
-                        <Style x:Key="textBoxStyles" TargetType="TextBox" BasedOn="{StaticResource TextBoxDark}">
+                        <Style x:Key="textBoxStyles" TargetType="TextBox" BasedOn="{StaticResource TextBoxDark}" xmlns:sys="clr-namespace:System;assembly=mscorlib">
+                            <Style.Resources>
+                                <VisualBrush x:Key="CueBannerBrush" AlignmentX="Left" AlignmentY="Top" Stretch="None">
+                                    <VisualBrush.Visual>
+                                        <Label Content="Enter some text" />
+                                    </VisualBrush.Visual>
+                                </VisualBrush>
+                            </Style.Resources>
                             <Setter Property="Margin" Value="5" />
                             <Setter Property="Width" Value="500" />
-                            <Setter Property="Height" Value="30" />
+                            <Setter Property="Height" Value="200" />
+                            <Style.Triggers>
+                                <Trigger Property="Text" Value="{x:Static sys:String.Empty}">
+                                    <Setter Property="Background" Value="{StaticResource CueBannerBrush}" />
+                                </Trigger>
+                                <Trigger Property="Text" Value="{x:Null}">
+                                    <Setter Property="Background" Value="{StaticResource CueBannerBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+                                </Trigger>
+                            </Style.Triggers>
                         </Style>
                     </Grid.Resources>
                     <Grid.RowDefinitions>
@@ -55,10 +75,28 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Enter some text:" Grid.Row="0" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
+                    <TextBlock Text="" Grid.Row="0" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
 
-                    <TextBox x:Name="tbSpeechText" Grid.Row="1" Grid.Column="0" Style="{StaticResource textBoxStyles}" />
-                    <Button Content="Synthesize Speech" Grid.Row="2" Grid.Column="0" Command="{x:Static uc:PollyCommands.SynthesizeSpeech}" Style="{StaticResource buttonStyles}" />
+                    <TextBox x:Name="tbSpeechText" Grid.Row="1" Grid.Column="0" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Visible" TextChanged="tbSpeechText_TextChanged" Style="{StaticResource textBoxStyles}" />
+                    <UniformGrid Rows="1" Columns="3" Grid.Row="2" Grid.Column="0">
+                        <Button Grid.Row="0" Grid.Column="0" Content="Synthesize Speech" HorizontalAlignment="Center" Command="{x:Static uc:PollyCommands.SynthesizeSpeech}" Style="{StaticResource buttonStyles}" />
+                            <!--<Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource buttonStyles}">
+                                    <Setter Property="Content" Value="Synthesize Speech" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=uc:PollyFunctionTestSpeech}, Path=IsAudioStreamDefined}" Value="True">
+                                            <Setter Property="Content" Value="Replay Speech" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=uc:PollyFunctionTestSpeech}, Path=IsAudioStreamDefined}" Value="False">
+                                            <Setter Property="Content" Value="Synthesize Speech" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>-->
+                        <Button Grid.Row="0" Grid.Column="1" Content="Replay Speech" HorizontalAlignment="Center" Command="{x:Static uc:PollyCommands.ReplaySpeech}" Style="{StaticResource buttonStyles}" />
+                        <Button Grid.Row="0" Grid.Column="2" Content="Save Speech" HorizontalAlignment="Center" Command="{x:Static uc:PollyCommands.SaveSynthesizedSpeech}" Style="{StaticResource buttonStyles}" />
+                    </UniformGrid>
                 </Grid>
             </StackPanel>
         </StackPanel>

@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.IO;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Tustler.Models;
@@ -15,8 +17,8 @@ namespace Tustler.UserControls
         private readonly NotificationsList notifications;
 
         // fields related to audio streaming
-        private MemoryStream audioStream = null;
-        private string contentType;
+        internal MemoryStream audioStream = null;
+        internal string contentType;
 
         public PollyFunctionTestSpeech()
         {
@@ -24,6 +26,8 @@ namespace Tustler.UserControls
 
             notifications = this.FindResource("applicationNotifications") as NotificationsList;
         }
+
+        public bool IsAudioStreamDefined => audioStream != null;
 
         private void ListVoices_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
@@ -55,8 +59,65 @@ namespace Tustler.UserControls
             var result = await Helpers.PollyServices.SynthesizeSpeech(tbSpeechText.Text, useNeural, voiceId).ConfigureAwait(true);
 
             (audioStream, contentType) = Helpers.PollyServices.ProcessSynthesizeSpeechResult(notifications, result);
+            CommandManager.InvalidateRequerySuggested();
 
-            if (audioStream != null)
+            await PlayAudioStream().ConfigureAwait(true);
+        }
+
+        private void ReplaySpeech_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = IsAudioStreamDefined;
+        }
+
+        private async void ReplaySpeech_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            await PlayAudioStream().ConfigureAwait(true);
+        }
+
+        private void SaveSynthesizedSpeech_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = IsAudioStreamDefined;
+        }
+
+        private async void SaveSynthesizedSpeech_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            SaveFileDialog dlg = new SaveFileDialog
+            {
+                Title = "Choose a destination",
+                InitialDirectory = ApplicationSettings.FileCachePath
+            };
+
+            Nullable<bool> result = dlg.ShowDialog();
+            if (result == true)
+            {
+                var filePath = dlg.FileName;
+                if (!Path.HasExtension(filePath))
+                {
+                    var extension = TustlerServicesLib.MimeTypeDictionary.GetExtensionFromMimeType(contentType);
+                    filePath = Path.ChangeExtension(filePath, extension);
+                }
+                using (FileStream fileStream = File.Create(filePath, (int)audioStream.Length))
+                {
+                    audioStream.Seek(0, SeekOrigin.Begin);
+                    await audioStream.CopyToAsync(fileStream).ConfigureAwait(false);
+                    fileStream.Close();
+                }
+            }
+        }
+
+        private void mePlayer_MediaFailed(object sender, Unosquare.FFME.Common.MediaFailedEventArgs e)
+        {
+            notifications.HandleError("SynthesizeSpeech_Executed", "Audio streamer failed", e.ErrorException);
+        }
+
+        private void tbSpeechText_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            audioStream = null;     // prevent replay
+        }
+
+        private async Task PlayAudioStream()
+        {
+            if (IsAudioStreamDefined)
             {
                 var prefix = "http://localhost:8000/audiostreamer/";    // must end in '/'
                 var task = Task.Run(() =>
@@ -70,9 +131,5 @@ namespace Tustler.UserControls
             }
         }
 
-        private void mePlayer_MediaFailed(object sender, Unosquare.FFME.Common.MediaFailedEventArgs e)
-        {
-            notifications.HandleError("SynthesizeSpeech_Executed", "Audio streamer failed", e.ErrorException);
-        }
     }
 }

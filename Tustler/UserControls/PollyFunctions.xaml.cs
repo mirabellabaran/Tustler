@@ -62,6 +62,22 @@ namespace Tustler.UserControls
                 null
             );
 
+        public static readonly RoutedUICommand ReplaySpeech = new RoutedUICommand
+            (
+                "ReplaySpeech",
+                "ReplaySpeech",
+                typeof(PollyCommands),
+                null
+            );
+
+        public static readonly RoutedUICommand SaveSynthesizedSpeech = new RoutedUICommand
+            (
+                "SaveSynthesizedSpeech",
+                "SaveSynthesizedSpeech",
+                typeof(PollyCommands),
+                null
+            );
+
         public static readonly RoutedUICommand StartSpeechTask = new RoutedUICommand
             (
                 "StartSpeechTask",
