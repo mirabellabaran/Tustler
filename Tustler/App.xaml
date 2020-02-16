@@ -36,10 +36,6 @@
                 <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
             </Style>
 
-            <Style TargetType="Label">
-                <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
-            </Style>
-
             <Style TargetType="DataGrid">
                 <Setter Property="Background" Value="{StaticResource NormalBackground}" />
             </Style>
@@ -55,6 +51,11 @@
             </Style>
 
             <Style TargetType="TextBlock" x:Key="TextBlockDark">
+                <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+                <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+            </Style>
+
+            <Style TargetType="Label" x:Key="LabelDark">
                 <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
                 <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
             </Style>

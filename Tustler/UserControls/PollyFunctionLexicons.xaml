@@ -22,19 +22,51 @@
     <DockPanel Background="{StaticResource ContrastingBackground}" Margin="20">
         <StackPanel Orientation="Horizontal">
             <StackPanel Orientation="Vertical">
-                <TextBlock Style="{StaticResource TextBlockDark}" FontSize="16" Text="Lexicons:"/>
+                <!--<TextBlock Style="{StaticResource TextBlockDark}" FontSize="16" Text="Lexicons:"/>-->
                 <Button Content="List Lexicons" Command="{x:Static uc:PollyCommands.ListLexicons}" Width="100" Height="40" Style="{StaticResource ButtonDark}" />
-                <DataGrid x:Name="dgLexicons" Width="250" Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource lexiconsInstance}, Path=Lexicons}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
+                <DataGrid x:Name="dgLexicons" Width="800" Height="300" Margin="10" AutoGenerateColumns="False" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource lexiconsInstance}, Path=Lexicons}" RowBackground="{StaticResource ContrastingBackground}">
+                    <DataGrid.Resources>
+                        <Style x:Key="textStyles" TargetType="TextBlock" BasedOn="{StaticResource TextBlockDark}">
+                            <Setter Property="HorizontalAlignment" Value="Left" />
+                            <Setter Property="Margin" Value="5" />
+                        </Style>
+                        <Style TargetType="Label" BasedOn="{StaticResource LabelDark}">
+                            <Setter Property="Foreground" Value="Black" />
+                            <Setter Property="FontWeight" Value="DemiBold" />
+                            <Setter Property="HorizontalAlignment" Value="Right" />
+                        </Style>
+                    </DataGrid.Resources>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Lexicon Name: " Binding="{Binding Path=Name}" />
+                    </DataGrid.Columns>
                     <DataGrid.RowDetailsTemplate>
                         <DataTemplate>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding Path=Attributes.Alphabet}" Margin="10" />
-                                <TextBlock Text="{Binding Path=Attributes.LanguageCode}" Margin="10" />
-                                <TextBlock Text="{Binding Path=Attributes.LastModified}" Margin="10" />
-                                <TextBlock Text="{Binding Path=Attributes.LexemesCount}" Margin="10" />
-                                <TextBlock Text="{Binding Path=Attributes.LexiconArn}" Margin="10" />
-                                <TextBlock Text="{Binding Path=Attributes.Size}" Margin="10" />
-                            </StackPanel>
+                            <Grid ShowGridLines="False">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120" />
+                                    <ColumnDefinition />
+                                </Grid.ColumnDefinitions>
+                                <Label Grid.Row="0" Grid.Column="0" Content="Alphabet: "/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Path=Attributes.Alphabet}" Style="{StaticResource textStyles}" />
+                                <Label Grid.Row="1" Grid.Column="0" Content="Language Code: "/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path=Attributes.LanguageCode}" Style="{StaticResource textStyles}" />
+                                <Label Grid.Row="2" Grid.Column="0" Content="Last Modified: "/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Path=Attributes.LastModified, StringFormat=D}" Style="{StaticResource textStyles}" />
+                                <Label Grid.Row="3" Grid.Column="0" Content="Lexemes Count: "/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Path=Attributes.LexemesCount}" Style="{StaticResource textStyles}" />
+                                <Label Grid.Row="4" Grid.Column="0" Content="ARN: "/>
+                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Path=Attributes.LexiconArn}" Style="{StaticResource textStyles}" />
+                                <Label Grid.Row="5" Grid.Column="0" Content="Size: "/>
+                                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Path=Attributes.Size}" Style="{StaticResource textStyles}" />
+                            </Grid>
                         </DataTemplate>
                     </DataGrid.RowDetailsTemplate>
                 </DataGrid>
