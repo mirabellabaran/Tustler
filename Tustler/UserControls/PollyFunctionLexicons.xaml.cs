@@ -56,8 +56,7 @@ namespace Tustler.UserControls
             var lexiconsInstance = this.FindResource("lexiconsInstance") as LexiconsViewModel;
 
             await lexiconsInstance.Refresh(notifications)
-                .ContinueWith(task => (
-                    dgLexicons.Items.Count > 0) ?
+                .ContinueWith(task => (dgLexicons.Items.Count > 0) ?
                         dgLexicons.HeadersVisibility = DataGridHeadersVisibility.All :
                         dgLexicons.HeadersVisibility = DataGridHeadersVisibility.None,
                         TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -22,7 +23,8 @@ namespace Tustler.UserControls
 
         private void StartSpeechTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = !string.IsNullOrEmpty(tbTextFilePath.Text);
+            e.CanExecute = !string.IsNullOrEmpty(tbTextFilePath.Text)
+                && File.Exists(tbTextFilePath.Text);
         }
 
         private async void StartSpeechTask_Executed(object sender, ExecutedRoutedEventArgs e)
@@ -34,11 +36,14 @@ namespace Tustler.UserControls
             string arn = ApplicationSettings.NotificationsARN;
             string filePath = tbTextFilePath.Text;
             bool useNeural = (string)(cbEngine.SelectedItem as ComboBoxItem).Tag == "neural";
-            string voiceId = cbVoice.SelectedItem as string;
+            string voiceId = (cbVoice.SelectedItem as ComboBoxItem).Content as string;
 
             // refresh and then enable the headers
             await speechTasksInstance.Refresh(notifications, bucketName, key, arn, filePath, useNeural, voiceId)
-                .ContinueWith(task => dgSpeechSynthesisTasks.HeadersVisibility = DataGridHeadersVisibility.All, TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
+                .ContinueWith(task => (dgSpeechSynthesisTasks.Items.Count > 0) ?
+                        dgSpeechSynthesisTasks.HeadersVisibility = DataGridHeadersVisibility.All :
+                        dgSpeechSynthesisTasks.HeadersVisibility = DataGridHeadersVisibility.None,
+                        TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using log4net;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -16,6 +17,7 @@ namespace Tustler
     /// </summary>
     public partial class App : Application
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(App));
         private IConfigurationRoot appConfig;
 
         public IConfigurationRoot AppConfig
@@ -28,6 +30,12 @@ namespace Tustler
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
+            //log4net.Config.XmlConfigurator.ConfigureAndWatch();
+            log.Info("        =============  Started Logging  =============        ");
+
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+            TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+
             var appSettingsFileName = "appsettings.json";
             var baseDirectory = System.AppContext.BaseDirectory;
 
@@ -47,6 +55,27 @@ namespace Tustler
             Unosquare.FFME.Library.FFmpegDirectory = @"C:\Users\Zev\Downloads\ffmpeg-20191122-27c6c92-win64-shared\bin";
         }
 
+        private void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
+        {
+            // an awaited task has generated an unobserved exception; record it and set it as observed
+            Exception ex = e.Exception as AggregateException;
+
+            var notifications = this.FindResource("applicationNotifications") as NotificationsList;
+
+            // note that there may be more than one wrapped exception; here just show the first one
+            Dispatcher.Invoke(() => notifications.HandleError("TaskScheduler_UnobservedTaskException", ex.InnerException.Message, ex.InnerException));
+
+            e.SetObserved();
+        }
+
+        private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            Exception ex = e.ExceptionObject as Exception;
+
+            log.Error($"CurrentDomain_UnhandledException: IsTerminating = {e.IsTerminating}", ex);
+            Application.Current.Shutdown();
+        }
+
         private void PrepareConfigurationFirstTimeExecution(string baseDirectory, string appSettingsFileName)
         {
             var fileCacheFolderName = "FileCache";
@@ -61,7 +90,7 @@ namespace Tustler
             var escapedPath = fileCachePath.Replace(@"\", @"/", StringComparison.InvariantCulture);
             var fileCacheFolderConfig = $"\t\"{fileCacheFolderName}\": \"{escapedPath}\",";
             var defaultBucketConfig = $"\t\"DefaultBucketName\": \"tator\",";
-            var notificationsARNConfig = $"\t\"NotificationsARN\": \"poo\"";
+            var notificationsARNConfig = $"\t\"NotificationsARN\": \"arn:aws:sns:ap-southeast-2:261914005867:TatorNotifications\"";
             string[] lines = {
                 "{",
                 fileCacheFolderConfig,
@@ -77,6 +106,5 @@ namespace Tustler
                     outputFile.WriteLine(line);
             }
         }
-
     }
 }
