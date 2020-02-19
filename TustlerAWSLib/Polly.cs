@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Amazon.Polly;
 using Amazon.Polly.Model;
@@ -133,7 +134,7 @@ namespace TustlerAWSLib
         /// <param name="engine">The speech synthesis engine (standard or neural)</param>
         /// <param name="voiceId">The Id of the voice to use for synthesis</param>
         /// <returns></returns>
-        public async static Task<AWSResult<PollyAudioStream>> SynthesizeSpeech(string text, Engine engine, string voiceId = "Joanna")
+        public async static Task<AWSResult<PollyAudioStream>> SynthesizeSpeech(string text, Engine engine, string voiceId)
         {
             try
             {
@@ -190,7 +191,7 @@ namespace TustlerAWSLib
         /// <param name="engine">The speech synthesis engine (standard or neural)</param>
         /// <param name="voiceId">The Id of the voice to use for synthesis</param>
         /// <returns>The task state, taskId and other task parameters</returns>
-        public async static Task<AWSResult<SynthesisTask>> StartSpeechSynthesisTask(string bucketName, string key, string arn, string text, Engine engine, string voiceId = "Joanna")
+        public async static Task<AWSResult<SynthesisTask>> StartSpeechSynthesisTask(string bucketName, string key, string arn, string text, Engine engine, string voiceId)
         {
             try
             {
@@ -255,18 +256,27 @@ namespace TustlerAWSLib
         /// <param name="engine">The speech synthesis engine (standard or neural)</param>
         /// <param name="voiceId">The Id of the voice to use for synthesis</param>
         /// <returns>The task state, taskId and other task parameters</returns>
-        public async static Task<AWSResult<SynthesisTask>> StartSpeechSynthesisTaskFromFile(string bucketName, string key, string arn, string filePath, Engine engine, string voiceId = "Joanna")
+        public async static Task<AWSResult<SynthesisTask>> StartSpeechSynthesisTaskFromFile(string bucketName, string key, string arn, string filePath, Engine engine, string voiceId)
         {
             string text;
 
             try
             {
-                text = File.ReadAllText(filePath);
+                // read the file into a binary array
+                var bytes = await File.ReadAllBytesAsync(filePath);
+
+                // check that the data is compatible with a utf-8 encoding (otherwise it may be binary)
+                Encoding enc = Encoding.GetEncoding("utf-8", new EncoderExceptionFallback(), new DecoderExceptionFallback());
+                var decoder = enc.GetDecoder();
+                int count = decoder.GetCharCount(bytes, 0, bytes.Length);
+                char[] chars = new char[count];
+                enc.GetDecoder().GetChars(bytes, 0, bytes.Length, chars, 0);
+
+                text = new string(chars);
             }
-            catch (NotSupportedException ex)
+            catch (DecoderFallbackException ex)
             {
-                // TODO what exception is generated if filePath is binary???
-                return new AWSResult<SynthesisTask>(null, new AWSException(nameof(StartSpeechSynthesisTaskFromFile), "An unknown condition has caused a service failure.", ex));
+                return new AWSResult<SynthesisTask>(null, new AWSException(nameof(StartSpeechSynthesisTaskFromFile), "The file contains non-text sequences.", ex));
             }
 
             return await StartSpeechSynthesisTask(bucketName, key, arn, text, engine, voiceId);

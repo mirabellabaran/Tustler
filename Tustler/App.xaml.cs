@@ -90,12 +90,14 @@ namespace Tustler
             var escapedPath = fileCachePath.Replace(@"\", @"/", StringComparison.InvariantCulture);
             var fileCacheFolderConfig = $"\t\"{fileCacheFolderName}\": \"{escapedPath}\",";
             var defaultBucketConfig = $"\t\"DefaultBucketName\": \"tator\",";
-            var notificationsARNConfig = $"\t\"NotificationsARN\": \"arn:aws:sns:ap-southeast-2:261914005867:TatorNotifications\"";
+            var notificationsARNConfig = $"\t\"NotificationsARN\": \"arn:aws:sns:ap-southeast-2:261914005867:TatorNotifications\",";
+            var notificationsQueueConfig = $"\t\"NotificationsQueue\": \"https://sqs.ap-southeast-2.amazonaws.com/261914005867/TatorQueue\"";
             string[] lines = {
                 "{",
                 fileCacheFolderConfig,
                 defaultBucketConfig,
                 notificationsARNConfig,
+                notificationsQueueConfig,
                 "}"
             };
 

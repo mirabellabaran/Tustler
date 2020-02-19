@@ -35,6 +35,14 @@ namespace Tustler.Models
             }
         }
 
+        public static string NotificationsQueue
+        {
+            get
+            {
+                return GetAppConfig().GetValue<string>("NotificationsQueue");
+            }
+        }
+
         private static IConfigurationRoot GetAppConfig()
         {
             App current = Application.Current as App;

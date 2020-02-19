@@ -53,7 +53,7 @@ namespace TustlerAWSLib
         /// </summary>
         /// <param name="topicARN">The address of the topic</param>
         /// <param name="message">The text message to send</param>
-        /// <returns></returns>
+        /// <returns>The message ID</returns>
         public async static Task<AWSResult<string>> Publish(string topicARN, string message)
         {
             try

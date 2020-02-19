@@ -86,5 +86,21 @@ namespace Tustler.UserControls
                 null
             );
 
+        public static readonly RoutedUICommand RefreshTaskList = new RoutedUICommand
+            (
+                "RefreshTaskList",
+                "RefreshTaskList",
+                typeof(PollyCommands),
+                null
+            );
+
+        public static readonly RoutedUICommand TestNotifications = new RoutedUICommand
+            (
+                "TestNotifications",
+                "TestNotifications",
+                typeof(PollyCommands),
+                null
+            );
+
     }
 }

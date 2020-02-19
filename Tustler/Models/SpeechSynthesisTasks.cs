@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -15,33 +16,91 @@ namespace Tustler.Models
             private set;
         }
 
-        public bool NeedsRefresh
-        {
-            get;
-            set;
-        }
+        //public bool NeedsRefresh
+        //{
+        //    get;
+        //    set;
+        //}
 
         public SpeechSynthesisTasksViewModel()
         {
             this.SpeechSynthesisTasks = new ObservableCollection<SpeechSynthesisTask>();
-            this.NeedsRefresh = true;
+            //this.NeedsRefresh = true;
         }
 
-        public async Task Refresh(NotificationsList notifications, string bucketName, string key, string arn, string filePath, bool useNeural, string voiceId = "Joanna")
+        /// <summary>
+        /// Create a new speech synthesis task and add to the task list
+        /// </summary>
+        /// <param name="notifications">A reference to the global notifications list</param>
+        /// <param name="bucketName">The name of an S3 bucket to receive the synthesized output</param>
+        /// <param name="key">The key prefix used to store the output within an S3 bucket</param>
+        /// <param name="arn">The address (ARN) of the SNS topic used for providing status notification</param>
+        /// <param name="filePath">The path to a file containing the text to convert to an audio stream</param>
+        /// <param name="useNeural">If true then use the neural speech synthesis engine, otherwise use the standard engine</param>
+        /// <param name="voiceId">The Id of the voice to use for synthesis</param>
+        /// <returns></returns>
+        public async Task<string> AddNewTask(NotificationsList notifications, string bucketName, string key, string arn, string filePath, bool useNeural, string voiceId)
         {
-            if (NeedsRefresh)
-            {
-                var engine = useNeural ? Engine.Neural : Engine.Standard;
-                var result = await TustlerAWSLib.Polly.StartSpeechSynthesisTaskFromFile(bucketName, key, arn, filePath, engine, voiceId).ConfigureAwait(true);
-                ProcessPollyNewSpeechSynthesisTask(notifications, result);
-            }
+            var engine = useNeural ? Engine.Neural : Engine.Standard;
+            var result = await TustlerAWSLib.Polly.StartSpeechSynthesisTaskFromFile(bucketName, key, arn, filePath, engine, voiceId).ConfigureAwait(true);
+            return ProcessPollyNewSpeechSynthesisTask(notifications, result);
         }
 
-        private void ProcessPollyNewSpeechSynthesisTask(NotificationsList notifications, TustlerAWSLib.AWSResult<Amazon.Polly.Model.SynthesisTask> result)
+        /// <summary>
+        /// Fetch a list of all known speech synthesis tasks
+        /// </summary>
+        /// <returns></returns>
+        public async Task ListTasks(NotificationsList notifications)
+        {
+            var result = await TustlerAWSLib.Polly.ListSpeechSynthesisTasks().ConfigureAwait(true);
+            ProcessPollySpeechSynthesisTasks(notifications, result);
+        }
+
+        private void ProcessPollySpeechSynthesisTasks(NotificationsList notifications, TustlerAWSLib.AWSResult<List<Amazon.Polly.Model.SynthesisTask>> result)
         {
             if (result.IsError)
             {
                 notifications.HandleError(result);
+            }
+            else
+            {
+                var tasks = result.Result.Select(task => new SpeechSynthesisTask
+                {
+                    TaskId = task.TaskId,
+                    TaskStatus = task.TaskStatus,
+                    TaskStatusReason = task.TaskStatusReason,
+                    CreationTime = task.CreationTime,
+                    Engine = task.Engine,
+                    LanguageCode = task.LanguageCode,
+                    LexiconNames = string.Join(", ", task.LexiconNames),
+                    OutputFormat = task.OutputFormat,
+                    OutputUri = task.OutputUri,
+                    SampleRate = task.SampleRate,
+                    SnsTopicArn = task.SnsTopicArn,
+                    VoiceId = task.VoiceId
+                });
+
+                this.SpeechSynthesisTasks.Clear();
+
+                foreach (var task in tasks)
+                {
+                    this.SpeechSynthesisTasks.Add(task);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Process the result from adding a new task
+        /// </summary>
+        /// <param name="notifications">A reference to the global notifications list</param>
+        /// <param name="result">The result to process</param>
+        /// <returns>The task Id</returns>
+        private string ProcessPollyNewSpeechSynthesisTask(NotificationsList notifications, TustlerAWSLib.AWSResult<Amazon.Polly.Model.SynthesisTask> result)
+        {
+            if (result.IsError)
+            {
+                notifications.HandleError(result);
+                return null;
             }
             else
             {
@@ -54,7 +113,7 @@ namespace Tustler.Models
                     CreationTime = task.CreationTime,
                     Engine = task.Engine,
                     LanguageCode = task.LanguageCode,
-                    LexiconNames = task.LexiconNames,
+                    LexiconNames = string.Join(", ", task.LexiconNames),
                     OutputFormat = task.OutputFormat,
                     OutputUri = task.OutputUri,
                     SampleRate = task.SampleRate,
@@ -62,7 +121,8 @@ namespace Tustler.Models
                     VoiceId = task.VoiceId
                 });
 
-                NeedsRefresh = false;
+                //NeedsRefresh = false;
+                return task.TaskId;
             }
         }
 
@@ -106,7 +166,7 @@ namespace Tustler.Models
             internal set;
         }
 
-        public List<string> LexiconNames
+        public string LexiconNames
         {
             get;
             internal set;
