@@ -220,6 +220,8 @@ namespace Tustler
                     // fallthru
                 case "credentials":
                 // fallthru
+                case "translate":
+                // fallthru
                 case "polly":
                     SwitchForm(tag);
                     handled = true;
@@ -248,6 +250,9 @@ namespace Tustler
                     break;
                 case "polly":
                     panControlsContainer.Children.Add(new PollyFunctions());
+                    break;
+                case "translate":
+                    panControlsContainer.Children.Add(new TranslateFunctions());
                     break;
             }
         }

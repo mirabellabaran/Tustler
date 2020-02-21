@@ -1,0 +1,24 @@
+﻿<UserControl x:Class="Tustler.UserControls.TranslateFunctions"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Tustler.Models"
+             xmlns:uc="clr-namespace:Tustler.UserControls"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <DockPanel>
+        <TabControl Margin="20">
+            <TabItem Header="Manage Translation Tasks" Width="150">
+                <uc:TranslateFunctionTranslationTasks />
+            </TabItem>
+            <TabItem Header="Test Translations" Width="150">
+                <uc:TranslateFunctionTestTranslations />
+            </TabItem>
+            <TabItem Header="Manage Terminologies" Width="150">
+                <uc:TranslateFunctionTerminologies/>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+
+</UserControl>

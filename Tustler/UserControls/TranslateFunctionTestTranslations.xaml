@@ -1,0 +1,79 @@
+﻿<UserControl x:Class="Tustler.UserControls.TranslateFunctionTestTranslations"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Tustler.Models"
+             xmlns:uc="clr-namespace:Tustler.UserControls"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <local:LanguageCodesViewModel x:Key="languageCodesInstance" />
+    </UserControl.Resources>
+    <UserControl.CommandBindings>
+        <CommandBinding Command="{x:Static uc:TranslateCommands.TranslateText}" CanExecute="TranslateText_CanExecute" Executed="TranslateText_Executed" />
+        <CommandBinding Command="{x:Static uc:TranslateCommands.SaveTranslation}" CanExecute="SaveTranslation_CanExecute" Executed="SaveTranslation_Executed" />
+    </UserControl.CommandBindings>
+    <DockPanel>
+        <Grid ShowGridLines="False" Margin="30, 10, 0, 0">
+            <Grid.Resources>
+                <Style x:Key="buttonStyles" TargetType="Button" BasedOn="{StaticResource ButtonDark}">
+                    <Setter Property="Margin" Value="5" />
+                    <Setter Property="Width" Value="130" />
+                    <Setter Property="Height" Value="40" />
+                </Style>
+                <Style x:Key="textBoxStyles" TargetType="TextBox" BasedOn="{StaticResource TextBoxDark}" xmlns:sys="clr-namespace:System;assembly=mscorlib">
+                    <Style.Resources>
+                        <VisualBrush x:Key="CueBannerBrush" AlignmentX="Left" AlignmentY="Top" Stretch="None">
+                            <VisualBrush.Visual>
+                                <Label Content="Enter some text to translate" />
+                            </VisualBrush.Visual>
+                        </VisualBrush>
+                    </Style.Resources>
+                    <Setter Property="Margin" Value="10" />
+                    <Style.Triggers>
+                        <Trigger Property="Text" Value="{x:Static sys:String.Empty}">
+                            <Setter Property="Background" Value="{StaticResource CueBannerBrush}" />
+                        </Trigger>
+                        <Trigger Property="Text" Value="{x:Null}">
+                            <Setter Property="Background" Value="{StaticResource CueBannerBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+                <DataTemplate x:Key="comboBoxItemTempate">
+                    <TextBlock Text="{Binding Path=Name}" />
+                </DataTemplate>
+            </Grid.Resources>
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition Height="100" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100"/>
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+
+            <ComboBox x:Name="cbSourceLanguage" Grid.Row="0" Grid.Column="0" Height="30" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource languageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource comboBoxItemTempate}" SelectedValue="en" SelectedValuePath="Code">
+                <ComboBox.ItemContainerStyle>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Background" Value="Yellow"/>
+                        <Setter Property="Foreground" Value="Red"/>
+                    </Style>
+                </ComboBox.ItemContainerStyle>
+            </ComboBox>
+            <TextBox x:Name="tbSourceText" Grid.Row="0" Grid.Column="1" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Visible" TextChanged="tbSourceText_TextChanged" Style="{StaticResource textBoxStyles}" />
+
+            <ComboBox x:Name="cbTargetLanguage" Grid.Row="1" Grid.Column="0" Height="30" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource languageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource comboBoxItemTempate}" SelectedValue="en" SelectedValuePath="Code">
+            </ComboBox>
+            <TextBox x:Name="tbTranslatedText" Grid.Row="1" Grid.Column="1" TextWrapping="Wrap" Margin="10" IsReadOnly="True" VerticalScrollBarVisibility="Visible" Style="{StaticResource TextBoxDark}" />
+            <UniformGrid Rows="1" Columns="2" Grid.Row="2" Grid.Column="1">
+                <Button Grid.Row="0" Grid.Column="0" Content="Translate Text" HorizontalAlignment="Center" Command="{x:Static uc:TranslateCommands.TranslateText}" Style="{StaticResource buttonStyles}" />
+                <Button Grid.Row="0" Grid.Column="1" Content="Save Translation" HorizontalAlignment="Center" Command="{x:Static uc:TranslateCommands.SaveTranslation}" Style="{StaticResource buttonStyles}" />
+            </UniformGrid>
+        </Grid>
+    </DockPanel>
+</UserControl>
