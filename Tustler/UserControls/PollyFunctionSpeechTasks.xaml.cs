@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Tustler.Helpers;
 using Tustler.Models;
 
 namespace Tustler.UserControls
@@ -47,11 +48,16 @@ namespace Tustler.UserControls
             else
                 dgSpeechSynthesisTasks.HeadersVisibility = DataGridHeadersVisibility.None;
 
-            var notificationReceived = await Helpers.PollyServices.WaitOnNotification(notifications, taskId).ConfigureAwait(true);
-            if (notificationReceived)
+            // wait on a notificaton and then continue with the following task
+            void ContinuationTask(object? msg)
             {
+                var message = (NotificationMessage)msg;
+                var detail = $"Message content: {message.Message}";
+                notifications.ShowMessage("Task state changed", detail);
                 PollyCommands.RefreshTaskList.Execute(null, this);
             }
+            var notificationsServicesInstance = this.FindResource("notificationsServicesInstance") as NotificationServices;
+            await notificationsServicesInstance.WaitOnTaskStateChanged(notifications, taskId, ContinuationTask).ConfigureAwait(true);
         }
 
         private void RefreshTaskList_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -86,8 +92,9 @@ namespace Tustler.UserControls
 
         private async void TestNotifications_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var result = await Helpers.PollyServices.TestNotifications().ConfigureAwait(true);
-            Helpers.PollyServices.ProcessTestNotificationsResult(notifications, result);
+            var notificationsServicesInstance = this.FindResource("notificationsServicesInstance") as NotificationServices;
+
+            await notificationsServicesInstance.TestNotifications(notifications).ConfigureAwait(true);
         }
 
         private void FilePicker_Click(object sender, System.Windows.RoutedEventArgs e)
