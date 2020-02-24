@@ -169,5 +169,40 @@ namespace TustlerAWSLib
                 return new AWSResult<List<TextTranslationJobProperties>>(null, new AWSException(nameof(ListTextTranslationJobs), "You have made too many requests within a short period of time. Wait for a short time and then try your request again.", ex));
             }
         }
+
+        public async static Task<AWSResult<List<TerminologyProperties>>> ListTerminologies()
+        {
+            try
+            {
+                using (var client = new AmazonTranslateClient())
+                {
+                    var request = new ListTerminologiesRequest();
+                    var result = new List<TerminologyProperties>();
+                    ListTerminologiesResponse response;
+                    do
+                    {
+                        response = await client.ListTerminologiesAsync(request);
+                        request.NextToken = response.NextToken;
+
+                        result.AddRange(response.TerminologyPropertiesList);
+                    } while (response.NextToken != null);
+
+                    return new AWSResult<List<TerminologyProperties>>(result, null);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                return new AWSResult<List<TerminologyProperties>>(null, new AWSException(nameof(ListTerminologies), "Not connected.", ex));
+            }
+            catch (InternalServerException ex)
+            {
+                return new AWSResult<List<TerminologyProperties>>(null, new AWSException(nameof(ListTerminologies), "An internal server error occurred. Retry your request.", ex));
+            }
+            catch (TooManyRequestsException ex)
+            {
+                return new AWSResult<List<TerminologyProperties>>(null, new AWSException(nameof(ListTerminologies), "You have made too many requests within a short period of time. Wait for a short time and then try your request again.", ex));
+            }
+        }
+
     }
 }

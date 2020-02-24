@@ -9,6 +9,7 @@
 
             <local:BucketViewModel x:Key="bucketsInstance"/>
             <local:BucketItemViewModel x:Key="bucketItemsInstance"/>
+            <local:LanguageCodesViewModel x:Key="languageCodesInstance" />
             <local:NotificationsList x:Key="applicationNotifications" />
             <helpers:NotificationServices x:Key="notificationsServicesInstance" />
 
@@ -27,10 +28,6 @@
             </Style>
 
             <Style TargetType="TreeView">
-                <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
-            </Style>
-
-            <Style TargetType="ListBox">
                 <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
             </Style>
 
@@ -68,6 +65,11 @@
             </Style>
 
             <Style TargetType="ComboBoxItem" x:Key="ComboBoxItemDark">
+                <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+                <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+            </Style>
+
+            <Style TargetType="ListBox" x:Key="ListBoxDark">
                 <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
                 <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
             </Style>

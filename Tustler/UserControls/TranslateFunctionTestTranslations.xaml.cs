@@ -28,10 +28,21 @@ namespace Tustler.UserControls
 
         private async void TranslateText_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var sourceLanguageCode = (cbSourceLanguage.SelectedItem as LanguageCode).Code;
-            var targetLanguageCode = (cbTargetLanguage.SelectedItem as LanguageCode).Code;
-            var translatedResult = await Helpers.TranslateServices.TranslateText(sourceLanguageCode, targetLanguageCode, tbSourceText.Text).ConfigureAwait(true);
-            tbTranslatedText.Text = Helpers.TranslateServices.ProcessTranslatedResult(notifications, translatedResult);
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                var sourceLanguageCode = (cbSourceLanguage.SelectedItem as LanguageCode).Code;
+                var targetLanguageCode = (cbTargetLanguage.SelectedItem as LanguageCode).Code;
+                var translatedResult = await Helpers.TranslateServices.TranslateText(sourceLanguageCode, targetLanguageCode, tbSourceText.Text).ConfigureAwait(true);
+                tbTranslatedText.Text = Helpers.TranslateServices.ProcessTranslatedResult(notifications, translatedResult);
+
+                CommandManager.InvalidateRequerySuggested();
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
         }
 
         private void SaveTranslation_CanExecute(object sender, CanExecuteRoutedEventArgs e)

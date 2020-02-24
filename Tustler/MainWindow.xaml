@@ -101,7 +101,7 @@
             </DockPanel>
             <DockPanel>
                 <Border DockPanel.Dock="Top" Padding="20,20,20,0">
-                    <ListBox DockPanel.Dock="Top" Height="90" HorizontalAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemsSource="{Binding Source={StaticResource applicationNotifications}, Path=Notifications}" />
+                    <ListBox DockPanel.Dock="Top" Height="90" HorizontalAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemsSource="{Binding Source={StaticResource applicationNotifications}, Path=Notifications}" Style="{StaticResource ListBoxDark}"/>
                 </Border>
                 <DockPanel x:Name="panControlsContainer">
                     <!--UserControl here-->

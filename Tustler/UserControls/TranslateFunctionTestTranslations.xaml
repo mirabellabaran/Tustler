@@ -7,9 +7,6 @@
              xmlns:uc="clr-namespace:Tustler.UserControls"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <UserControl.Resources>
-        <local:LanguageCodesViewModel x:Key="languageCodesInstance" />
-    </UserControl.Resources>
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static uc:TranslateCommands.TranslateText}" CanExecute="TranslateText_CanExecute" Executed="TranslateText_Executed" />
         <CommandBinding Command="{x:Static uc:TranslateCommands.SaveTranslation}" CanExecute="SaveTranslation_CanExecute" Executed="SaveTranslation_Executed" />

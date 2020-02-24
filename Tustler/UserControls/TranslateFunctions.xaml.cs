@@ -30,7 +30,7 @@ namespace Tustler.UserControls
             (
                 "TranslateText",
                 "TranslateText",
-                typeof(PollyCommands),
+                typeof(TranslateCommands),
                 null
             );
 
@@ -38,9 +38,32 @@ namespace Tustler.UserControls
             (
                 "SaveTranslation",
                 "SaveTranslation",
-                typeof(PollyCommands),
+                typeof(TranslateCommands),
                 null
             );
 
+        public static readonly RoutedUICommand ListTerminologies = new RoutedUICommand
+            (
+                "ListTerminologies",
+                "ListTerminologies",
+                typeof(TranslateCommands),
+                null
+            );
+
+        public static readonly RoutedUICommand StartTranslationTask = new RoutedUICommand
+            (
+                "StartTranslationTask",
+                "StartTranslationTask",
+                typeof(TranslateCommands),
+                null
+            );
+
+        public static readonly RoutedUICommand RefreshTaskList = new RoutedUICommand
+            (
+                "RefreshTaskList",
+                "RefreshTaskList",
+                typeof(TranslateCommands),
+                null
+            );
     }
 }

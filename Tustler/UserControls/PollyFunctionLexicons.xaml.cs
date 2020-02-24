@@ -53,13 +53,27 @@ namespace Tustler.UserControls
 
         private async void ListLexicons_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var lexiconsInstance = this.FindResource("lexiconsInstance") as LexiconsViewModel;
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
 
-            await lexiconsInstance.Refresh(notifications)
-                .ContinueWith(task => (dgLexicons.Items.Count > 0) ?
-                        dgLexicons.HeadersVisibility = DataGridHeadersVisibility.All :
-                        dgLexicons.HeadersVisibility = DataGridHeadersVisibility.None,
-                        TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
+                var lexiconsInstance = this.FindResource("lexiconsInstance") as LexiconsViewModel;
+
+                await lexiconsInstance.Refresh(notifications)
+                    .ContinueWith(task => (dgLexicons.Items.Count > 0) ?
+                            dgLexicons.HeadersVisibility = DataGridHeadersVisibility.All :
+                            dgLexicons.HeadersVisibility = DataGridHeadersVisibility.None,
+                            TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+
+            if (dgLexicons.Items.Count == 0)
+            {
+                notifications.ShowMessage("No lexicons", "No lexicons have been defined. Use the Amazon Console to add new lexicons.");
+            }
         }
 
     }

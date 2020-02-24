@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TustlerAWSLib;
 
 namespace Tustler.Models
 {
@@ -28,12 +29,39 @@ namespace Tustler.Models
             this.NeedsRefresh = true;
         }
 
-        public async Task Refresh(NotificationsList notifications)
+        public async Task<string> AddNewTask(NotificationsList notifications, string jobName, string sourceLanguageCode, List<string> targetLanguageCodes, string s3InputFolderName, string s3OutputFolderName, List<string> terminologyNames)
+        {
+            var result = await TustlerAWSLib.Translate.StartTextTranslationJob(jobName, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
+            return ProcessPollyNewTranslationJob(notifications, result);
+        }
+
+        public async Task ListTasks(NotificationsList notifications)
         {
             if (NeedsRefresh)
             {
                 var translationJobs = await TustlerAWSLib.Translate.ListTextTranslationJobs().ConfigureAwait(true);
                 ProcessTranslationJobs(notifications, translationJobs);
+            }
+        }
+
+        private string ProcessPollyNewTranslationJob(NotificationsList notifications, TustlerAWSLib.AWSResult<TranslateJobStatus> result)
+        {
+            if (result.IsError)
+            {
+                notifications.HandleError(result);
+                return null;
+            }
+            else
+            {
+                var jobStatus = result.Result;
+                this.TranslationJobs.Add(new TranslationJob
+                {
+                    JobId = jobStatus.JobId,
+                    JobStatus = jobStatus.JobStatus,
+                    JobDetail = null
+                });
+
+                return jobStatus.JobId;
             }
         }
 
@@ -51,16 +79,19 @@ namespace Tustler.Models
                     var translationJobModelItems = from job in jobs
                                                    select new TranslationJob
                                                    {
-                                                       SubmittedTime = job.SubmittedTime,
-                                                       EndTime = job.EndTime,
                                                        JobId = job.JobId,
-                                                       JobName = job.JobName,
                                                        JobStatus = job.JobStatus,
-                                                       InputDocumentsCount = job.JobDetails.InputDocumentsCount,
-                                                       TranslatedDocumentsCount = job.JobDetails.TranslatedDocumentsCount,
-                                                       DocumentsWithErrorsCount = job.JobDetails.DocumentsWithErrorsCount,
-                                                       Message = job.Message,
-                                                       OutputS3Folder = job.OutputDataConfig.S3Uri
+                                                       JobDetail = new JobProperties
+                                                       {
+                                                           JobName = job.JobName,
+                                                           SubmittedTime = job.SubmittedTime,
+                                                           EndTime = job.EndTime,
+                                                           InputDocumentsCount = job.JobDetails.InputDocumentsCount,
+                                                           TranslatedDocumentsCount = job.JobDetails.TranslatedDocumentsCount,
+                                                           DocumentsWithErrorsCount = job.JobDetails.DocumentsWithErrorsCount,
+                                                           Message = job.Message,
+                                                           OutputS3Folder = job.OutputDataConfig.S3Uri
+                                                       }
                                                    };
 
                     this.TranslationJobs.Clear();
@@ -77,11 +108,16 @@ namespace Tustler.Models
 
     public class TranslationJob
     {
+        public string JobId { get; internal set; }
+        public string JobStatus { get; internal set; }
+        public JobProperties JobDetail { get; internal set; }
+    }
+
+    public class JobProperties
+    {
+        public string JobName { get; internal set; }
         public DateTime SubmittedTime { get; internal set; }
         public DateTime EndTime { get; internal set; }
-        public string JobId { get; internal set; }
-        public string JobName { get; internal set; }
-        public string JobStatus { get; internal set; }
         public int InputDocumentsCount { get; internal set; }
         public int TranslatedDocumentsCount { get; internal set; }
         public int DocumentsWithErrorsCount { get; internal set; }

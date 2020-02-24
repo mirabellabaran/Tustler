@@ -7,7 +7,71 @@
              xmlns:uc="clr-namespace:Tustler.UserControls"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <DockPanel>
-        <TextBlock Text="Terminologies"></TextBlock>
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <local:TranslationTerminologiesViewModel x:Key="terminologiesInstance" />
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <UserControl.CommandBindings>
+        <CommandBinding Command="{x:Static uc:TranslateCommands.ListTerminologies}" CanExecute="ListTerminologies_CanExecute" Executed="ListTerminologies_Executed" />
+    </UserControl.CommandBindings>
+
+    <DockPanel Background="{StaticResource ContrastingBackground}" Margin="20">
+        <StackPanel Orientation="Vertical">
+            <Button Content="List Terminologies" Command="{x:Static uc:TranslateCommands.ListTerminologies}" Width="130" Height="40" Style="{StaticResource ButtonDark}" />
+            <DataGrid x:Name="dgTerminologies" Width="800" Height="300" Margin="10" AutoGenerateColumns="False" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource terminologiesInstance}, Path=TranslationTerminologies}" RowBackground="{StaticResource ContrastingBackground}">
+                <DataGrid.Resources>
+                    <Style x:Key="textStyles" TargetType="TextBlock" BasedOn="{StaticResource TextBlockDark}">
+                        <Setter Property="HorizontalAlignment" Value="Left" />
+                        <Setter Property="Margin" Value="5" />
+                    </Style>
+                    <Style TargetType="Label" BasedOn="{StaticResource LabelDark}">
+                        <Setter Property="Foreground" Value="Black" />
+                        <Setter Property="FontWeight" Value="DemiBold" />
+                        <Setter Property="HorizontalAlignment" Value="Right" />
+                    </Style>
+                </DataGrid.Resources>
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Terminology Name: " Binding="{Binding Path=Name}" />
+                </DataGrid.Columns>
+                <DataGrid.RowDetailsTemplate>
+                    <DataTemplate>
+                        <Grid ShowGridLines="False">
+                            <Grid.RowDefinitions>
+                                <RowDefinition />
+                                <RowDefinition />
+                                <RowDefinition />
+                                <RowDefinition />
+                                <RowDefinition />
+                                <RowDefinition />
+                                <RowDefinition />
+                                <RowDefinition />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Row="0" Grid.Column="0" Content="ARN: "/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Path=Arn}" Style="{StaticResource textStyles}" />
+                            <Label Grid.Row="1" Grid.Column="0" Content="Description: "/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path=Description}" Style="{StaticResource textStyles}" />
+                            <Label Grid.Row="2" Grid.Column="0" Content="Created: "/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Path=CreatedAt, StringFormat=D}" Style="{StaticResource textStyles}" />
+                            <Label Grid.Row="3" Grid.Column="0" Content="Last Updated: "/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Path=LastUpdatedAt}" Style="{StaticResource textStyles}" />
+                            <Label Grid.Row="4" Grid.Column="0" Content="Source Language: "/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Path=SourceLanguageCode}" Style="{StaticResource textStyles}" />
+                            <Label Grid.Row="5" Grid.Column="0" Content="Target Languages: "/>
+                            <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Path=TargetLanguageCodes}" Style="{StaticResource textStyles}" />
+                            <Label Grid.Row="6" Grid.Column="0" Content="Term Count: "/>
+                            <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding Path=TermCount}" Style="{StaticResource textStyles}" />
+                            <Label Grid.Row="7" Grid.Column="0" Content="Size: "/>
+                            <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding Path=SizeBytes}" Style="{StaticResource textStyles}" />
+                        </Grid>
+                    </DataTemplate>
+                </DataGrid.RowDetailsTemplate>
+            </DataGrid>
+        </StackPanel>
     </DockPanel>
 </UserControl>
