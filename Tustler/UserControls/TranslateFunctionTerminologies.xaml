@@ -7,12 +7,6 @@
              xmlns:uc="clr-namespace:Tustler.UserControls"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <UserControl.Resources>
-        <ResourceDictionary>
-            <local:TranslationTerminologiesViewModel x:Key="terminologiesInstance" />
-        </ResourceDictionary>
-    </UserControl.Resources>
-
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static uc:TranslateCommands.ListTerminologies}" CanExecute="ListTerminologies_CanExecute" Executed="ListTerminologies_Executed" />
     </UserControl.CommandBindings>

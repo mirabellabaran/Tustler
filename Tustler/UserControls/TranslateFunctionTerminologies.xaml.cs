@@ -58,6 +58,5 @@ namespace Tustler.UserControls
                 notifications.ShowMessage("No terminologies", "No terminologies have been defined. Use the Amazon Console to add new terminologies.");
             }
         }
-
     }
 }

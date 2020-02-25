@@ -29,10 +29,10 @@ namespace Tustler.Models
             this.NeedsRefresh = true;
         }
 
-        public async Task<string> AddNewTask(NotificationsList notifications, string jobName, string sourceLanguageCode, List<string> targetLanguageCodes, string s3InputFolderName, string s3OutputFolderName, List<string> terminologyNames)
+        public async Task AddNewTask(NotificationsList notifications, string jobName, string sourceLanguageCode, List<string> targetLanguageCodes, string s3InputFolderName, string s3OutputFolderName, List<string> terminologyNames)
         {
             var result = await TustlerAWSLib.Translate.StartTextTranslationJob(jobName, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
-            return ProcessPollyNewTranslationJob(notifications, result);
+            ProcessPollyNewTranslationJob(notifications, result);
         }
 
         public async Task ListTasks(NotificationsList notifications)
@@ -44,12 +44,11 @@ namespace Tustler.Models
             }
         }
 
-        private string ProcessPollyNewTranslationJob(NotificationsList notifications, TustlerAWSLib.AWSResult<TranslateJobStatus> result)
+        private void ProcessPollyNewTranslationJob(NotificationsList notifications, TustlerAWSLib.AWSResult<TranslateJobStatus> result)
         {
             if (result.IsError)
             {
                 notifications.HandleError(result);
-                return null;
             }
             else
             {
@@ -60,8 +59,6 @@ namespace Tustler.Models
                     JobStatus = jobStatus.JobStatus,
                     JobDetail = null
                 });
-
-                return jobStatus.JobId;
             }
         }
 

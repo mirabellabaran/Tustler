@@ -15,30 +15,34 @@
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static uc:TranslateCommands.StartTranslationTask}" CanExecute="StartTranslationTask_CanExecute" Executed="StartTranslationTask_Executed" />
         <CommandBinding Command="{x:Static uc:TranslateCommands.RefreshTaskList}" CanExecute="RefreshTaskList_CanExecute" Executed="RefreshTaskList_Executed" />
+        <CommandBinding Command="{x:Static uc:TranslateCommands.AddTerminologies}" CanExecute="AddTerminologies_CanExecute" Executed="AddTerminologies_Executed" />
     </UserControl.CommandBindings>
 
     <DockPanel Background="{StaticResource ContrastingBackground}" Margin="20">
         <StackPanel Orientation="Vertical">
             <Grid ShowGridLines="False" Margin="10">
                 <Grid.Resources>
+                    <local:SelectedItemsViewModel x:Key="selectedTerminologies" />
+                    <local:SelectedItemsViewModel x:Key="selectedLanguageCodes" />
+
                     <!--<SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#535c60" />-->
                     <Style x:Key="buttonStyles" TargetType="Button" BasedOn="{StaticResource ButtonDark}">
-                        <Setter Property="Margin" Value="5" />
+                        <Setter Property="Margin" Value="5, 5, 0, 5" />
                     </Style>
                     <Style x:Key="textBlockStyles" TargetType="TextBlock">
                         <Setter Property="Width" Value="400" />
                         <Setter Property="TextAlignment" Value="Left" />
                         <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
-                        <Setter Property="VerticalAlignment" Value="Bottom" />
+                        <Setter Property="VerticalAlignment" Value="Center" />
                         <Setter Property="Margin" Value="5, 0, 0, 0" />
                     </Style>
                     <Style x:Key="textBoxStyles" TargetType="TextBox" BasedOn="{StaticResource TextBoxDark}">
-                        <Setter Property="Margin" Value="5" />
+                        <Setter Property="Margin" Value="5, 5, 0, 5" />
                     </Style>
                     <Style x:Key="comboBoxStyles" TargetType="ComboBox" BasedOn="{StaticResource ComboBoxDark}">
                         <Setter Property="Margin" Value="10" />
                     </Style>
-                    <DataTemplate x:Key="comboBoxItemTempate">
+                    <DataTemplate x:Key="ListItemTempate">
                         <TextBlock Text="{Binding Path=Name}" />
                     </DataTemplate>
                 </Grid.Resources>
@@ -46,41 +50,66 @@
                     <RowDefinition Height="40" />
                     <RowDefinition Height="40" />
                     <RowDefinition Height="40" />
-                    <RowDefinition Height="40" />
-                    <RowDefinition Height="40" />
-                    <RowDefinition Height="40" />
-                    <RowDefinition Height="40" />
-                    <RowDefinition Height="40" />
+                    <RowDefinition Height="80" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="400 "/>
-                    <ColumnDefinition Width="40" />
+                    <ColumnDefinition Width="120 "/>
+                    <ColumnDefinition Width="200" />
                     <ColumnDefinition Width="100" />
-                    <ColumnDefinition Width="100" />
+                    <ColumnDefinition Width="60" />
+                    <ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="200" />
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Text="Path to a text file:" Grid.Row="0" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
-                <TextBox x:Name="tbTextFilePath" Grid.Row="1" Grid.Column="0" Style="{StaticResource textBoxStyles}" />
-                <Button Content="..." ToolTip="Select a file" Grid.Row="1" Grid.Column="1" Style="{StaticResource buttonStyles}" Click="FilePicker_Click" />
+                <TextBlock Text="Job name (optional):" Grid.Row="0" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
+                <TextBox x:Name="tbJobName" Grid.Row="0" Grid.Column="1" Style="{StaticResource textBoxStyles}" />
 
-                <TextBlock Text="Set the job name (optional):" Grid.Row="2" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
-                <TextBox x:Name="tbJobName" Grid.Row="3" Grid.Column="0" Style="{StaticResource textBoxStyles}" GotFocus="tbJobName_GotFocus" />
+                <TextBlock Text="Input Folder Name:" Width="300" Grid.Row="1" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
+                <TextBox x:Name="tbInputFolder" Grid.Row="1" Grid.Column="1" Style="{StaticResource textBoxStyles}" />
 
-                <TextBlock Text="Source Language" Width="300" Grid.Row="4" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
-                <ComboBox x:Name="cbSourceLanguage" Grid.Row="5" Grid.Column="1" Height="30" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource languageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource comboBoxItemTempate}" SelectedValue="en" SelectedValuePath="Code" />
-                <TextBlock Text="Target Languages:" Width="300" Grid.Row="4" Grid.Column="2" Style="{StaticResource textBlockStyles}" />
-                <ListBox x:Name="lbTargetLanguages" Grid.Row="5" Grid.Column="3" Height="30" SelectionMode="Multiple" Style="{StaticResource ListBoxDark}" ItemsSource="{Binding Source={StaticResource languageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource comboBoxItemTempate}" SelectedValue="en" SelectedValuePath="Code" />
+                <TextBlock Text="Output Folder Name:" Width="300" Grid.Row="2" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
+                <TextBox x:Name="tbOutputFolder" Grid.Row="2" Grid.Column="1" Style="{StaticResource textBoxStyles}" />
 
-                <TextBlock Text="Input Folder Name:" Width="300" Grid.Row="6" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
-                <TextBox x:Name="tbInputFolder" Grid.Row="7" Grid.Column="1" Style="{StaticResource textBoxStyles}" GotFocus="tbJobName_GotFocus" />
+                <StackPanel Orientation="Horizontal" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2">
+                    <StackPanel.Resources>
+                        <Style x:Key="listBoxStyles" TargetType="ListBox" BasedOn="{StaticResource ListBoxDark}">
+                            <Setter Property="Width" Value="140" />
+                            <Setter Property="Margin" Value="10" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ElementName=chkIncludeTerminologyNames, Path=IsChecked}" Value="True">
+                                    <Setter Property="IsEnabled" Value="True" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ElementName=chkIncludeTerminologyNames, Path=IsChecked}" Value="False">
+                                    <Setter Property="IsEnabled" Value="False" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Resources>
+                    <StackPanel Orientation="Vertical">
+                        <CheckBox x:Name="chkIncludeTerminologyNames" IsChecked="False" Margin="10" Command="{x:Static uc:TranslateCommands.AddTerminologies}">Add Terminologies</CheckBox>
+                        <ListBox Background="{StaticResource ContrastingBackground}" BorderThickness="0" ItemsSource="{Binding Source={StaticResource selectedTerminologies}, Path=Items}" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                    </StackPanel>
+                    <ListBox x:Name="lbTerminologyNames" SelectionMode="Multiple" Style="{StaticResource listBoxStyles}" ItemsSource="{Binding Source={StaticResource terminologiesInstance}, Path=TranslationTerminologies}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValuePath="Name" SelectionChanged="lbTerminologyNames_SelectionChanged"/>
+                </StackPanel>
 
-                <TextBlock Text="Output Folder Name:" Width="300" Grid.Row="6" Grid.Column="2" Style="{StaticResource textBlockStyles}" />
-                <TextBox x:Name="tbOutputFolder" Grid.Row="7" Grid.Column="3" Style="{StaticResource textBoxStyles}" GotFocus="tbJobName_GotFocus" />
+                <TextBlock Text="Source Language:" Width="300" Grid.Row="0" Grid.Column="4" Style="{StaticResource textBlockStyles}" />
+                <ComboBox x:Name="cbSourceLanguage" Grid.Row="0" Grid.Column="5" Height="30" Style="{StaticResource comboBoxStyles}" ItemsSource="{Binding Source={StaticResource languageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en" SelectedValuePath="Code" />
+
+                <StackPanel Orientation="Vertical" Grid.Row="1" Grid.Column="4" Grid.RowSpan="3">
+                    <TextBlock Text="Target Languages:" Width="300" Style="{StaticResource textBlockStyles}" />
+                    <ListBox Height="100" Background="{StaticResource ContrastingBackground}" BorderThickness="0" ItemsSource="{Binding Source={StaticResource selectedLanguageCodes}, Path=Items}" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                </StackPanel>
+                <ListBox x:Name="lbTargetLanguages" Grid.Row="1" Grid.Column="5" Grid.RowSpan="3" Margin="10" SelectionMode="Multiple" Style="{StaticResource ListBoxDark}" ItemsSource="{Binding Source={StaticResource languageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en" SelectedValuePath="Code" SelectionChanged="lbTargetLanguages_SelectionChanged" />
             </Grid>
 
-            <DataGrid x:Name="dgTranslationTasks"  Height="200" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource translationJobsInstance}, Path=TranslationJobs}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2" />
+            <DataGrid x:Name="dgTranslationTasks"  Height="130" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource translationJobsInstance}, Path=TranslationJobs}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
+                
+            </DataGrid>
 
-            <Button Content="Refresh" Width="120" Style="{StaticResource ButtonDark}" Command="{x:Static uc:TranslateCommands.RefreshTaskList}" />
+            <UniformGrid Rows="1" Columns="2">
+                <Button Content="Refresh" Width="120" Height="30" Style="{StaticResource ButtonDark}" Command="{x:Static uc:TranslateCommands.RefreshTaskList}" />
+                <Button Content="Start Task" Width="120" Height="30" Style="{StaticResource ButtonDark}" Command="{x:Static uc:TranslateCommands.StartTranslationTask}" />
+            </UniformGrid>
         </StackPanel>
     </DockPanel>
 </UserControl>

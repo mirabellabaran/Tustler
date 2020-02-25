@@ -65,5 +65,13 @@ namespace Tustler.UserControls
                 typeof(TranslateCommands),
                 null
             );
+
+        public static readonly RoutedUICommand AddTerminologies = new RoutedUICommand
+            (
+                "AddTerminologies",
+                "AddTerminologies",
+                typeof(TranslateCommands),
+                null
+            );
     }
 }

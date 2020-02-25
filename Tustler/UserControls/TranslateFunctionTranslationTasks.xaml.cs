@@ -15,6 +15,8 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Tustler.Models;
 using Microsoft.Win32;
+using System.Windows.Markup;
+using System.Globalization;
 
 namespace Tustler.UserControls
 {
@@ -34,8 +36,10 @@ namespace Tustler.UserControls
 
         private void StartTranslationTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = !string.IsNullOrEmpty(tbTextFilePath.Text)
-                && File.Exists(tbTextFilePath.Text);
+            e.CanExecute =
+                lbTargetLanguages.SelectedItems.Count > 0
+                && !string.IsNullOrEmpty(tbInputFolder.Text)
+                && !string.IsNullOrEmpty(tbOutputFolder.Text);
         }
 
         private async void StartTranslationTask_Executed(object sender, ExecutedRoutedEventArgs e)
@@ -44,18 +48,31 @@ namespace Tustler.UserControls
 
             List<string> GetTargetLanguageCodes()
             {
-                var selectedLanguageCodes = lbTargetLanguages.SelectedItems as IEnumerable<LanguageCode>;
+                var selectedLanguageCodes = (lbTargetLanguages.SelectedItems as IEnumerable<object>).Cast<LanguageCode>();
                 return selectedLanguageCodes.Select(lc => lc.Code).ToList();
             }
 
-            string jobName = tbJobName.Text;
+            List<string> GetTerminologyNames()
+            {
+                if (chkIncludeTerminologyNames.IsChecked.HasValue && chkIncludeTerminologyNames.IsChecked.Value && lbTerminologyNames.SelectedItems.Count > 0)
+                {
+                    var selectedLanguageCodes = (lbTerminologyNames.SelectedItems as IEnumerable<object>).Cast< Terminology>();
+                    return selectedLanguageCodes.Select(term => term.Name).ToList();
+                }
+                else
+                {
+                    return null;
+                }
+            }
+
+            string jobName = string.IsNullOrEmpty(tbJobName.Text)? $"TranslateJob-{DateTime.Now.Ticks}" : tbJobName.Text;
             string sourceLanguageCode = (cbSourceLanguage.SelectedItem as LanguageCode).Code;
             List<string> targetLanguageCodes = GetTargetLanguageCodes();
             string s3InputFolderName = tbInputFolder.Text;  // TODO lookup
             string s3OutputFolderName = tbOutputFolder.Text;    // TODO lookup
-            List<string> terminologyNames = null;
+            List<string> terminologyNames = GetTerminologyNames();
 
-            var taskId = await translationJobsInstance.AddNewTask(notifications, jobName, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
+            await translationJobsInstance.AddNewTask(notifications, jobName, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
 
             // enable the headers
             if (dgTranslationTasks.Items.Count > 0)
@@ -94,27 +111,42 @@ namespace Tustler.UserControls
             }
         }
 
-        private void FilePicker_Click(object sender, RoutedEventArgs e)
+        private void AddTerminologies_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            OpenFileDialog dlg = new OpenFileDialog
-            {
-                Title = "Choose a file to upload",
-                Multiselect = false,
-                InitialDirectory = ApplicationSettings.FileCachePath
-            };
+            e.CanExecute = true;
+        }
 
-            Nullable<bool> result = dlg.ShowDialog();
-            if (result == true)
+        private async void AddTerminologies_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            try
             {
-                tbTextFilePath.Text = dlg.FileName;
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                var terminologiesInstance = this.FindResource("terminologiesInstance") as TranslationTerminologiesViewModel;
+
+                await terminologiesInstance.Refresh(notifications).ConfigureAwait(true);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+
+            if (lbTerminologyNames.Items.Count == 0)
+            {
+                notifications.ShowMessage("No terminologies", "No terminologies have been defined. Use the Amazon Console to add new terminologies.");
             }
         }
 
-        private void tbJobName_GotFocus(object sender, RoutedEventArgs e)
+        private void lbTerminologyNames_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (string.IsNullOrEmpty(tbJobName.Text)){
-                tbJobName.Text = $"TranslationJob-{DateTime.Now.Ticks}";
-            }
+            var selectedTerminologies = lbTerminologyNames.FindResource("selectedTerminologies") as SelectedItemsViewModel;
+            selectedTerminologies.Update(lbTerminologyNames.SelectedItems as IEnumerable<object>);
+        }
+
+        private void lbTargetLanguages_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var selectedLanguageCodes = lbTargetLanguages.FindResource("selectedLanguageCodes") as SelectedItemsViewModel;
+            selectedLanguageCodes.Update(lbTargetLanguages.SelectedItems as IEnumerable<object>);
         }
     }
 }
