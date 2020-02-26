@@ -27,6 +27,30 @@ namespace Tustler.Models
             }
         }
 
+        public static string DefaultUserARN
+        {
+            get
+            {
+                return GetAppConfig().GetValue<string>("DefaultUserARN");
+            }
+        }
+
+        public static string TranslateInputFolder
+        {
+            get
+            {
+                return GetAppConfig().GetValue<string>("TranslateInputFolder");
+            }
+        }
+
+        public static string TranslateOutputFolder
+        {
+            get
+            {
+                return GetAppConfig().GetValue<string>("TranslateOutputFolder");
+            }
+        }
+
         public static string NotificationsARN
         {
             get

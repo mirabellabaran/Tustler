@@ -1,4 +1,5 @@
-﻿using Amazon.Translate;
+﻿using Amazon;
+using Amazon.Translate;
 using Amazon.Translate.Model;
 using System;
 using System.Collections.Generic;
@@ -62,15 +63,16 @@ namespace TustlerAWSLib
             }
         }
 
-        public async static Task<AWSResult<TranslateJobStatus>> StartTextTranslationJob(string jobName, string sourceLanguageCode, List<string> targetLanguageCodes, string s3InputFolderName, string s3OutputFolderName, List<string> terminologyNames)
+        public async static Task<AWSResult<TranslateJobStatus>> StartTextTranslationJob(string jobName, string dataAccessRoleArn, string sourceLanguageCode, List<string> targetLanguageCodes, string s3InputFolderName, string s3OutputFolderName, List<string> terminologyNames)
         {
             try
             {
-                using (var client = new AmazonTranslateClient())
+                using (var client = new AmazonTranslateClient(RegionEndpoint.APNortheast2))
                 {
                     var request = new StartTextTranslationJobRequest
                     {
                         JobName = jobName,
+                        DataAccessRoleArn = dataAccessRoleArn,
                         SourceLanguageCode = sourceLanguageCode,
                         TargetLanguageCodes = targetLanguageCodes,
                         InputDataConfig = new InputDataConfig
@@ -104,6 +106,10 @@ namespace TustlerAWSLib
             catch (UnsupportedLanguagePairException ex)
             {
                 return new AWSResult<TranslateJobStatus>(null, new AWSException(nameof(StartTextTranslationJob), "Amazon Translate does not support translation from the language of the source text into the requested target language.", ex));
+            }
+            catch (AmazonTranslateException ex)
+            {
+                return new AWSResult<TranslateJobStatus>(null, new AWSException(nameof(StartTextTranslationJob), "Translate error. Check your Amazon region permits starting a long-running translation job.", ex));
             }
         }
 

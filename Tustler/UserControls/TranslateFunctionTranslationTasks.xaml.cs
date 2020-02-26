@@ -32,14 +32,16 @@ namespace Tustler.UserControls
             InitializeComponent();
 
             notifications = this.FindResource("applicationNotifications") as NotificationsList;
+
+            tbInputFolder.Text = ApplicationSettings.TranslateInputFolder;
+            tbOutputFolder.Text = ApplicationSettings.TranslateOutputFolder;
         }
 
         private void StartTranslationTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute =
-                lbTargetLanguages.SelectedItems.Count > 0
-                && !string.IsNullOrEmpty(tbInputFolder.Text)
-                && !string.IsNullOrEmpty(tbOutputFolder.Text);
+            e.CanExecute = lbTargetLanguages.SelectedItems.Count > 0;
+                //&& !string.IsNullOrEmpty(tbInputFolder.Text)
+                //&& !string.IsNullOrEmpty(tbOutputFolder.Text);
         }
 
         private async void StartTranslationTask_Executed(object sender, ExecutedRoutedEventArgs e)
@@ -66,13 +68,14 @@ namespace Tustler.UserControls
             }
 
             string jobName = string.IsNullOrEmpty(tbJobName.Text)? $"TranslateJob-{DateTime.Now.Ticks}" : tbJobName.Text;
+            string dataAccessRoleArn = ApplicationSettings.DefaultUserARN;
             string sourceLanguageCode = (cbSourceLanguage.SelectedItem as LanguageCode).Code;
             List<string> targetLanguageCodes = GetTargetLanguageCodes();
-            string s3InputFolderName = tbInputFolder.Text;  // TODO lookup
-            string s3OutputFolderName = tbOutputFolder.Text;    // TODO lookup
+            string s3InputFolderName = ApplicationSettings.TranslateInputFolder;
+            string s3OutputFolderName = ApplicationSettings.TranslateOutputFolder;
             List<string> terminologyNames = GetTerminologyNames();
 
-            await translationJobsInstance.AddNewTask(notifications, jobName, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
+            await translationJobsInstance.AddNewTask(notifications, jobName, dataAccessRoleArn, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
 
             // enable the headers
             if (dgTranslationTasks.Items.Count > 0)
@@ -147,6 +150,12 @@ namespace Tustler.UserControls
         {
             var selectedLanguageCodes = lbTargetLanguages.FindResource("selectedLanguageCodes") as SelectedItemsViewModel;
             selectedLanguageCodes.Update(lbTargetLanguages.SelectedItems as IEnumerable<object>);
+
+            if (e.AddedItems.Count > 0)
+            {
+                var firstItem = (e.AddedItems as IEnumerable<object>).First() as LanguageCode;
+                lbTargetLanguages.ScrollIntoView(firstItem);
+            }
         }
     }
 }

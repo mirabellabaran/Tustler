@@ -65,10 +65,10 @@
                 <TextBox x:Name="tbJobName" Grid.Row="0" Grid.Column="1" Style="{StaticResource textBoxStyles}" />
 
                 <TextBlock Text="Input Folder Name:" Width="300" Grid.Row="1" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
-                <TextBox x:Name="tbInputFolder" Grid.Row="1" Grid.Column="1" Style="{StaticResource textBoxStyles}" />
+                <TextBox x:Name="tbInputFolder" Grid.Row="1" Grid.Column="1" IsReadOnly="True" Style="{StaticResource textBoxStyles}" />
 
                 <TextBlock Text="Output Folder Name:" Width="300" Grid.Row="2" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
-                <TextBox x:Name="tbOutputFolder" Grid.Row="2" Grid.Column="1" Style="{StaticResource textBoxStyles}" />
+                <TextBox x:Name="tbOutputFolder" Grid.Row="2" Grid.Column="1" IsReadOnly="True" Style="{StaticResource textBoxStyles}" />
 
                 <StackPanel Orientation="Horizontal" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2">
                     <StackPanel.Resources>

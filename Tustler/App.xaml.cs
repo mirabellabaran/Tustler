@@ -30,7 +30,6 @@ namespace Tustler
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
-            //log4net.Config.XmlConfigurator.ConfigureAndWatch();
             log.Info("        =============  Started Logging  =============        ");
 
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
@@ -90,12 +89,18 @@ namespace Tustler
             var escapedPath = fileCachePath.Replace(@"\", @"/", StringComparison.InvariantCulture);
             var fileCacheFolderConfig = $"\t\"{fileCacheFolderName}\": \"{escapedPath}\",";
             var defaultBucketConfig = $"\t\"DefaultBucketName\": \"tator\",";
+            var defaultUser = $"\t\"DefaultUserARN\": \"arn:aws:iam::261914005867:user/TatorUser\",";
+            var translateServiceInputFolderName = $"\t\"TranslateInputFolder\": \"TranslationInput/\",";
+            var translateServiceOutputFolderName = $"\t\"TranslateOutputFolder\": \"TranslationOutput/\",";
             var notificationsARNConfig = $"\t\"NotificationsARN\": \"arn:aws:sns:ap-southeast-2:261914005867:TatorNotifications\",";
             var notificationsQueueConfig = $"\t\"NotificationsQueue\": \"https://sqs.ap-southeast-2.amazonaws.com/261914005867/TatorQueue\"";
             string[] lines = {
                 "{",
                 fileCacheFolderConfig,
                 defaultBucketConfig,
+                defaultUser,
+                translateServiceInputFolderName,
+                translateServiceOutputFolderName,
                 notificationsARNConfig,
                 notificationsQueueConfig,
                 "}"

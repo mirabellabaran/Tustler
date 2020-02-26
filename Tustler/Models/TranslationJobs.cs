@@ -29,9 +29,9 @@ namespace Tustler.Models
             this.NeedsRefresh = true;
         }
 
-        public async Task AddNewTask(NotificationsList notifications, string jobName, string sourceLanguageCode, List<string> targetLanguageCodes, string s3InputFolderName, string s3OutputFolderName, List<string> terminologyNames)
+        public async Task AddNewTask(NotificationsList notifications, string jobName, string dataAccessRoleArn, string sourceLanguageCode, List<string> targetLanguageCodes, string s3InputFolderName, string s3OutputFolderName, List<string> terminologyNames)
         {
-            var result = await TustlerAWSLib.Translate.StartTextTranslationJob(jobName, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
+            var result = await TustlerAWSLib.Translate.StartTextTranslationJob(jobName, dataAccessRoleArn, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
             ProcessPollyNewTranslationJob(notifications, result);
         }
 

@@ -61,7 +61,7 @@
                 </Border>
                 <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2" Visibility="{Binding ElementName=showHide, Path=IsChecked, Converter={StaticResource boolConverter}}">
                     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                        <TextBlock Text="{Binding Path=Exception.StackTrace}" ToolTip="{Binding Path=Context}" Style="{StaticResource TextBlockDark}" />
+                        <TextBlock Text="{Binding Path=Exception.Message}" ToolTip="{Binding Path=Context}" Style="{StaticResource TextBlockDark}" />
                     </ScrollViewer>
                 </Border>
                 <ToggleButton x:Name="showHide" Height="30" Style="{StaticResource toggleContent}" />
