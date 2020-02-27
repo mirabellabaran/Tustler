@@ -67,15 +67,24 @@ namespace Tustler.UserControls
                 }
             }
 
-            string jobName = string.IsNullOrEmpty(tbJobName.Text)? $"TranslateJob-{DateTime.Now.Ticks}" : tbJobName.Text;
-            string dataAccessRoleArn = ApplicationSettings.DefaultUserARN;
-            string sourceLanguageCode = (cbSourceLanguage.SelectedItem as LanguageCode).Code;
-            List<string> targetLanguageCodes = GetTargetLanguageCodes();
-            string s3InputFolderName = ApplicationSettings.TranslateInputFolder;
-            string s3OutputFolderName = ApplicationSettings.TranslateOutputFolder;
-            List<string> terminologyNames = GetTerminologyNames();
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
 
-            await translationJobsInstance.AddNewTask(notifications, jobName, dataAccessRoleArn, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
+                string jobName = string.IsNullOrEmpty(tbJobName.Text) ? $"TranslateJob-{DateTime.Now.Ticks}" : tbJobName.Text;
+                string dataAccessRoleArn = ApplicationSettings.DefaultUserARN;
+                string sourceLanguageCode = (cbSourceLanguage.SelectedItem as LanguageCode).Code;
+                List<string> targetLanguageCodes = GetTargetLanguageCodes();
+                string s3InputFolderName = ApplicationSettings.TranslateInputFolder;
+                string s3OutputFolderName = ApplicationSettings.TranslateOutputFolder;
+                List<string> terminologyNames = GetTerminologyNames();
+
+                await translationJobsInstance.AddNewTask(notifications, jobName, dataAccessRoleArn, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
 
             // enable the headers
             if (dgTranslationTasks.Items.Count > 0)

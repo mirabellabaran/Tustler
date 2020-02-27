@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:Tustler"
         xmlns:models="clr-namespace:Tustler.Models"
         xmlns:usercontrols="clr-namespace:Tustler.UserControls"
+        xmlns:helpers="clr-namespace:Tustler.Helpers"
         mc:Ignorable="d"
         Title="Tustler" Height="962" Width="1681"
         Background="{StaticResource NormalBackground}">
@@ -16,6 +17,8 @@
     </Window.CommandBindings>
     
     <Window.Resources>
+        <helpers:FractionConverter x:Key="FractionConverter"/>
+        
         <DataTemplate DataType="{x:Type models:ApplicationMessageInfo}">
             <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
                 <Border.Resources>
@@ -37,8 +40,14 @@
         </DataTemplate>
 
         <DataTemplate DataType="{x:Type models:ApplicationErrorInfo}">
-            <StackPanel Orientation="Horizontal" Height="40">
+            <StackPanel Orientation="Horizontal" Height="40" HorizontalAlignment="Stretch">
                 <StackPanel.Resources>
+                    <Style x:Key="textBlockHeaderStyles" TargetType="TextBlock" >
+                        <Setter Property="Background" Value="{StaticResource NormalBackground}" />
+                        <Setter Property="Padding" Value="2" />
+                        <Setter Property="Margin" Value="10, 0, 0, 0" />
+                    </Style>
+
                     <BooleanToVisibilityConverter x:Key="boolConverter" />
 
                     <Style x:Key="toggleContent" TargetType="ToggleButton" BasedOn="{StaticResource ToggleButtonDark}">
@@ -57,11 +66,11 @@
 
                 </StackPanel.Resources>
                 <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
-                    <TextBlock Text="{Binding Path=Message}" VerticalAlignment="Center" Style="{StaticResource TextBlockDark}" />
+                    <TextBlock Text="{Binding Path=Message}" VerticalAlignment="Center" Style="{StaticResource textBlockHeaderStyles}" />
                 </Border>
-                <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2" Visibility="{Binding ElementName=showHide, Path=IsChecked, Converter={StaticResource boolConverter}}">
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                        <TextBlock Text="{Binding Path=Exception.Message}" ToolTip="{Binding Path=Context}" Style="{StaticResource TextBlockDark}" />
+                <Border BorderBrush="DarkGray" BorderThickness="2" Width="{Binding Converter={StaticResource FractionConverter}, ConverterParameter=0.4, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ScrollContentPresenter}}, Path=ActualWidth}" Padding="5" Margin="2" Visibility="{Binding ElementName=showHide, Path=IsChecked, Converter={StaticResource boolConverter}}">
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                        <TextBlock Height="100" TextWrapping="Wrap" Text="{Binding Path=Exception.Message}" ToolTip="{Binding Path=Context}" Style="{StaticResource TextBlockDark}" />
                     </ScrollViewer>
                 </Border>
                 <ToggleButton x:Name="showHide" Height="30" Style="{StaticResource toggleContent}" />
@@ -101,7 +110,7 @@
             </DockPanel>
             <DockPanel>
                 <Border DockPanel.Dock="Top" Padding="20,20,20,0">
-                    <ListBox DockPanel.Dock="Top" Height="90" HorizontalAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemsSource="{Binding Source={StaticResource applicationNotifications}, Path=Notifications}" Style="{StaticResource ListBoxDark}"/>
+                    <ListBox Height="90" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemsSource="{Binding Source={StaticResource applicationNotifications}, Path=Notifications}" Style="{StaticResource ListBoxDark}"/>
                 </Border>
                 <DockPanel x:Name="panControlsContainer">
                     <!--UserControl here-->
