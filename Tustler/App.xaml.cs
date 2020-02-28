@@ -59,6 +59,8 @@ namespace Tustler
             // an awaited task has generated an unobserved exception; record it and set it as observed
             Exception ex = e.Exception as AggregateException;
 
+            log.Error("TaskScheduler_UnobservedTaskException", ex);
+
             var notifications = this.FindResource("applicationNotifications") as NotificationsList;
 
             // note that there may be more than one wrapped exception; here just show the first one
@@ -77,6 +79,8 @@ namespace Tustler
 
         private void PrepareConfigurationFirstTimeExecution(string baseDirectory, string appSettingsFileName)
         {
+            // TODO remove this function because some of the information is private and should be in a config file only
+
             var fileCacheFolderName = "FileCache";
             // default to placing the file cache in the application base directory
             var fileCachePath = Path.Combine(baseDirectory, fileCacheFolderName);
@@ -89,18 +93,20 @@ namespace Tustler
             var escapedPath = fileCachePath.Replace(@"\", @"/", StringComparison.InvariantCulture);
             var fileCacheFolderConfig = $"\t\"{fileCacheFolderName}\": \"{escapedPath}\",";
             var defaultBucketConfig = $"\t\"DefaultBucketName\": \"tator\",";
-            var defaultUser = $"\t\"DefaultUserARN\": \"arn:aws:iam::261914005867:user/TatorUser\",";
-            var translateServiceInputFolderName = $"\t\"TranslateInputFolder\": \"TranslationInput/\",";
-            var translateServiceOutputFolderName = $"\t\"TranslateOutputFolder\": \"TranslationOutput/\",";
+            var batchTranslateServiceRole = $"\t\"BatchTranslateServiceRole\": \"arn:aws:iam::261914005867:role/TODO-create-this-role\",";
+            var batchTranslateRegion = $"\t\"BatchTranslateRegion\": \"ap-northeast-2\",";
+            var batchTranslateInputFolder = $"\t\"BatchTranslateInputFolder\": \"TranslationInput/\",";
+            var batchTranslateOutputFolder = $"\t\"BatchTranslateOutputFolder\": \"TranslationOutput/\",";
             var notificationsARNConfig = $"\t\"NotificationsARN\": \"arn:aws:sns:ap-southeast-2:261914005867:TatorNotifications\",";
             var notificationsQueueConfig = $"\t\"NotificationsQueue\": \"https://sqs.ap-southeast-2.amazonaws.com/261914005867/TatorQueue\"";
             string[] lines = {
                 "{",
                 fileCacheFolderConfig,
                 defaultBucketConfig,
-                defaultUser,
-                translateServiceInputFolderName,
-                translateServiceOutputFolderName,
+                batchTranslateServiceRole,
+                batchTranslateRegion,
+                batchTranslateInputFolder,
+                batchTranslateOutputFolder,
                 notificationsARNConfig,
                 notificationsQueueConfig,
                 "}"

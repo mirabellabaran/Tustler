@@ -9,7 +9,10 @@
              d:DesignHeight="450" d:DesignWidth="800">
     <DockPanel>
         <TabControl Margin="20">
-            <TabItem Header="Manage Translation Tasks" Width="150">
+            <TabItem Header="Realtime Translation" Width="150">
+                <uc:TranslateFunctionTranslationTasks />
+            </TabItem>
+            <TabItem Header="Manage Batch Translation" Width="150">
                 <uc:TranslateFunctionTranslationTasks />
             </TabItem>
             <TabItem Header="Test Translations" Width="150">

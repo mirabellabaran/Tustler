@@ -27,27 +27,35 @@ namespace Tustler.Models
             }
         }
 
-        public static string DefaultUserARN
+        public static string BatchTranslateServiceRole
         {
             get
             {
-                return GetAppConfig().GetValue<string>("DefaultUserARN");
+                return GetAppConfig().GetValue<string>("BatchTranslateServiceRole");
             }
         }
 
-        public static string TranslateInputFolder
+        public static string BatchTranslateRegion
         {
             get
             {
-                return GetAppConfig().GetValue<string>("TranslateInputFolder");
+                return GetAppConfig().GetValue<string>("BatchTranslateRegion");
             }
         }
 
-        public static string TranslateOutputFolder
+        public static string BatchTranslateInputFolder
         {
             get
             {
-                return GetAppConfig().GetValue<string>("TranslateOutputFolder");
+                return GetAppConfig().GetValue<string>("BatchTranslateInputFolder");
+            }
+        }
+
+        public static string BatchTranslateOutputFolder
+        {
+            get
+            {
+                return GetAppConfig().GetValue<string>("BatchTranslateOutputFolder");
             }
         }
 

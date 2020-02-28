@@ -63,11 +63,23 @@ namespace TustlerAWSLib
             }
         }
 
-        public async static Task<AWSResult<TranslateJobStatus>> StartTextTranslationJob(string jobName, string dataAccessRoleArn, string sourceLanguageCode, List<string> targetLanguageCodes, string s3InputFolderName, string s3OutputFolderName, List<string> terminologyNames)
+        /// <summary>
+        /// Start a batch translation job (only available in some regions)
+        /// </summary>
+        /// <param name="jobName">An arbitrary name for the job</param>
+        /// <param name="region">The name of an AWS RegionEndpoint that support batch translation</param>
+        /// <param name="dataAccessRoleArn">A service role allowing the batch translation service read/write access to the S3 app bucket</param>
+        /// <param name="sourceLanguageCode">The language code for the source documents</param>
+        /// <param name="targetLanguageCodes">One or more language codes for the output documents</param>
+        /// <param name="s3InputFolderName">An S3 pseudo folder containing the source documents</param>
+        /// <param name="s3OutputFolderName">An S3 pseudo folder where output documents will be written</param>
+        /// <param name="terminologyNames">The names of any predefined translation terminologies (optional)</param>
+        /// <returns></returns>
+        public async static Task<AWSResult<TranslateJobStatus>> StartTextTranslationJob(string jobName, RegionEndpoint region, string dataAccessRoleArn, string sourceLanguageCode, List<string> targetLanguageCodes, string s3InputFolderName, string s3OutputFolderName, List<string> terminologyNames)
         {
             try
             {
-                using (var client = new AmazonTranslateClient(RegionEndpoint.APNortheast2))
+                using (var client = new AmazonTranslateClient(region))
                 {
                     var request = new StartTextTranslationJobRequest
                     {
@@ -113,11 +125,11 @@ namespace TustlerAWSLib
             }
         }
 
-        public async static Task<AWSResult<TranslateJobStatus>> StopTextTranslationJob(string jobId)
+        public async static Task<AWSResult<TranslateJobStatus>> StopTextTranslationJob(string jobId, RegionEndpoint region)
         {
             try
             {
-                using (var client = new AmazonTranslateClient())
+                using (var client = new AmazonTranslateClient(region))
                 {
                     var request = new StopTextTranslationJobRequest
                     {
@@ -142,11 +154,11 @@ namespace TustlerAWSLib
             }
         }
 
-        public async static Task<AWSResult<List<TextTranslationJobProperties>>> ListTextTranslationJobs()
+        public async static Task<AWSResult<List<TextTranslationJobProperties>>> ListTextTranslationJobs(RegionEndpoint region)
         {
             try
             {
-                using (var client = new AmazonTranslateClient())
+                using (var client = new AmazonTranslateClient(region))
                 {
                     var request = new ListTextTranslationJobsRequest();
                     var result = new List<TextTranslationJobProperties>();
@@ -173,6 +185,10 @@ namespace TustlerAWSLib
             catch (TooManyRequestsException ex)
             {
                 return new AWSResult<List<TextTranslationJobProperties>>(null, new AWSException(nameof(ListTextTranslationJobs), "You have made too many requests within a short period of time. Wait for a short time and then try your request again.", ex));
+            }
+            catch (AmazonTranslateException ex)
+            {
+                return new AWSResult<List<TextTranslationJobProperties>>(null, new AWSException(nameof(ListTextTranslationJobs), "Translate error.", ex));
             }
         }
 

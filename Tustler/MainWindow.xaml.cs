@@ -32,6 +32,9 @@ namespace Tustler
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            // look for status changes in the notifications listbox so that it can scroll new items into view
+            lbNotifications.ItemContainerGenerator.ItemsChanged += lbNotifications_ItemsChanged;
+
             tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "S3 Management", Tag = "s3management", HasChildren = false }));
             tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "Settings", Tag = "settings", HasChildren = true }));
 
@@ -70,6 +73,16 @@ namespace Tustler
                 {
                     MainWindowCommands.Switch.Execute(null, tvActions);
                 }
+            }
+        }
+
+        private void lbNotifications_ItemsChanged(object sender, System.Windows.Controls.Primitives.ItemsChangedEventArgs e)
+        {
+            if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+            {
+                var numItems = lbNotifications.Items.Count;
+                if (numItems > 0)
+                    lbNotifications.ScrollIntoView(lbNotifications.Items[numItems - 1]);
             }
         }
 
