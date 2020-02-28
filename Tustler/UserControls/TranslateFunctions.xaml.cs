@@ -34,6 +34,14 @@ namespace Tustler.UserControls
                 null
             );
 
+        public static readonly RoutedUICommand RealtimeTranslate = new RoutedUICommand
+            (
+                "RealtimeTranslate",
+                "RealtimeTranslate",
+                typeof(TranslateCommands),
+                null
+            );
+
         public static readonly RoutedUICommand SaveTranslation = new RoutedUICommand
             (
                 "SaveTranslation",

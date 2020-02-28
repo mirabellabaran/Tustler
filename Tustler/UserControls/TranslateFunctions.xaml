@@ -10,7 +10,7 @@
     <DockPanel>
         <TabControl Margin="20">
             <TabItem Header="Realtime Translation" Width="150">
-                <uc:TranslateFunctionTranslationTasks />
+                <uc:TranslateFunctionRealtimeTranslation />
             </TabItem>
             <TabItem Header="Manage Batch Translation" Width="150">
                 <uc:TranslateFunctionTranslationTasks />
