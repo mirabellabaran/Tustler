@@ -55,19 +55,6 @@ namespace Tustler.UserControls
                 return selectedLanguageCodes.Select(lc => lc.Code).ToList();
             }
 
-            List<string> GetTerminologyNames()
-            {
-                if (chkIncludeTerminologyNames.IsChecked.HasValue && chkIncludeTerminologyNames.IsChecked.Value && lbTerminologyNames.SelectedItems.Count > 0)
-                {
-                    var selectedLanguageCodes = (lbTerminologyNames.SelectedItems as IEnumerable<object>).Cast< Terminology>();
-                    return selectedLanguageCodes.Select(term => term.Name).ToList();
-                }
-                else
-                {
-                    return null;
-                }
-            }
-
             try
             {
                 Mouse.OverrideCursor = Cursors.Wait;
@@ -79,7 +66,7 @@ namespace Tustler.UserControls
                 List<string> targetLanguageCodes = GetTargetLanguageCodes();
                 string s3InputFolderName = ApplicationSettings.BatchTranslateInputFolder;
                 string s3OutputFolderName = ApplicationSettings.BatchTranslateOutputFolder;
-                List<string> terminologyNames = GetTerminologyNames();
+                List<string> terminologyNames = Helpers.UIServices.UIHelpers.GetTerminologyNames(chkIncludeTerminologyNames, lbTerminologyNames);
 
                 await translationJobsInstance.AddNewTask(notifications, jobName, RegionEndpoint.GetBySystemName(regionSystemName), dataAccessRoleArn, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
             }

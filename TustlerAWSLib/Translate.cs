@@ -61,6 +61,10 @@ namespace TustlerAWSLib
             {
                 return new AWSResult<string>(null, new AWSException(nameof(TranslateText), "Amazon Translate does not support translation from the language of the source text into the requested target language.", ex));
             }
+            catch (AmazonTranslateException ex)
+            {
+                return new AWSResult<string>(null, new AWSException(nameof(TranslateText), "Translate error. See message details.", ex));
+            }
         }
 
         /// <summary>

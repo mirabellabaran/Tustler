@@ -40,6 +40,8 @@
                     <RowDefinition Height="40" />
                     <RowDefinition Height="40" />
                     <RowDefinition Height="40" />
+                    <RowDefinition Height="40" />
+                    <RowDefinition Height="40" />
                     <RowDefinition Height="80" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
@@ -51,11 +53,14 @@
                     <ColumnDefinition Width="200" />
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Text="Translation Source Document:" VerticalAlignment="Bottom" Grid.Row="0" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
-                <TextBox x:Name="tbTranslationSourceDocument" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource textBoxStyles}" />
-                <Button Content="..." Grid.Row="1" Grid.Column="3" Style="{StaticResource buttonStyles}" Click="FilePicker_Click" />
+                <TextBlock Text="Job name:" VerticalAlignment="Bottom" Grid.Row="0" Grid.Column="0" ToolTip="This is used to construct the output file name" Style="{StaticResource textBlockStyles}" />
+                <TextBox x:Name="tbJobName" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource textBoxStyles}" />
 
-                <StackPanel Orientation="Horizontal" Grid.Row="3" Grid.Column="0" Grid.RowSpan="2" Grid.ColumnSpan="2">
+                <TextBlock Text="Translation Source Document:" VerticalAlignment="Bottom" Grid.Row="2" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
+                <TextBox x:Name="tbTranslationSourceDocument" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource textBoxStyles}" />
+                <Button Content="..." Grid.Row="3" Grid.Column="3" Style="{StaticResource buttonStyles}" Click="FilePicker_Click" />
+
+                <StackPanel Orientation="Horizontal" Grid.Row="5" Grid.Column="0" Grid.RowSpan="2" Grid.ColumnSpan="2">
                     <StackPanel.Resources>
                         <Style x:Key="listBoxStyles" TargetType="ListBox" BasedOn="{StaticResource ListBoxDark}">
                             <Setter Property="Width" Value="140" />
@@ -77,8 +82,8 @@
                     <ListBox x:Name="lbTerminologyNames" SelectionMode="Multiple" Style="{StaticResource listBoxStyles}" ItemsSource="{Binding Source={StaticResource terminologiesInstance}, Path=TranslationTerminologies}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValuePath="Name" SelectionChanged="lbTerminologyNames_SelectionChanged"/>
                 </StackPanel>
 
-                <TextBlock Text="Source Language:" Grid.Row="3" Grid.Column="4" Style="{StaticResource textBlockStyles}" />
-                <ComboBox x:Name="cbSourceLanguage" Grid.Row="3" Grid.Column="5" Height="30" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource languageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en" SelectedValuePath="Code">
+                <TextBlock Text="Source Language:" Grid.Row="5" Grid.Column="4" Style="{StaticResource textBlockStyles}" />
+                <ComboBox x:Name="cbSourceLanguage" Grid.Row="5" Grid.Column="5" Height="30" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource languageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en" SelectedValuePath="Code">
                     <ComboBox.ItemContainerStyle>
                         <Style TargetType="ComboBoxItem">
                             <Setter Property="Background" Value="Yellow"/>
@@ -87,10 +92,11 @@
                     </ComboBox.ItemContainerStyle>
                 </ComboBox>
 
-                <TextBlock Text="Target Language:" Grid.Row="4" Grid.Column="4" Style="{StaticResource textBlockStyles}" />
-                <ComboBox x:Name="cbTargetLanguage" Grid.Row="4" Grid.Column="5" Height="30" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource languageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en" SelectedValuePath="Code">
+                <TextBlock Text="Target Language:" Grid.Row="6" Grid.Column="4" Style="{StaticResource textBlockStyles}" />
+                <ComboBox x:Name="cbTargetLanguage" Grid.Row="6" Grid.Column="5" Height="30" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource languageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en" SelectedValuePath="Code">
                 </ComboBox>
             </Grid>
+            <ProgressBar x:Name="pbTranslationJob" Height="10" Margin="10" Minimum="0" Maximum="100" Value="0" />
             <Button Content="Start Translation" Width="120" Height="30" Style="{StaticResource ButtonDark}" Command="{x:Static uc:TranslateCommands.RealtimeTranslate}" />
         </StackPanel>
     </DockPanel>

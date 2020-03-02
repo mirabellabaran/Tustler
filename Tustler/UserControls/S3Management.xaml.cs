@@ -28,9 +28,17 @@ namespace Tustler.UserControls
         {
             BucketViewModel bucketViewModel = this.FindResource("bucketsInstance") as BucketViewModel;
 
-            Helpers.UIServices.SetBusyState();
-            //await Dispatcher.InvokeAsync<Task>(() => bucketViewModel.Refresh(notifications));
-            await bucketViewModel.Refresh(notifications).ConfigureAwait(true);
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                //await Dispatcher.InvokeAsync<Task>(() => bucketViewModel.Refresh(notifications));
+                await bucketViewModel.Refresh(notifications).ConfigureAwait(true);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
         }
 
         private async void ListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -40,11 +48,18 @@ namespace Tustler.UserControls
 
             var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
 
-            Helpers.UIServices.SetBusyState();
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
 
-            // refresh and then enable the headers
-            await bucketItemsInstance.Refresh(notifications, selectedBucket.Name)
+                // refresh and then enable the headers
+                await bucketItemsInstance.Refresh(notifications, selectedBucket.Name)
                 .ContinueWith(task => dgBucketItems.HeadersVisibility = DataGridHeadersVisibility.All, TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
         }
 
         private void FilterBucketItems_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -176,11 +191,18 @@ namespace Tustler.UserControls
                 var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
                 var bucketName = bucketItemsInstance.CurrentBucketName;
 
-                Helpers.UIServices.SetBusyState();
-                var uploadResult = await Helpers.S3Services.UploadItem(bucketName, path, mimetype, extension).ConfigureAwait(true);
-                Helpers.S3Services.ProcessUploadItemResult(notifications, uploadResult);
+                try
+                {
+                    Mouse.OverrideCursor = Cursors.Wait;
+                    var uploadResult = await Helpers.S3Services.UploadItem(bucketName, path, mimetype, extension).ConfigureAwait(true);
+                    Helpers.S3Services.ProcessUploadItemResult(notifications, uploadResult);
 
-                await bucketItemsInstance.RefreshAsync(notifications).ConfigureAwait(true);
+                    await bucketItemsInstance.RefreshAsync(notifications).ConfigureAwait(true);
+                }
+                finally
+                {
+                    Mouse.OverrideCursor = null;
+                }
             }
         }
 
@@ -220,9 +242,17 @@ namespace Tustler.UserControls
                     absolutePath :
                     Path.ChangeExtension(absolutePath, selectedItem.Extension);
 
-                Helpers.UIServices.SetBusyState();
-                var downloadResult = await Helpers.S3Services.DownloadItem(bucketName, key, filePath).ConfigureAwait(true);
-                Helpers.S3Services.ProcessDownloadItemResult(notifications, downloadResult);
+                try
+                {
+                    Mouse.OverrideCursor = Cursors.Wait;
+
+                    var downloadResult = await Helpers.S3Services.DownloadItem(bucketName, key, filePath).ConfigureAwait(true);
+                    Helpers.S3Services.ProcessDownloadItemResult(notifications, downloadResult);
+                }
+                finally
+                {
+                    Mouse.OverrideCursor = null;
+                }
             }
         }
 
@@ -236,8 +266,16 @@ namespace Tustler.UserControls
         {
             var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
 
-            Helpers.UIServices.SetBusyState();
-            await bucketItemsInstance.RefreshAsync(notifications).ConfigureAwait(true);
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                await bucketItemsInstance.RefreshAsync(notifications).ConfigureAwait(true);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
         }
 
         private void UploadFilePicker_Click(object sender, RoutedEventArgs e)

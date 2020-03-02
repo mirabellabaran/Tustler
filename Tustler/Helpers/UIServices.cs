@@ -1,17 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
+using Tustler.Models;
 
-namespace Tustler.Helpers
+namespace Tustler.Helpers.UIServices
 {
     /// <summary>
     /// Modified from https://stackoverflow.com/questions/3480966/display-hourglass-when-application-is-busy
     /// </summary>
     /// <see cref="T.J.Kjaer"/>
-    public static class UIServices
+    public static class MouseTImer
     {
         /// <summary>
         ///   A value indicating whether the UI is currently busy
@@ -56,6 +59,22 @@ namespace Tustler.Helpers
             {
                 SetBusyState(false);
                 dispatcherTimer.Stop();
+            }
+        }
+    }
+
+    public static class UIHelpers
+    {
+        public static List<string> GetTerminologyNames(CheckBox chkIncludeTerminologyNames, ListBox lbTerminologyNames)
+        {
+            if (chkIncludeTerminologyNames.IsChecked.HasValue && chkIncludeTerminologyNames.IsChecked.Value && lbTerminologyNames.SelectedItems.Count > 0)
+            {
+                var selectedLanguageCodes = (lbTerminologyNames.SelectedItems as IEnumerable<object>).Cast<Terminology>();
+                return selectedLanguageCodes.Select(term => term.Name).ToList();
+            }
+            else
+            {
+                return null;
             }
         }
     }

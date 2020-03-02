@@ -37,7 +37,25 @@ namespace Tustler.UserControls
 
         private async void RealtimeTranslate_Executed(object sender, ExecutedRoutedEventArgs e)
         {
+            string jobName = tbJobName.Text;
+            string sourceLanguageCode = (cbSourceLanguage.SelectedItem as LanguageCode).Code;
+            string targetLanguageCode = (cbTargetLanguage.SelectedItem as LanguageCode).Code;
+            string textFilePath = tbTranslationSourceDocument.Text;
+            Progress<int> progress = new Progress<int>(value =>
+            {
+                pbTranslationJob.Value = value;
+            });
 
+            try
+            {
+
+                List<string> terminologyNames = Helpers.UIServices.UIHelpers.GetTerminologyNames(chkIncludeTerminologyNames, lbTerminologyNames);
+                await Helpers.TranslateServices.TranslateLargeText(notifications, progress, jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames).ConfigureAwait(true);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
         }
 
         private void AddTerminologies_CanExecute(object sender, CanExecuteRoutedEventArgs e)
