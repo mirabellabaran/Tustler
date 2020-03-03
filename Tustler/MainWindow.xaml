@@ -14,6 +14,7 @@
     <Window.CommandBindings>
         <CommandBinding Command="{x:Static local:MainWindowCommands.Exit}" CanExecute="ExitCommand_CanExecute" Executed="ExitCommand_Executed" />
         <CommandBinding Command="{x:Static local:MainWindowCommands.Switch}" CanExecute="SwitchCommand_CanExecute" Executed="SwitchCommand_Executed" />
+        <CommandBinding Command="{x:Static local:MainWindowCommands.ClearNotifications}" CanExecute="ClearNotifications_CanExecute" Executed="ClearNotifications_Executed" />
     </Window.CommandBindings>
     
     <Window.Resources>
@@ -110,7 +111,13 @@
             </DockPanel>
             <DockPanel>
                 <Border DockPanel.Dock="Top" Padding="20,20,20,0">
-                    <ListBox x:Name="lbNotifications" Height="90" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemsSource="{Binding Source={StaticResource applicationNotifications}, Path=Notifications}" Style="{StaticResource ListBoxDark}" />
+                    <ListBox x:Name="lbNotifications" Height="90" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemsSource="{Binding Source={StaticResource applicationNotifications}, Path=Notifications}" Style="{StaticResource ListBoxDark}">
+                        <ListBox.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Clear" Command="{x:Static local:MainWindowCommands.ClearNotifications}" />
+                            </ContextMenu>
+                        </ListBox.ContextMenu>
+                    </ListBox>
                 </Border>
                 <DockPanel x:Name="panControlsContainer">
                     <!--UserControl here-->

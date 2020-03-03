@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿#nullable enable
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,7 +12,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
-using System.Windows.Shapes;
 using Tustler.Models;
 
 namespace Tustler.UserControls
@@ -32,14 +32,46 @@ namespace Tustler.UserControls
 
         private void RealtimeTranslate_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = !string.IsNullOrEmpty(tbTranslationSourceDocument.Text) && File.Exists(tbTranslationSourceDocument.Text);
+            e.CanExecute = 
+                (!string.IsNullOrEmpty(tbTranslationSourceDocument.Text) && File.Exists(tbTranslationSourceDocument.Text))
+                || !(Helpers.TranslateServices.GetArchivedJob(tbJobName.Text) is null);
         }
 
         private async void RealtimeTranslate_Executed(object sender, ExecutedRoutedEventArgs e)
         {
+            // returns true if an archived job should be used
+            bool CheckUseArchivedJob(string jobName)
+            {
+                string? filePath = Helpers.TranslateServices.GetArchivedJob(jobName);
+                if (string.IsNullOrEmpty(filePath))
+                {
+                    return false;
+                }
+                else
+                {
+                    // an archive exists with this name
+                    if (!string.IsNullOrEmpty(tbTranslationSourceDocument.Text) && File.Exists(tbTranslationSourceDocument.Text))
+                    {
+                        // possible to start a new job; ask the user
+                        MessageBoxResult result = MessageBox.Show($"An incomplete job with the name {jobName} can be found at {filePath}. Select Yes to continue with the unfinished job, or No to start a new job.", "Continue unfinished job?", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                        return (result) switch
+                        {
+                            MessageBoxResult.Yes => true,
+                            MessageBoxResult.No => false,
+                            _ => false
+                        };
+                    }
+                    else
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            bool useArchivedJob = CheckUseArchivedJob(tbJobName.Text);
             string jobName = tbJobName.Text;
-            string sourceLanguageCode = (cbSourceLanguage.SelectedItem as LanguageCode).Code;
-            string targetLanguageCode = (cbTargetLanguage.SelectedItem as LanguageCode).Code;
+            string sourceLanguageCode = (cbSourceLanguage.SelectedItem as LanguageCode)!.Code;  // combobox must have a selection
+            string targetLanguageCode = (cbTargetLanguage.SelectedItem as LanguageCode)!.Code;  // combobox must have a selection
             string textFilePath = tbTranslationSourceDocument.Text;
             Progress<int> progress = new Progress<int>(value =>
             {
@@ -48,13 +80,15 @@ namespace Tustler.UserControls
 
             try
             {
-
+                pbTranslationJob.Value = 0.0;
+                pbTranslationJob.Visibility = Visibility.Visible;
                 List<string> terminologyNames = Helpers.UIServices.UIHelpers.GetTerminologyNames(chkIncludeTerminologyNames, lbTerminologyNames);
-                await Helpers.TranslateServices.TranslateLargeText(notifications, progress, jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames).ConfigureAwait(true);
+                await Helpers.TranslateServices.TranslateLargeText(notifications, progress, useArchivedJob, jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames).ConfigureAwait(true);
             }
             finally
             {
                 Mouse.OverrideCursor = null;
+                pbTranslationJob.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -105,6 +139,5 @@ namespace Tustler.UserControls
                 tbTranslationSourceDocument.Text = dlg.FileName;
             }
         }
-
     }
 }

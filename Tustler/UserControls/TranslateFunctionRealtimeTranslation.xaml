@@ -53,8 +53,8 @@
                     <ColumnDefinition Width="200" />
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Text="Job name:" VerticalAlignment="Bottom" Grid.Row="0" Grid.Column="0" ToolTip="This is used to construct the output file name" Style="{StaticResource textBlockStyles}" />
-                <TextBox x:Name="tbJobName" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource textBoxStyles}" />
+                <TextBlock Text="Job name:" VerticalAlignment="Bottom" Grid.Row="0" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
+                <TextBox x:Name="tbJobName" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" ToolTip="This is used to construct the output file name" Style="{StaticResource textBoxStyles}" />
 
                 <TextBlock Text="Translation Source Document:" VerticalAlignment="Bottom" Grid.Row="2" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
                 <TextBox x:Name="tbTranslationSourceDocument" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource textBoxStyles}" />
@@ -96,7 +96,7 @@
                 <ComboBox x:Name="cbTargetLanguage" Grid.Row="6" Grid.Column="5" Height="30" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource languageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en" SelectedValuePath="Code">
                 </ComboBox>
             </Grid>
-            <ProgressBar x:Name="pbTranslationJob" Height="10" Margin="10" Minimum="0" Maximum="100" Value="0" />
+            <ProgressBar x:Name="pbTranslationJob" Height="10" Margin="10" Minimum="0" Maximum="100" Value="0" Visibility="Collapsed" />
             <Button Content="Start Translation" Width="120" Height="30" Style="{StaticResource ButtonDark}" Command="{x:Static uc:TranslateCommands.RealtimeTranslate}" />
         </StackPanel>
     </DockPanel>

@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -24,15 +25,15 @@ namespace Tustler.Helpers
     {
         // key is a messageId or taskId
         private Dictionary<string, MatchedAction> notificationTasks;
-        private DispatcherTimer timer = null;
+        private DispatcherTimer? timer = null;
 
         /// <summary>
         /// Wraps a matching function and a related action
         /// </summary>
         private class MatchedAction
         {
-            public Func<string, NotificationMessage, bool> Match { get; internal set; }
-            public Action<object?> Action { get; internal set; }
+            public Func<string, NotificationMessage, bool>? Match { get; internal set; }
+            public Action<object?>? Action { get; internal set; }
         }
 
         public NotificationServices()
@@ -73,13 +74,13 @@ namespace Tustler.Helpers
         /// <returns></returns>
         public async Task TestNotifications(NotificationsList notifications)
         {
-            static async Task<AWSResult<string>> PublishMessage(NotificationsList notifications)
+            static async Task<AWSResult<string>> PublishMessage()
             {
                 var arn = ApplicationSettings.NotificationsARN;
                 return await SNS.Publish(arn, "Test message").ConfigureAwait(true);
             }
 
-            var result = await PublishMessage(notifications).ConfigureAwait(true);
+            var result = await PublishMessage().ConfigureAwait(true);
             if (result.IsError)
             {
                 notifications.HandleError("TestNotifications", "An error occurred when publishing a message.", result.Exception);
@@ -91,7 +92,7 @@ namespace Tustler.Helpers
                 void ContinuationTask(object? msg)
                 {
                     var message = msg as NotificationMessage;
-                    notifications.ShowMessage("Test succeeded", $"Received a message with content \"{message.Message}\" on the input queue.");
+                    notifications.ShowMessage("Test succeeded", $"Received a message with content \"{message!.Message}\" on the input queue.");
                 }
                 await WaitOnReceivedMessage(notifications, messageId, ContinuationTask).ConfigureAwait(true);
             }
@@ -112,7 +113,7 @@ namespace Tustler.Helpers
         private async Task WaitOnMessage(NotificationsList notifications)
         {
             var queueUrl = ApplicationSettings.NotificationsQueue;
-            NotificationMessage message;
+            NotificationMessage? message;
 
             var result = await SQS.ReceiveMessage(queueUrl).ConfigureAwait(true);
             if (result.IsError)

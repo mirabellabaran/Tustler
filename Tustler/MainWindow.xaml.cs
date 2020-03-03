@@ -14,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Tustler.Models;
 using Tustler.UserControls;
 
 namespace Tustler
@@ -110,6 +111,17 @@ namespace Tustler
                     e.Handled = true;
                 }
             }
+        }
+
+        private void ClearNotifications_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = true;
+        }
+
+        private void ClearNotifications_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            var notifications = this.FindResource("applicationNotifications") as NotificationsList;
+            notifications.Notifications.Clear();
         }
 
         private void TreeView_DoubleClick(object sender, MouseButtonEventArgs e)
@@ -292,6 +304,13 @@ namespace Tustler
                 {
                     new KeyGesture(Key.Enter)
                 }
+            );
+
+        public static readonly RoutedCommand ClearNotifications = new RoutedCommand
+            (
+                "ClearNotifications",
+                typeof(MainWindowCommands),
+                null
             );
     }
 }

@@ -10,35 +10,34 @@ namespace TustlerServicesLib
 {
     public class SentenceChunker
     {
-        const int CHUNKSIZE = 300;//5000;       // maximum of 5000 UTF-8 characters per chunk, broken on sentence boundaries
+        internal int chunkSize;     // maximum of 5000 UTF-8 characters per chunk, broken on sentence boundaries
 
         internal Dictionary<int, string> SourceChunks { get; set; }
         internal Dictionary<int, (bool Complete, string Value)> TranslatedChunks { get; set; }
 
         /// <summary>
-        /// Break the text inside the specified file into chunks, ensuring breaks occur on sentence boundaries
+        /// Break the specified text into chunks, ensuring breaks occur on sentence boundaries
         /// </summary>
-        /// <param name="textFilePath">The path of a text file</param>
-        /// <remarks>Text data whose length is exactly CHUNKSIZE will be chunked at the previous sentence end boundary, producing two chunks</remarks>
-        public SentenceChunker(string textFilePath)
+        /// <param name="text">The text to break into chunks</param>
+        /// <remarks>Text data whose length is exactly chunkSize will be chunked at the previous sentence end boundary, producing two chunks</remarks>
+        public SentenceChunker(string text, int chunkSize = 5000)
         {
-            var contents = File.ReadAllText(textFilePath);
-            var nChunks = (contents.Length / CHUNKSIZE) + 1;
+            var nChunks = (text.Length / chunkSize) + 1;
 
             // the following regex finds sentences ending in a period, an exclamation or a question mark followed by a capital letter (with optional intervening whitespace)
             // while ignoring SOME quote embedded strings
             // example: When he came to the house, he shouted \"Hey, Anybody there?\", and then opened the door and went in. First sentence.Second sentence! Third sentence? Yes.
             // note that the following version, with a standalone sentence inside the quote, breaks the quoted phrase: ...he shouted \"Hey! Anybody there?\", and then ...
             // inspired by the discussions at https://stackoverflow.com/questions/4957226/split-text-into-sentences-in-c-sharp
-            MatchCollection matches = Regex.Matches(contents, @"(?<=[\.!\?])\s*(?=[A-Z])");
+            MatchCollection matches = Regex.Matches(text, @"(?<=[\.!\?])\s*(?=[A-Z])");
 
             // each end-of-sentence match is the index of a potential chunk terminator (break point)
             var matchSeq = (matches as IEnumerable<Match>);
             var matchIndices = new Queue<int>(matchSeq.Select(m => m.Success ? m.Index : -1));
-            matchIndices.Enqueue(contents.Length);      // add the end of the string as a potential chunk terminator
+            matchIndices.Enqueue(text.Length);      // add the end of the string as a potential chunk terminator
 
-            var aggregator = new Aggregator(CHUNKSIZE, nChunks, matchIndices);
-            contents.Aggregate(aggregator, (agg, c) => {
+            var aggregator = new Aggregator(chunkSize, nChunks, matchIndices);
+            text.Aggregate(aggregator, (agg, c) => {
                 agg.Add(c);
                 return agg;
             });
@@ -46,7 +45,6 @@ namespace TustlerServicesLib
             aggregator.Flush();
             SourceChunks = aggregator.Result;
             TranslatedChunks = new Dictionary<int, (bool Complete, string Value)>(SourceChunks.Select(kvp => new KeyValuePair<int, (bool Complete, string Value)>(kvp.Key, (false, null))));
-
         }
 
         private SentenceChunker(Dictionary<int, string> sourceChunks, Dictionary<int, (bool Complete, string Value)> translatedChunks)
@@ -114,7 +112,7 @@ namespace TustlerServicesLib
         }
 
         /// <summary>
-        /// Recover ource and translated chunks from disk
+        /// Recover source and translated chunks from disk
         /// </summary>
         /// <param name="jobName"></param>
         /// <returns></returns>
@@ -125,6 +123,18 @@ namespace TustlerServicesLib
             var (sourceChunks, translatedChunks) = DeArchive(filePath);
 
             return new SentenceChunker(sourceChunks, translatedChunks);
+        }
+
+        /// <summary>
+        /// Break the text inside the specified file into chunks, ensuring breaks occur on sentence boundaries
+        /// </summary>
+        /// <param name="textFilePath">The path of a text file</param>
+        /// <returns></returns>
+        public static SentenceChunker FromFile(string textFilePath, int chunkSize = 5000)
+        {
+            var contents = File.ReadAllText(textFilePath);
+
+            return new SentenceChunker(contents, chunkSize);
         }
 
         private void Archive(string filePath)
