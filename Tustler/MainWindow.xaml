@@ -121,7 +121,6 @@
                 </Border>
                 <DockPanel x:Name="panControlsContainer">
                     <!--UserControl here-->
-                    <!--<usercontrols:S3Management/>-->
                 </DockPanel>
             </DockPanel>
         </DockPanel>

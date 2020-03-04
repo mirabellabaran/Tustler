@@ -247,6 +247,8 @@ namespace Tustler
                 // fallthru
                 case "translate":
                 // fallthru
+                case "transcribe":
+                // fallthru
                 case "polly":
                     SwitchForm(tag);
                     handled = true;
@@ -264,21 +266,33 @@ namespace Tustler
 
         private void SwitchForm(string tag)
         {
-            panControlsContainer.Children.Clear();
-            switch (tag)
+            try
             {
-                case "s3management":
-                    panControlsContainer.Children.Add(new S3Management());
-                    break;
-                case "credentials":
-                    panControlsContainer.Children.Add(new Credentials());
-                    break;
-                case "polly":
-                    panControlsContainer.Children.Add(new PollyFunctions());
-                    break;
-                case "translate":
-                    panControlsContainer.Children.Add(new TranslateFunctions());
-                    break;
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                panControlsContainer.Children.Clear();
+                switch (tag)
+                {
+                    case "s3management":
+                        panControlsContainer.Children.Add(new S3Management());
+                        break;
+                    case "credentials":
+                        panControlsContainer.Children.Add(new Credentials());
+                        break;
+                    case "polly":
+                        panControlsContainer.Children.Add(new PollyFunctions());
+                        break;
+                    case "translate":
+                        panControlsContainer.Children.Add(new TranslateFunctions());
+                        break;
+                    case "transcribe":
+                        panControlsContainer.Children.Add(new TranscribeFunctions());
+                        break;
+                }
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
             }
         }
     }

@@ -33,7 +33,7 @@ namespace Tustler.UserControls
         private void RealtimeTranslate_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
             e.CanExecute = 
-                (!string.IsNullOrEmpty(tbTranslationSourceDocument.Text) && File.Exists(tbTranslationSourceDocument.Text))
+                (!string.IsNullOrEmpty(tbTranslationSourceDocument.Text) && File.Exists(tbTranslationSourceDocument.Text) && !string.IsNullOrEmpty(tbJobName.Text))
                 || !(Helpers.TranslateServices.GetArchivedJob(tbJobName.Text) is null);
         }
 
@@ -80,6 +80,8 @@ namespace Tustler.UserControls
 
             try
             {
+                Mouse.OverrideCursor = Cursors.Wait;
+
                 pbTranslationJob.Value = 0.0;
                 pbTranslationJob.Visibility = Visibility.Visible;
                 List<string> terminologyNames = Helpers.UIServices.UIHelpers.GetTerminologyNames(chkIncludeTerminologyNames, lbTerminologyNames);

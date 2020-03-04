@@ -17,14 +17,6 @@ namespace Tustler.Helpers
     {
         public static async Task TranslateLargeText(NotificationsList notifications, Progress<int> progress, bool useArchivedJob, string jobName, string sourceLanguageCode, string targetLanguageCode, string textFilePath, List<string>? terminologyNames = null)
         {
-            // compute an exponential backoff delay when a Rate exceeded message is received
-            long GetDelay(int retryNum, long minSleepMilliseconds, long maxSleepMilliseconds)
-            {
-                retryNum = Math.Max(0, retryNum);
-                long currentSleepMillis = (long)(minSleepMilliseconds * Math.Pow(2, retryNum));
-                return Math.Min(currentSleepMillis, maxSleepMilliseconds);
-            }
-
             if (progress is null)
             {
                 throw new ArgumentNullException(nameof(progress));
@@ -37,39 +29,10 @@ namespace Tustler.Helpers
             }
             else
             {
-                chunker = TustlerServicesLib.SentenceChunker.FromFile(textFilePath, 300);
+                chunker = TustlerServicesLib.SentenceChunker.FromFile(textFilePath);
             }
 
-            var count = 0;
-            foreach (var kvp in chunker.Chunks)
-            {
-                if (!chunker.IsChunkTranslated(kvp.Key))
-                {
-                    var translationResult = await TranslateText(sourceLanguageCode, targetLanguageCode, kvp.Value, terminologyNames).ConfigureAwait(true);
-                    if (translationResult.IsError)
-                    {
-                        if ((translationResult.Exception.InnerException is AmazonTranslateException) &&
-                            (translationResult.Exception.InnerException as AmazonTranslateException).StatusCode == HttpStatusCode.TooManyRequests)
-                        {
-                            var newDelay = GetDelay(count + 1, 10, 5000);
-                            await Task.Delay((int)newDelay).ConfigureAwait(false);
-                        }
-                        else
-                        {
-                            notifications.HandleError(translationResult);
-                            chunker.ArchiveChunks(jobName, ApplicationSettings.FileCachePath);
-                            notifications.ShowMessage("The failed job can be restarted", $"{jobName} has been archived and can be restarted at another time using the same job name.");
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        var translatedText = translationResult.Result;
-                        chunker.Update(kvp.Key, translatedText);
-                    }
-                }
-                (progress as IProgress<int>).Report(++count * 100 / chunker.NumChunks);
-            }
+            await ProcessChunks(chunker, notifications, progress, jobName, sourceLanguageCode, targetLanguageCode, terminologyNames).ConfigureAwait(true);
 
             if (chunker.IsJobComplete)
             {
@@ -78,6 +41,57 @@ namespace Tustler.Helpers
                 filePath = Path.ChangeExtension(filePath, "txt");
                 File.WriteAllText(filePath, chunker.CompletedTranslation);
                 notifications.ShowMessage("Translation job completed", $"{jobName} has been saved to file {filePath}.");
+            }
+        }
+
+        private static async Task ProcessChunks(SentenceChunker chunker, NotificationsList notifications, Progress<int> progress, string jobName, string sourceLanguageCode, string targetLanguageCode, List<string>? terminologyNames)
+        {
+            // compute an exponential backoff delay when a Rate exceeded message is received
+            long GetDelay(int retryNum, long minSleepMilliseconds, long maxSleepMilliseconds)
+            {
+                retryNum = Math.Max(0, retryNum);
+                long currentSleepMillis = (long)(minSleepMilliseconds * Math.Pow(2, retryNum));
+                return Math.Min(currentSleepMillis, maxSleepMilliseconds);
+            }
+
+            var count = 0;
+            foreach (var kvp in chunker.Chunks)
+            {
+                if (!chunker.IsChunkTranslated(kvp.Key))
+                {
+                    int maxRetries = 10;
+                    while (maxRetries-- > 0)
+                    {
+                        var translationResult = await TranslateText(sourceLanguageCode, targetLanguageCode, kvp.Value, terminologyNames).ConfigureAwait(true);
+                        if (translationResult.IsError)
+                        {
+                            var ex = translationResult.Exception;
+                            if (
+                                !(ex.InnerException is null) &&
+                                (ex.InnerException is AmazonTranslateException) &&
+                                (ex.InnerException as AmazonTranslateException)?.StatusCode == HttpStatusCode.TooManyRequests
+                                )
+                            {
+                                var newDelay = GetDelay(count + 1, 10, 5000);
+                                await Task.Delay((int)newDelay).ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                notifications.HandleError(translationResult);
+                                chunker.ArchiveChunks(jobName, ApplicationSettings.FileCachePath);
+                                notifications.ShowMessage("The failed job can be restarted", $"{jobName} has been archived and can be restarted at another time using the same job name.");
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            var translatedText = translationResult.Result;
+                            chunker.Update(kvp.Key, translatedText);
+                            break;
+                        }
+                    }
+                }
+                (progress as IProgress<int>).Report(++count * 100 / chunker.NumChunks);
             }
         }
 
