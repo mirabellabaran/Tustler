@@ -41,7 +41,9 @@ namespace Tustler
             var appSettingsPath = Path.Combine(baseDirectory, appSettingsFileName);
             if (!File.Exists(appSettingsPath))
             {
-                PrepareConfigurationFirstTimeExecution(baseDirectory, appSettingsPath);
+                //PrepareConfigurationFirstTimeExecution(baseDirectory, appSettingsPath);
+                MessageBox.Show($"Missing configuration file {appSettingsPath}", "Configuration file missing", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.Current.Shutdown();
             }
 
             var builder = new ConfigurationBuilder()
@@ -75,49 +77,6 @@ namespace Tustler
 
             log.Error($"CurrentDomain_UnhandledException: IsTerminating = {e.IsTerminating}", ex);
             Application.Current.Shutdown();
-        }
-
-        private void PrepareConfigurationFirstTimeExecution(string baseDirectory, string appSettingsFileName)
-        {
-            // TODO remove this function because some of the information is private and should be in a config file only
-
-            var fileCacheFolderName = "FileCache";
-            // default to placing the file cache in the application base directory
-            var fileCachePath = Path.Combine(baseDirectory, fileCacheFolderName);
-            if (!Directory.Exists(fileCachePath))
-            {
-                Directory.CreateDirectory(fileCachePath);
-            }
-
-            // prepare the configuration (file cache folder path, default S3 bucket name and the ARN for SNS notifications)
-            var escapedPath = fileCachePath.Replace(@"\", @"/", StringComparison.InvariantCulture);
-            var fileCacheFolderConfig = $"\t\"{fileCacheFolderName}\": \"{escapedPath}\",";
-            var defaultBucketConfig = $"\t\"DefaultBucketName\": \"tator\",";
-            var batchTranslateServiceRole = $"\t\"BatchTranslateServiceRole\": \"arn:aws:iam::261914005867:role/TODO-create-this-role\",";
-            var batchTranslateRegion = $"\t\"BatchTranslateRegion\": \"ap-northeast-2\",";
-            var batchTranslateInputFolder = $"\t\"BatchTranslateInputFolder\": \"TranslationInput/\",";
-            var batchTranslateOutputFolder = $"\t\"BatchTranslateOutputFolder\": \"TranslationOutput/\",";
-            var notificationsARNConfig = $"\t\"NotificationsARN\": \"arn:aws:sns:ap-southeast-2:261914005867:TatorNotifications\",";
-            var notificationsQueueConfig = $"\t\"NotificationsQueue\": \"https://sqs.ap-southeast-2.amazonaws.com/261914005867/TatorQueue\"";
-            string[] lines = {
-                "{",
-                fileCacheFolderConfig,
-                defaultBucketConfig,
-                batchTranslateServiceRole,
-                batchTranslateRegion,
-                batchTranslateInputFolder,
-                batchTranslateOutputFolder,
-                notificationsARNConfig,
-                notificationsQueueConfig,
-                "}"
-            };
-
-            // write the configuration
-            using (StreamWriter outputFile = new StreamWriter(appSettingsFileName))
-            {
-                foreach (string line in lines)
-                    outputFile.WriteLine(line);
-            }
         }
     }
 }
