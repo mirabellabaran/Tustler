@@ -11,6 +11,7 @@
             <local:BucketItemViewModel x:Key="bucketItemsInstance"/>
             <local:LanguageCodesViewModel x:Key="languageCodesInstance" />
             <local:TranslationTerminologiesViewModel x:Key="terminologiesInstance" />
+            <local:TranscriptionVocabulariesViewModel x:Key="vocabulariesInstance" />
 
             <local:NotificationsList x:Key="applicationNotifications" />
             <helpers:NotificationServices x:Key="notificationsServicesInstance" />

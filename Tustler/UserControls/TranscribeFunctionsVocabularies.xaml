@@ -1,0 +1,63 @@
+﻿<UserControl x:Class="Tustler.UserControls.TranscribeFunctionsVocabularies"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Tustler.Models"
+             xmlns:uc="clr-namespace:Tustler.UserControls"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.CommandBindings>
+        <CommandBinding Command="{x:Static uc:TranscribeCommands.ListVocabularies}" CanExecute="ListVocabularies_CanExecute" Executed="ListVocabularies_Executed" />
+    </UserControl.CommandBindings>
+
+    <DockPanel Background="{StaticResource ContrastingBackground}" Margin="20">
+        <StackPanel Orientation="Vertical">
+            <Button Content="List Vocabularies" Command="{x:Static uc:TranscribeCommands.ListVocabularies}" Width="130" Height="40" Style="{StaticResource ButtonDark}" />
+            <DataGrid x:Name="dgVocabularies" Width="800" Height="300" Margin="10" AutoGenerateColumns="False" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource vocabulariesInstance}, Path=TranscriptionVocabularies}" RowBackground="{StaticResource ContrastingBackground}">
+                <DataGrid.Resources>
+                    <Style x:Key="textStyles" TargetType="TextBlock" BasedOn="{StaticResource TextBlockDark}">
+                        <Setter Property="HorizontalAlignment" Value="Left" />
+                        <Setter Property="Margin" Value="5" />
+                    </Style>
+                    <Style TargetType="Label" BasedOn="{StaticResource LabelDark}">
+                        <Setter Property="Foreground" Value="Black" />
+                        <Setter Property="FontWeight" Value="DemiBold" />
+                        <Setter Property="HorizontalAlignment" Value="Right" />
+                    </Style>
+                </DataGrid.Resources>
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Terminology Name: " Binding="{Binding Path=Name}" />
+                </DataGrid.Columns>
+                <DataGrid.RowDetailsTemplate>
+                    <DataTemplate>
+                        <Grid ShowGridLines="False">
+                            <Grid.RowDefinitions>
+                                <RowDefinition />
+                                <RowDefinition />
+                                <RowDefinition />
+                                <RowDefinition />
+                                <RowDefinition />
+                                <RowDefinition />
+                                <RowDefinition />
+                                <RowDefinition />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <Label Grid.Row="0" Grid.Column="0" Content="Vocabulary Name: "/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Path=VocabularyName}" Style="{StaticResource textStyles}" />
+                            <Label Grid.Row="1" Grid.Column="0" Content="State: "/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path=VocabularyState}" Style="{StaticResource textStyles}" />
+                            <Label Grid.Row="2" Grid.Column="0" Content="Last Modified: "/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Path=LastModifiedTime, StringFormat=D}" Style="{StaticResource textStyles}" />
+                            <Label Grid.Row="3" Grid.Column="0" Content="LanguageCode: "/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Path=LanguageCode}" Style="{StaticResource textStyles}" />
+                        </Grid>
+                    </DataTemplate>
+                </DataGrid.RowDetailsTemplate>
+            </DataGrid>
+        </StackPanel>
+    </DockPanel>
+</UserControl>

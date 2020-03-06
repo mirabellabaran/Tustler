@@ -23,4 +23,15 @@ namespace Tustler.UserControls
             InitializeComponent();
         }
     }
+
+    public static class TranscribeCommands
+    {
+        public static readonly RoutedUICommand ListVocabularies = new RoutedUICommand
+            (
+                "ListVocabularies",
+                "ListVocabularies",
+                typeof(TranscribeCommands),
+                null
+            );
+    }
 }
