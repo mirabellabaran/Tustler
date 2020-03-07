@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace TustlerServicesLib
 {
@@ -44,6 +45,16 @@ namespace TustlerServicesLib
 
             aggregator.Flush();
             SourceChunks = aggregator.Result;
+            TranslatedChunks = new Dictionary<int, (bool Complete, string Value)>(SourceChunks.Select(kvp => new KeyValuePair<int, (bool Complete, string Value)>(kvp.Key, (false, null))));
+        }
+
+        /// <summary>
+        /// Create a sentence chunker from the specified sentences (e.g. a sequence of subtitles that need translation)
+        /// </summary>
+        /// <param name="sentences">A collection of sentences, to be translated separately</param>
+        public SentenceChunker(IEnumerable<string> sentences)
+        {
+            SourceChunks = new Dictionary<int, string>(sentences.Where(s => !string.IsNullOrEmpty(s)).Select((s, i) => new KeyValuePair<int, string>(i, s)));
             TranslatedChunks = new Dictionary<int, (bool Complete, string Value)>(SourceChunks.Select(kvp => new KeyValuePair<int, (bool Complete, string Value)>(kvp.Key, (false, null))));
         }
 
@@ -90,6 +101,62 @@ namespace TustlerServicesLib
                     return string.Join(" ", TranslatedChunks.Select(kvp => kvp.Value.Value));
                 else
                     return null;
+            }
+        }
+
+        public string[] AllSentences
+        {
+            get
+            {
+                if (IsJobComplete)
+                    return TranslatedChunks.Select(kvp => kvp.Value.Value).ToArray();
+                else
+                    return null;
+            }
+        }
+
+        public async Task ProcessChunks(Func<int, string, Task<(bool IsErrorState, bool RecoverableError)>> translator)
+        {
+            // compute an exponential backoff delay when a Rate exceeded message is received
+            long GetDelay(int retryNum, long minSleepMilliseconds, long maxSleepMilliseconds)
+            {
+                retryNum = Math.Max(0, retryNum);
+                long currentSleepMillis = (long)(minSleepMilliseconds * Math.Pow(2, retryNum));
+                return Math.Min(currentSleepMillis, maxSleepMilliseconds);
+            }
+
+            var retries = 0;
+            var delay = 0L;
+            foreach (var kvp in Chunks)
+            {
+                if (!IsChunkTranslated(kvp.Key))
+                {
+                    int maxRetries = 10;
+                    while (maxRetries-- > 0)
+                    {
+                        if (delay > 0L)
+                        {
+                            await Task.Delay((int)delay).ConfigureAwait(false);
+                        }
+                        var (isErrorState, recoverableError) = await translator(kvp.Key, kvp.Value);
+                        if (isErrorState)
+                        {
+                            if (recoverableError)
+                            {
+                                // exponential backoff
+                                delay = GetDelay(++retries, 10, 5000);
+                            }
+                            else
+                            {
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
             }
         }
 

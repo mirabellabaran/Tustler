@@ -15,6 +15,7 @@
         <CommandBinding Command="{x:Static local:MainWindowCommands.Exit}" CanExecute="ExitCommand_CanExecute" Executed="ExitCommand_Executed" />
         <CommandBinding Command="{x:Static local:MainWindowCommands.Switch}" CanExecute="SwitchCommand_CanExecute" Executed="SwitchCommand_Executed" />
         <CommandBinding Command="{x:Static local:MainWindowCommands.ClearNotifications}" CanExecute="ClearNotifications_CanExecute" Executed="ClearNotifications_Executed" />
+        <CommandBinding Command="{x:Static local:MainWindowCommands.CopyNotification}" CanExecute="CopyNotification_CanExecute" Executed="CopyNotification_Executed" />
     </Window.CommandBindings>
     
     <Window.Resources>
@@ -114,7 +115,8 @@
                     <ListBox x:Name="lbNotifications" Height="90" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemsSource="{Binding Source={StaticResource applicationNotifications}, Path=Notifications}" Style="{StaticResource ListBoxDark}">
                         <ListBox.ContextMenu>
                             <ContextMenu>
-                                <MenuItem Header="Clear" Command="{x:Static local:MainWindowCommands.ClearNotifications}" />
+                                <MenuItem Header="Clear All" Command="{x:Static local:MainWindowCommands.ClearNotifications}" />
+                                <MenuItem Header="Copy Selected" Command="{x:Static local:MainWindowCommands.CopyNotification}" />
                             </ContextMenu>
                         </ListBox.ContextMenu>
                     </ListBox>

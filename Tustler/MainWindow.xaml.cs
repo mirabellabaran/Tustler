@@ -124,6 +124,25 @@ namespace Tustler
             notifications.Notifications.Clear();
         }
 
+        private void CopyNotification_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = (lbNotifications.SelectedItems.Count > 0);
+        }
+
+        private void CopyNotification_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            var notification = (lbNotifications.SelectedItem as Notification);
+            if (!(notification is null))
+            {
+                var content = notification switch
+                {
+                    ApplicationErrorInfo errorInfo => $"{errorInfo.Context}\n{errorInfo.Message}\nInner: {errorInfo.Exception.Message}\n{errorInfo.Exception.StackTrace}",
+                    ApplicationMessageInfo messageInfo => $"{messageInfo.Message}\n{messageInfo.Detail}",
+                };
+                Clipboard.SetText(content, TextDataFormat.Text);
+            }
+        }
+
         private void TreeView_DoubleClick(object sender, MouseButtonEventArgs e)
         {
             var tree = sender as TreeView;
@@ -323,6 +342,13 @@ namespace Tustler
         public static readonly RoutedCommand ClearNotifications = new RoutedCommand
             (
                 "ClearNotifications",
+                typeof(MainWindowCommands),
+                null
+            );
+
+        public static readonly RoutedCommand CopyNotification = new RoutedCommand
+            (
+                "CopyNotification",
                 typeof(MainWindowCommands),
                 null
             );

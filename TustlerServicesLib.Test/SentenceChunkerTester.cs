@@ -1,5 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using TustlerServicesLib;
 
 namespace TustlerServicesLibTest
@@ -12,22 +14,62 @@ For structural PNGs, the ?ring events that de?ne the group are purely theoretica
 Supported and adapted polychronous groups are assumed to co-exist in a dynamic equilibrium that is sensitive to the network inputs (Izhikevich, 2006a). An unsupervised learning rule governs this dynamic equilibrium, selectively reinforcing supported groups that best match the current inputs and weakening connections with non-matching conduction delays. The e?ect of the learning rule is a selective adaptation of connection weights in a way that supports the propagation of ?ring activity within each matching group. However, some degree of adaptation seems to occur even in the absence of structured input, as is the case in model networks exposed to random input. Under these conditions the network connection weights adapt to the underlying connection structure of the network, reinforcing only those groups whose conduction delays match the network dynamics. This process of network maturation is often exploited in model networks where the initialization of synaptic weights to random values (or often a constant value) means that adapted PNGs are unlikely to occur.
 Selective reinforcement of supported groups requires a learning rule that is sensitive to both the precise timing and the temporal order of ?ring events. A sensitivity to precise timing allows the selective reinforcement of connections whose conduction delays match the ?ring times of the pre-synaptic and post-synaptic neurons, while a sensitivity to temporal order supports a Hebbian notion of causality in which the e?ciency of one neuron in contributing to the ?ring of another is increased. One well-known and empirically supported learning rule that meets these criteria is spike-timing-dependent plasticity (or STDP) (Gerstner et al., 1993, 1996, Markram et al., 1997, Caporale and Dan, 2008). It is an unsupervised local learning rule that operates at the local level of each connection, without bene?t of an error or reward signal. It also closely matches the temporally sensitive learning rule that Donald Hebb seemed to have in mind, producing the much quoted e?ect of: neurons that ?re together, wire together (Shatz, 1996). However, it has an additional feature in that the magnitude of synaptic change (i.e. the strength of the resulting wiring) is sensitive to the precise timing of each neural spike.";
 
+        readonly string[] sentences = new string[] {
+                "AAAAAA AAAAAA AAAAAA",
+                "BBBBBB BBBBBB BBBBBB",
+                "CCCCCC CCCCCC CCCCCC"
+            };
+
         [TestMethod]
         public void TestChunkSize5000Returns1Chunk()
         {
             var chunker = new TustlerServicesLib.SentenceChunker(testString, 5000);
-            Assert.AreEqual(chunker.NumChunks, 2);
+            Assert.AreEqual(2, chunker.NumChunks);
         }
 
         [TestMethod]
         public void TestChunkSize300Returns10Chunks()
         {
             var chunker = new TustlerServicesLib.SentenceChunker(testString, 300);
-            Assert.AreEqual(chunker.NumChunks, 26);
+            Assert.AreEqual(26, chunker.NumChunks);
 
             var terminators = new[] { '.', '!', '?' };
             var allSentencesEndInTerminators = chunker.Chunks.All(kvp => terminators.Contains(kvp.Value.Last()));
             Assert.IsTrue(allSentencesEndInTerminators);
+        }
+
+        [TestMethod]
+        public void TestEnumerableConstructor()
+        {
+            var chunker = new TustlerServicesLib.SentenceChunker(sentences);
+            Assert.AreEqual(3, chunker.NumChunks);
+            Assert.IsNull(chunker.CompletedTranslation);
+        }
+
+        [TestMethod]
+        public async Task TestProcessChunks()
+        {
+            var queue = new Queue<int>(10);
+            async Task<(bool IsErrorState, bool RecoverableError)> Translator(int index, string text)
+            {
+                queue.Enqueue(index);
+                await Task.Delay(10).ConfigureAwait(false);
+                if (index == 0)     // pretend we are in an error state; should retry ten times
+                {
+                    return (true, true);
+                }
+                else
+                {
+                    return (false, false);
+                }
+            }
+
+            var chunker = new TustlerServicesLib.SentenceChunker(sentences);
+            await chunker.ProcessChunks(Translator);
+            var result = string.Join("", queue.Select(i => i.ToString()).ToArray());
+
+            // index 0 is retried ten times
+            Assert.AreEqual("000000000012", result);
         }
     }
 }

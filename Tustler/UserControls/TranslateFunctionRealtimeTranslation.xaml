@@ -82,6 +82,7 @@
                     <ListBox x:Name="lbTerminologyNames" SelectionMode="Multiple" Style="{StaticResource listBoxStyles}" ItemsSource="{Binding Source={StaticResource terminologiesInstance}, Path=TranslationTerminologies}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValuePath="Name" SelectionChanged="lbTerminologyNames_SelectionChanged"/>
                 </StackPanel>
 
+                <CheckBox x:Name="chkTextFileContainsOneSentencePerLine" Grid.Row="4" Grid.Column="0" Margin="10" IsThreeState="False" IsChecked="False" ToolTip="The file contains exactly one sentence per line">One sentence per line</CheckBox>
                 <TextBlock Text="Source Language:" Grid.Row="5" Grid.Column="4" Style="{StaticResource textBlockStyles}" />
                 <ComboBox x:Name="cbSourceLanguage" Grid.Row="5" Grid.Column="5" Height="30" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource languageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en" SelectedValuePath="Code">
                     <ComboBox.ItemContainerStyle>

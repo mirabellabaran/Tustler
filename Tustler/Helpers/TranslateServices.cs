@@ -15,6 +15,10 @@ namespace Tustler.Helpers
 {
     public static class TranslateServices
     {
+        /// <summary>
+        /// Translate a file containing text and output to a new text file
+        /// </summary>
+        /// <remarks>Newline characters may be introduced at chunk boundaries</remarks>
         public static async Task TranslateLargeText(NotificationsList notifications, Progress<int> progress, bool useArchivedJob, string jobName, string sourceLanguageCode, string targetLanguageCode, string textFilePath, List<string>? terminologyNames = null)
         {
             if (progress is null)
@@ -44,55 +48,76 @@ namespace Tustler.Helpers
             }
         }
 
-        private static async Task ProcessChunks(SentenceChunker chunker, NotificationsList notifications, Progress<int> progress, string jobName, string sourceLanguageCode, string targetLanguageCode, List<string>? terminologyNames)
+        /// <summary>
+        /// Translate a file containing one complete sentence per line and output to a new file containing one complete sentence per line
+        /// </summary>
+        public static async Task TranslateSentences(NotificationsList notifications, Progress<int> progress, bool useArchivedJob, string jobName, string sourceLanguageCode, string targetLanguageCode, string textFilePath, List<string>? terminologyNames = null)
         {
-            // compute an exponential backoff delay when a Rate exceeded message is received
-            long GetDelay(int retryNum, long minSleepMilliseconds, long maxSleepMilliseconds)
+            if (progress is null)
             {
-                retryNum = Math.Max(0, retryNum);
-                long currentSleepMillis = (long)(minSleepMilliseconds * Math.Pow(2, retryNum));
-                return Math.Min(currentSleepMillis, maxSleepMilliseconds);
+                throw new ArgumentNullException(nameof(progress));
             }
 
-            var count = 0;
-            foreach (var kvp in chunker.Chunks)
+            SentenceChunker chunker;
+            if (useArchivedJob && !(GetArchivedJob(jobName) is null))
             {
-                if (!chunker.IsChunkTranslated(kvp.Key))
+                chunker = SentenceChunker.DeArchiveChunks(jobName, ApplicationSettings.FileCachePath);
+            }
+            else
+            {
+                // the text file is assumed to contain a sequence of sentences, with one complete sentence per line
+                var sentences = File.ReadAllLines(textFilePath);
+                chunker = new TustlerServicesLib.SentenceChunker(sentences);
+            }
+
+            await ProcessChunks(chunker, notifications, progress, jobName, sourceLanguageCode, targetLanguageCode, terminologyNames).ConfigureAwait(true);
+
+            if (chunker.IsJobComplete)
+            {
+                // save the translated text
+                var filePath = Path.Combine(ApplicationSettings.FileCachePath, jobName);
+                filePath = Path.ChangeExtension(filePath, "txt");
+                File.WriteAllLines(filePath, chunker.AllSentences);
+                notifications.ShowMessage("Translation job completed", $"{jobName} has been saved to file {filePath}.");
+            }
+        }
+
+        private static async Task ProcessChunks(SentenceChunker chunker, NotificationsList notifications, Progress<int> progress, string jobName, string sourceLanguageCode, string targetLanguageCode, List<string>? terminologyNames)
+        {
+            async Task<(bool IsErrorState, bool RecoverableError)> Translator(int index, string text)
+            {
+                var translationResult = await TranslateText(sourceLanguageCode, targetLanguageCode, text, terminologyNames).ConfigureAwait(true);
+                if (translationResult.IsError)
                 {
-                    int maxRetries = 10;
-                    while (maxRetries-- > 0)
+                    var ex = translationResult.Exception;
+                    if (
+                        !(ex.InnerException is null) &&
+                        (ex.InnerException is AmazonTranslateException) &&
+                        (ex.InnerException as AmazonTranslateException)?.StatusCode == HttpStatusCode.TooManyRequests
+                        )
                     {
-                        var translationResult = await TranslateText(sourceLanguageCode, targetLanguageCode, kvp.Value, terminologyNames).ConfigureAwait(true);
-                        if (translationResult.IsError)
-                        {
-                            var ex = translationResult.Exception;
-                            if (
-                                !(ex.InnerException is null) &&
-                                (ex.InnerException is AmazonTranslateException) &&
-                                (ex.InnerException as AmazonTranslateException)?.StatusCode == HttpStatusCode.TooManyRequests
-                                )
-                            {
-                                var newDelay = GetDelay(count + 1, 10, 5000);
-                                await Task.Delay((int)newDelay).ConfigureAwait(false);
-                            }
-                            else
-                            {
-                                notifications.HandleError(translationResult);
-                                chunker.ArchiveChunks(jobName, ApplicationSettings.FileCachePath);
-                                notifications.ShowMessage("The failed job can be restarted", $"{jobName} has been archived and can be restarted at another time using the same job name.");
-                                return;
-                            }
-                        }
-                        else
-                        {
-                            var translatedText = translationResult.Result;
-                            chunker.Update(kvp.Key, translatedText);
-                            break;
-                        }
+                        return (true, true);
+                    }
+                    else
+                    {
+                        notifications.HandleError(translationResult);
+                        chunker.ArchiveChunks(jobName, ApplicationSettings.FileCachePath);
+                        notifications.ShowMessage("The failed job can be restarted", $"{jobName} has been archived and can be restarted at another time using the same job name.");
+                        return (true, false);
                     }
                 }
-                (progress as IProgress<int>).Report(++count * 100 / chunker.NumChunks);
+                else
+                {
+                    var translatedText = translationResult.Result;
+                    chunker.Update(index, translatedText);
+
+                    (progress as IProgress<int>).Report(index * 100 / chunker.NumChunks);
+
+                    return (false, false);
+                }
             }
+
+            await chunker.ProcessChunks(Translator).ConfigureAwait(true);
         }
 
         public static async Task<AWSResult<string>> TranslateText(string sourceLanguageCode, string targetLanguageCode, string text, List<string>? terminologyNames = null)

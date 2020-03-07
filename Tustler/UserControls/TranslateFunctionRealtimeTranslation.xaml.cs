@@ -73,6 +73,7 @@ namespace Tustler.UserControls
             string sourceLanguageCode = (cbSourceLanguage.SelectedItem as LanguageCode)!.Code;  // combobox must have a selection
             string targetLanguageCode = (cbTargetLanguage.SelectedItem as LanguageCode)!.Code;  // combobox must have a selection
             string textFilePath = tbTranslationSourceDocument.Text;
+            bool fileIsOneSentencePerLine = chkTextFileContainsOneSentencePerLine.IsChecked.HasValue? chkTextFileContainsOneSentencePerLine.IsChecked.Value : false;
             Progress<int> progress = new Progress<int>(value =>
             {
                 pbTranslationJob.Value = value;
@@ -85,7 +86,11 @@ namespace Tustler.UserControls
                 pbTranslationJob.Value = 0.0;
                 pbTranslationJob.Visibility = Visibility.Visible;
                 List<string> terminologyNames = Helpers.UIServices.UIHelpers.GetTerminologyNames(chkIncludeTerminologyNames, lbTerminologyNames);
-                await Helpers.TranslateServices.TranslateLargeText(notifications, progress, useArchivedJob, jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames).ConfigureAwait(true);
+
+                if (fileIsOneSentencePerLine)
+                    await Helpers.TranslateServices.TranslateSentences(notifications, progress, useArchivedJob, jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames).ConfigureAwait(true);
+                else
+                    await Helpers.TranslateServices.TranslateLargeText(notifications, progress, useArchivedJob, jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames).ConfigureAwait(true);
             }
             finally
             {
