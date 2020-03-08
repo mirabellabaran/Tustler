@@ -53,7 +53,7 @@
                             <Label Grid.Row="2" Grid.Column="0" Content="Created: "/>
                             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Path=CreatedAt, StringFormat=D}" Style="{StaticResource textStyles}" />
                             <Label Grid.Row="3" Grid.Column="0" Content="Last Updated: "/>
-                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Path=LastUpdatedAt}" Style="{StaticResource textStyles}" />
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Path=LastUpdatedAt, StringFormat=D}" Style="{StaticResource textStyles}" />
                             <Label Grid.Row="4" Grid.Column="0" Content="Source Language: "/>
                             <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Path=SourceLanguageCode}" Style="{StaticResource textStyles}" />
                             <Label Grid.Row="5" Grid.Column="0" Content="Target Languages: "/>

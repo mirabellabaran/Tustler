@@ -18,11 +18,11 @@ namespace Tustler.UserControls
     /// <summary>
     /// Interaction logic for TranscribeFunctionsVocabularies.xaml
     /// </summary>
-    public partial class TranscribeFunctionsVocabularies : UserControl
+    public partial class TranscribeFunctionVocabularies : UserControl
     {
         private readonly NotificationsList notifications;
 
-        public TranscribeFunctionsVocabularies()
+        public TranscribeFunctionVocabularies()
         {
             InitializeComponent();
 

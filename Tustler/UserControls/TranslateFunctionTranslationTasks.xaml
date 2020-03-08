@@ -93,13 +93,13 @@
                 </StackPanel>
 
                 <TextBlock Text="Source Language:" Width="300" Grid.Row="0" Grid.Column="4" Style="{StaticResource textBlockStyles}" />
-                <ComboBox x:Name="cbSourceLanguage" Grid.Row="0" Grid.Column="5" Height="30" Style="{StaticResource comboBoxStyles}" ItemsSource="{Binding Source={StaticResource languageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en" SelectedValuePath="Code" />
+                <ComboBox x:Name="cbSourceLanguage" Grid.Row="0" Grid.Column="5" Height="30" Style="{StaticResource comboBoxStyles}" ItemsSource="{Binding Source={StaticResource translationLanguageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en" SelectedValuePath="Code" />
 
                 <StackPanel Orientation="Vertical" Grid.Row="1" Grid.Column="4" Grid.RowSpan="3">
                     <TextBlock Text="Target Languages:" Width="300" Style="{StaticResource textBlockStyles}" />
                     <ListBox Height="100" Background="{StaticResource ContrastingBackground}" BorderThickness="0" ItemsSource="{Binding Source={StaticResource selectedLanguageCodes}, Path=Items}" ScrollViewer.VerticalScrollBarVisibility="Auto" />
                 </StackPanel>
-                <ListBox x:Name="lbTargetLanguages" Grid.Row="1" Grid.Column="5" Grid.RowSpan="3" Margin="10" SelectionMode="Multiple" Style="{StaticResource ListBoxDark}" ItemsSource="{Binding Source={StaticResource languageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en" SelectedValuePath="Code" SelectionChanged="lbTargetLanguages_SelectionChanged" />
+                <ListBox x:Name="lbTargetLanguages" Grid.Row="1" Grid.Column="5" Grid.RowSpan="3" Margin="10" SelectionMode="Multiple" Style="{StaticResource ListBoxDark}" ItemsSource="{Binding Source={StaticResource translationLanguageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en" SelectedValuePath="Code" SelectionChanged="lbTargetLanguages_SelectionChanged" />
             </Grid>
 
             <DataGrid x:Name="dgTranslationTasks"  Height="130" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource translationJobsInstance}, Path=TranslationJobs}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">

@@ -33,5 +33,24 @@ namespace Tustler.UserControls
                 typeof(TranscribeCommands),
                 null
             );
+
+        /// <summary>
+        /// Add a vocabulary to the transcription job
+        /// </summary>
+        public static readonly RoutedUICommand AddVocabulary = new RoutedUICommand
+            (
+                "AddVocabulary",
+                "AddVocabulary",
+                typeof(TranscribeCommands),
+                null
+            );
+
+        public static readonly RoutedUICommand StartTranscriptionJob = new RoutedUICommand
+            (
+                "StartTranscriptionJob",
+                "StartTranscriptionJob",
+                typeof(TranscribeCommands),
+                null
+            );
     }
 }

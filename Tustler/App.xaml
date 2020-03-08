@@ -9,7 +9,8 @@
 
             <local:BucketViewModel x:Key="bucketsInstance"/>
             <local:BucketItemViewModel x:Key="bucketItemsInstance"/>
-            <local:LanguageCodesViewModel x:Key="languageCodesInstance" />
+            <local:TranslationLanguageCodesViewModel x:Key="translationLanguageCodesInstance" />
+            <local:TranscriptionLanguageCodesViewModel x:Key="transcriptionLanguageCodesInstance" />
             <local:TranslationTerminologiesViewModel x:Key="terminologiesInstance" />
             <local:TranscriptionVocabulariesViewModel x:Key="vocabulariesInstance" />
 

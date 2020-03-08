@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Tustler.Models
 {
-    public class LanguageCodesViewModel
+    public class TranslationLanguageCodesViewModel
     {
         public ObservableCollection<LanguageCode> LanguageCodes
         {
@@ -13,7 +13,7 @@ namespace Tustler.Models
             private set;
         }
 
-        public LanguageCodesViewModel()
+        public TranslationLanguageCodesViewModel()
         {
             var codes = new LanguageCode[] {
                 new LanguageCode { Name = "Afrikaans", Code = "af" },
@@ -24,8 +24,8 @@ namespace Tustler.Models
                 new LanguageCode { Name = "Bengali", Code = "bn" },
                 new LanguageCode { Name = "Bosnian", Code = "bs" },
                 new LanguageCode { Name = "Bulgarian", Code = "bg" },
-                new LanguageCode { Name = "Chinese(Simplified)   ", Code = "zh" },
-                new LanguageCode { Name = "Chinese(Traditional)  ", Code = "zh-TW" },
+                new LanguageCode { Name = "Chinese (Simplified)   ", Code = "zh" },
+                new LanguageCode { Name = "Chinese (Traditional)  ", Code = "zh-TW" },
                 new LanguageCode { Name = "Croatian", Code = "hr" },
                 new LanguageCode { Name = "Czech", Code = "cs" },
                 new LanguageCode { Name = "Danish", Code = "da" },
@@ -35,7 +35,7 @@ namespace Tustler.Models
                 new LanguageCode { Name = "Estonian", Code = "et" },
                 new LanguageCode { Name = "Finnish", Code = "fi" },
                 new LanguageCode { Name = "French", Code = "fr" },
-                new LanguageCode { Name = "French(Canadian)  ", Code = "fr-CA" },
+                new LanguageCode { Name = "French (Canadian)  ", Code = "fr-CA" },
                 new LanguageCode { Name = "Georgian", Code = "ka" },
                 new LanguageCode { Name = "German", Code = "de" },
                 new LanguageCode { Name = "Greek", Code = "el" },

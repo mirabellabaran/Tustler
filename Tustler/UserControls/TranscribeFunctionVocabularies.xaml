@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="Tustler.UserControls.TranscribeFunctionsVocabularies"
+﻿<UserControl x:Class="Tustler.UserControls.TranscribeFunctionVocabularies"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -27,7 +27,7 @@
                     </Style>
                 </DataGrid.Resources>
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Terminology Name: " Binding="{Binding Path=Name}" />
+                    <DataGridTextColumn Header="Vocabulary Name: " Binding="{Binding Path=VocabularyName}" />
                 </DataGrid.Columns>
                 <DataGrid.RowDetailsTemplate>
                     <DataTemplate>
@@ -36,24 +36,17 @@
                                 <RowDefinition />
                                 <RowDefinition />
                                 <RowDefinition />
-                                <RowDefinition />
-                                <RowDefinition />
-                                <RowDefinition />
-                                <RowDefinition />
-                                <RowDefinition />
                             </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="120" />
                                 <ColumnDefinition />
                             </Grid.ColumnDefinitions>
-                            <Label Grid.Row="0" Grid.Column="0" Content="Vocabulary Name: "/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Path=VocabularyName}" Style="{StaticResource textStyles}" />
-                            <Label Grid.Row="1" Grid.Column="0" Content="State: "/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path=VocabularyState}" Style="{StaticResource textStyles}" />
-                            <Label Grid.Row="2" Grid.Column="0" Content="Last Modified: "/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Path=LastModifiedTime, StringFormat=D}" Style="{StaticResource textStyles}" />
-                            <Label Grid.Row="3" Grid.Column="0" Content="LanguageCode: "/>
-                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Path=LanguageCode}" Style="{StaticResource textStyles}" />
+                            <Label Grid.Row="0" Grid.Column="0" Content="State: "/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Path=VocabularyState}" Style="{StaticResource textStyles}" />
+                            <Label Grid.Row="1" Grid.Column="0" Content="Last Modified: "/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path=LastModifiedTime, StringFormat=D}" Style="{StaticResource textStyles}" />
+                            <Label Grid.Row="2" Grid.Column="0" Content="LanguageCode: "/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Path=LanguageCode}" Style="{StaticResource textStyles}" />
                         </Grid>
                     </DataTemplate>
                 </DataGrid.RowDetailsTemplate>
