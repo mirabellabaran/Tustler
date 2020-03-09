@@ -65,12 +65,18 @@ namespace Tustler.Helpers.UIServices
 
     public static class UIHelpers
     {
-        public static List<string> GetTerminologyNames(CheckBox chkIncludeTerminologyNames, ListBox lbTerminologyNames)
+        /// <summary>
+        /// Extract a selected field from the list of selected items in a ListBox
+        /// </summary>
+        /// <param name="chkIncludeNames">If set and true, return the selected items</param>
+        /// <param name="lbNames">A listbox with items selected</param>
+        /// <returns></returns>
+        public static List<string> GetFieldFromListBoxSelectedItems<T>(CheckBox chkIncludeNames, ListBox lbNames, Func<T, string> selector)
         {
-            if (chkIncludeTerminologyNames.IsChecked.HasValue && chkIncludeTerminologyNames.IsChecked.Value && lbTerminologyNames.SelectedItems.Count > 0)
+            if (chkIncludeNames.IsChecked.HasValue && chkIncludeNames.IsChecked.Value && lbNames.SelectedItems.Count > 0)
             {
-                var selectedLanguageCodes = (lbTerminologyNames.SelectedItems as IEnumerable<object>).Cast<Terminology>();
-                return selectedLanguageCodes.Select(term => term.Name).ToList();
+                var selectedObjects = (lbNames.SelectedItems as IEnumerable<object>).Cast<T>();
+                return selectedObjects.Select<T, string>(selector).ToList();
             }
             else
             {

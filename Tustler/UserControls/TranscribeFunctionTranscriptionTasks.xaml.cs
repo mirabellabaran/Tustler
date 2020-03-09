@@ -20,35 +20,113 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class TranscribeFunctionTranscriptionTasks : UserControl
     {
+        private readonly NotificationsList notifications;
+
         public TranscribeFunctionTranscriptionTasks()
         {
             InitializeComponent();
+
+            notifications = this.FindResource("applicationNotifications") as NotificationsList;
+        }
+
+        private async void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            BucketViewModel bucketViewModel = this.FindResource("bucketsInstance") as BucketViewModel;
+
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                await bucketViewModel.Refresh(false, notifications).ConfigureAwait(true);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
         }
 
         private void StartTranscriptionJob_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-
+            e.CanExecute = (!string.IsNullOrEmpty(tbJobName.Text) && !(lbBuckets.SelectedItem is null) && !(lbBucketItems.SelectedItem is null));
         }
 
         private void StartTranscriptionJob_Executed(object sender, ExecutedRoutedEventArgs e)
         {
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
 
+                List<string> terminologyNames = Helpers.UIServices.UIHelpers.GetFieldFromListBoxSelectedItems<Vocabulary>(chkIncludeVocabulary, lbVocabularyNames, vocab => vocab.VocabularyName);
+
+                //await Helpers.Tran.TranslateSentences(notifications, progress, useArchivedJob, jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames).ConfigureAwait(true);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
         }
 
         private void AddVocabulary_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-
+            e.CanExecute = true;
         }
 
-        private void AddVocabulary_Executed(object sender, ExecutedRoutedEventArgs e)
+        private async void AddVocabulary_Executed(object sender, ExecutedRoutedEventArgs e)
         {
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
 
+                if (chkIncludeVocabulary.IsChecked.Value)
+                {
+                    var vocabulariesInstance = this.FindResource("vocabulariesInstance") as TranscriptionVocabulariesViewModel;
+                    await vocabulariesInstance.Refresh(notifications).ConfigureAwait(true);
+
+                    if (lbVocabularyNames.Items.Count == 0)
+                    {
+                        notifications.ShowMessage("No vocabularies", "No vocabularies have been defined. Use the Amazon Console to add new vocabularies.");
+                    }
+                }
+                else
+                {
+                    // clear selections
+                    var selectedVocabularies = lbVocabularyNames.FindResource("selectedVocabularies") as SelectedItemsViewModel;
+                    selectedVocabularies.Clear();
+
+                    lbVocabularyNames.SelectedItem = null;
+                }
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
         }
 
-        private void lbTerminologyNames_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void lbVocabularyNames_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            var selectedTerminologies = lbTerminologyNames.FindResource("selectedTerminologies") as SelectedItemsViewModel;
-            selectedTerminologies.Update(lbTerminologyNames.SelectedItems as IEnumerable<object>);
+            var selectedVocabularies = lbVocabularyNames.FindResource("selectedVocabularies") as SelectedItemsViewModel;
+            selectedVocabularies.Update(lbVocabularyNames.SelectedItems as IEnumerable<object>);
+        }
+
+        private async void BucketsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var listBox = (ListBox)e.Source;
+            Bucket selectedBucket = (Bucket)listBox.SelectedItem;
+
+            var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+            var audioBucketItemsInstance = this.FindResource("audioBucketItemsInstance") as MediaFilteredBucketItemViewModel;
+            
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                await bucketItemsInstance.Refresh(notifications, selectedBucket.Name).ConfigureAwait(true);
+                audioBucketItemsInstance.Select(bucketItemsInstance, BucketItemMediaType.Audio);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
         }
     }
 }

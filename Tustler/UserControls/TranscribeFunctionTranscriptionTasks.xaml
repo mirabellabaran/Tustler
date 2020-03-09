@@ -6,17 +6,21 @@
              xmlns:local="clr-namespace:Tustler.Models"
              xmlns:uc="clr-namespace:Tustler.UserControls"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static uc:TranscribeCommands.StartTranscriptionJob}" CanExecute="StartTranscriptionJob_CanExecute" Executed="StartTranscriptionJob_Executed" />
         <CommandBinding Command="{x:Static uc:TranscribeCommands.AddVocabulary}" CanExecute="AddVocabulary_CanExecute" Executed="AddVocabulary_Executed" />
     </UserControl.CommandBindings>
 
+    <UserControl.Resources>
+        <local:MediaFilteredBucketItemViewModel x:Key="audioBucketItemsInstance"/>
+    </UserControl.Resources>
+    
     <DockPanel Background="{StaticResource ContrastingBackground}" Margin="20">
         <StackPanel Orientation="Vertical">
             <Grid ShowGridLines="False" Margin="10">
                 <Grid.Resources>
-                    <local:SelectedItemsViewModel x:Key="selectedTerminologies" />
+                    <local:SelectedItemsViewModel x:Key="selectedVocabularies" />
 
                     <Style x:Key="buttonStyles" TargetType="Button" BasedOn="{StaticResource ButtonDark}">
                         <Setter Property="Margin" Value="5" />
@@ -31,32 +35,58 @@
                     <Style x:Key="textBoxStyles" TargetType="TextBox" BasedOn="{StaticResource TextBoxDark}">
                         <Setter Property="Margin" Value="5, 5, 0, 5" />
                     </Style>
-                    <DataTemplate x:Key="ListItemTempate">
+                    <DataTemplate x:Key="LanguageCodesListItemTempate">
                         <TextBlock Text="{Binding Path=Name}" />
+                    </DataTemplate>
+                    <DataTemplate x:Key="VocabulariesListItemTempate">
+                        <TextBlock Text="{Binding Path=VocabularyName}" />
+                    </DataTemplate>
+                    <DataTemplate DataType="{x:Type local:Bucket}">
+                        <TextBlock Text="{Binding Path=Name}" HorizontalAlignment="Stretch" />
+                    </DataTemplate>
+                    <DataTemplate DataType="{x:Type local:BucketItem}">
+                        <TextBlock Text="{Binding Path=Key}" HorizontalAlignment="Stretch" />
                     </DataTemplate>
                 </Grid.Resources>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="40" />
                     <RowDefinition Height="40" />
+                    <RowDefinition Height="10" />
+                    <RowDefinition Height="20" />
                     <RowDefinition Height="40" />
                     <RowDefinition Height="40" />
                     <RowDefinition Height="40" />
+                    <RowDefinition Height="10" />
                     <RowDefinition Height="40" />
-                    <RowDefinition Height="80" />
+                    <RowDefinition Height="40" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="170 "/>
-                    <ColumnDefinition Width="250" />
+                    <ColumnDefinition Width="300 "/>
+                    <ColumnDefinition Width="300" />
                     <ColumnDefinition Width="100" />
-                    <ColumnDefinition Width="40" />
+                    <ColumnDefinition Width="120" />
                     <ColumnDefinition Width="120" />
                     <ColumnDefinition Width="200" />
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Text="Job name:" VerticalAlignment="Bottom" Grid.Row="0" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
-                <TextBox x:Name="tbJobName" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" ToolTip="This is used to construct the output file name" Style="{StaticResource textBoxStyles}" />
+                <TextBox x:Name="tbJobName" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" ToolTip="This is used to construct the output file name" Style="{StaticResource textBoxStyles}" />
 
-                <StackPanel Orientation="Horizontal" Grid.Row="5" Grid.Column="0" Grid.RowSpan="2" Grid.ColumnSpan="2">
+                <TextBlock Text="Audio file location:" VerticalAlignment="Bottom" Grid.Row="3" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
+                <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="5" Grid.Row="4" Grid.Column="0" Grid.RowSpan="3" Grid.ColumnSpan="2">
+                    <StackPanel Orientation="Horizontal">
+                        <DockPanel Margin="0,0,5,0">
+                            <TextBlock Text="Bucket:" Margin="0,0,0,2" DockPanel.Dock="Top" Style="{StaticResource TextBlockDark}" />
+                            <ListBox x:Name="lbBuckets" Width="200" SelectionMode="Single" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" ItemsSource="{Binding Source={StaticResource bucketsInstance}, Path=Buckets}" SelectionChanged="BucketsListBox_SelectionChanged" Style="{StaticResource ListBoxDark}" />
+                        </DockPanel>
+                        <DockPanel>
+                            <TextBlock Text="Media Items:" Margin="0,0,0,2" DockPanel.Dock="Top" Style="{StaticResource TextBlockDark}" />
+                            <ListBox x:Name="lbBucketItems" Width="370" SelectionMode="Single" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" ItemsSource="{Binding Source={StaticResource audioBucketItemsInstance}, Path=BucketItems}" Style="{StaticResource ListBoxDark}" />
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Orientation="Horizontal" Grid.Row="8" Grid.Column="0" Grid.RowSpan="2" Grid.ColumnSpan="2">
                     <StackPanel.Resources>
                         <Style x:Key="listBoxStyles" TargetType="ListBox" BasedOn="{StaticResource ListBoxDark}">
                             <Setter Property="Width" Value="140" />
@@ -73,13 +103,13 @@
                     </StackPanel.Resources>
                     <StackPanel Orientation="Vertical">
                         <CheckBox x:Name="chkIncludeVocabulary" IsChecked="False" Margin="10" Command="{x:Static uc:TranscribeCommands.AddVocabulary}">Add Vocabulary</CheckBox>
-                        <ListBox Background="{StaticResource ContrastingBackground}" BorderThickness="0" ItemsSource="{Binding Source={StaticResource selectedTerminologies}, Path=Items}" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                        <ListBox Background="{StaticResource ContrastingBackground}" BorderThickness="0" ItemsSource="{Binding Source={StaticResource selectedVocabularies}, Path=Items}" ScrollViewer.VerticalScrollBarVisibility="Auto" />
                     </StackPanel>
-                    <ListBox x:Name="lbTerminologyNames" SelectionMode="Multiple" Style="{StaticResource listBoxStyles}" ItemsSource="{Binding Source={StaticResource terminologiesInstance}, Path=TranslationTerminologies}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValuePath="Name" SelectionChanged="lbTerminologyNames_SelectionChanged"/>
+                    <ListBox x:Name="lbVocabularyNames" SelectionMode="Single" Style="{StaticResource listBoxStyles}" ItemsSource="{Binding Source={StaticResource vocabulariesInstance}, Path=TranscriptionVocabularies}" ItemTemplate="{StaticResource VocabulariesListItemTempate}" SelectedValuePath="Name" SelectionChanged="lbVocabularyNames_SelectionChanged"/>
                 </StackPanel>
 
-                <TextBlock Text="Language/Accent:" Grid.Row="5" Grid.Column="4" Style="{StaticResource textBlockStyles}" />
-                <ComboBox x:Name="cbSourceLanguage" Grid.Row="5" Grid.Column="5" Height="30" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource transcriptionLanguageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en-GB" SelectedValuePath="Code">
+                <TextBlock Text="Language/Accent:" VerticalAlignment="Bottom" Grid.Row="0" Grid.Column="3" Style="{StaticResource textBlockStyles}" />
+                <ComboBox x:Name="cbSourceLanguage" Grid.Row="1" Grid.Column="3" Height="30" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource transcriptionLanguageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource LanguageCodesListItemTempate}" SelectedValue="en-GB" SelectedValuePath="Code">
                     <ComboBox.ItemContainerStyle>
                         <Style TargetType="ComboBoxItem">
                             <Setter Property="Background" Value="Yellow"/>
@@ -87,8 +117,7 @@
                         </Style>
                     </ComboBox.ItemContainerStyle>
                 </ComboBox>
-
-           </Grid>
+            </Grid>
             <Button Content="Start Transcription" Width="120" Height="30" Style="{StaticResource ButtonDark}" Command="{x:Static uc:TranscribeCommands.StartTranscriptionJob}" />
         </StackPanel>
     </DockPanel>

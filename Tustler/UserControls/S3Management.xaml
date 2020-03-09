@@ -6,7 +6,7 @@
              xmlns:local="clr-namespace:Tustler.Models"
              xmlns:uc="clr-namespace:Tustler.UserControls"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static uc:S3Commands.FilterBucketItems}" CanExecute="FilterBucketItems_CanExecute" Executed="FilterBucketItems_Executed" />
         <CommandBinding Command="{x:Static uc:S3Commands.DeleteBucketItem}" CanExecute="DeleteBucketItem_CanExecute" Executed="DeleteBucketItem_Executed" />
@@ -50,9 +50,9 @@
             <Border DockPanel.Dock="Left" Padding="50, 20, 50, 20">
                 <StackPanel Orientation="Vertical" Background="{StaticResource NormalBackground}">
                     <TextBlock Style="{StaticResource TextBlockDark}" FontSize="16" Text="Buckets:"/>
-                    <ListBox Width="300" Height="200" Margin="10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding Source={StaticResource bucketsInstance}, Path=Buckets}" SelectionChanged="ListBox_SelectionChanged"/>
+                    <ListBox Width="300" Height="200" Margin="10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding Source={StaticResource bucketsInstance}, Path=Buckets}" SelectionChanged="ListBox_SelectionChanged"  Style="{StaticResource ListBoxDark}" />
 
-                    <Button Content="List Buckets" Width="100" Height="40" Style="{StaticResource ButtonDark}" Click="ListBuckets_Button_Click"/>
+                    <Button Content="Refresh" Width="100" Height="40" Style="{StaticResource ButtonDark}" Click="ListBuckets_Button_Click"/>
                 </StackPanel>
             </Border>
             <Border DockPanel.Dock="Right" Padding="50, 20, 50, 20">

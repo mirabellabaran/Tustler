@@ -11,7 +11,8 @@ using System.Windows.Data;
 
 namespace Tustler.Models
 {
-    public class BucketItemsCollection: ObservableCollection<BucketItem>{
+    public class BucketItemsCollection: ObservableCollection<BucketItem>
+    {
         readonly Dictionary<string, BucketItem> keyLookup;
 
         public BucketItemsCollection() => keyLookup = new Dictionary<string, BucketItem>();
@@ -23,6 +24,7 @@ namespace Tustler.Models
                 return keyLookup.Keys;
             }
         }
+
         public void Add(string key, BucketItem item)
         {
             this.Add(item);
@@ -49,18 +51,25 @@ namespace Tustler.Models
         }
     }
 
+    public enum BucketItemMediaType
+    {
+        All,
+        Audio,
+        Video,
+        Text,
+        Defined     // the mime type is non-null
+    }
+
     public class BucketItemViewModel
     {
-        public enum MediaType
-        {
-            All,
-            Audio,
-            Video,
-            Text,
-            Defined     // the mime type is non-null
-        }
+        private BucketItemMediaType filteredMediaType;
 
-        private MediaType filteredMediaType;
+        public BucketItemViewModel()
+        {
+            this.BucketItems = new BucketItemsCollection();
+            this.NeedsRefresh = true;
+            this.CurrentBucketName = null;
+        }
 
         public BucketItemsCollection BucketItems
         {
@@ -85,7 +94,7 @@ namespace Tustler.Models
             set;
         }
 
-        public MediaType FilteredMediaType
+        public BucketItemMediaType FilteredMediaType
         {
             get
             {
@@ -96,13 +105,6 @@ namespace Tustler.Models
                 filteredMediaType = value;
                 SetFilter(filteredMediaType);
             }
-        }
-
-        public BucketItemViewModel()
-        {
-            this.BucketItems = new BucketItemsCollection();
-            this.NeedsRefresh = true;
-            this.CurrentBucketName = null;
         }
 
         public async Task RefreshAsync(NotificationsList notifications)
@@ -132,7 +134,13 @@ namespace Tustler.Models
         /// Set a filter on the view, showing only the specified mime types e.g. audio
         /// </summary>
         /// <param name="requiredMediaType"></param>
-        private void SetFilter(MediaType selectedMediaType)
+        private void SetFilter(BucketItemMediaType selectedMediaType)
+        {
+            BucketItemsView.Filter = new Predicate<object>(item => IsRquiredMediaType(selectedMediaType, (item as BucketItem)));
+            BucketItemsView.Refresh();
+        }
+
+        internal static bool IsRquiredMediaType (BucketItemMediaType selectedMediaType, BucketItem item)
         {
             static bool CheckTypeIs(string mimeType, string type)
             {
@@ -141,18 +149,16 @@ namespace Tustler.Models
                 else
                     return mimeType.Contains(type, StringComparison.InvariantCulture);
             }
-            Func<string, bool> isRquiredMediaType = (selectedMediaType) switch
-            {
-                MediaType.All => (mimeType => true),
-                MediaType.Audio => (mimeType => CheckTypeIs(mimeType, "audio")),
-                MediaType.Video => (mimeType => CheckTypeIs(mimeType, "video")),
-                MediaType.Text => (mimeType => CheckTypeIs(mimeType, "text")),
-                MediaType.Defined => (mimeType => (mimeType != null)),
-                _ => (mimeType => true),
-            };
 
-            BucketItemsView.Filter = new Predicate<object>(item => isRquiredMediaType((item as BucketItem).MimeType));
-            BucketItemsView.Refresh();
+            return selectedMediaType switch
+            {
+                BucketItemMediaType.All => true,
+                BucketItemMediaType.Audio => CheckTypeIs(item.MimeType, "audio"),
+                BucketItemMediaType.Video => CheckTypeIs(item.MimeType, "video"),
+                BucketItemMediaType.Text => CheckTypeIs(item.MimeType, "text"),
+                BucketItemMediaType.Defined => (item.MimeType != null),
+                _ => true
+            };
         }
 
         private void ProcessS3BucketItems(NotificationsList notifications, TustlerAWSLib.AWSResult<List<S3Object>> bucketItemsResult)
@@ -175,7 +181,7 @@ namespace Tustler.Models
                     }
                 }
 
-                this.FilteredMediaType = MediaType.All;
+                this.FilteredMediaType = BucketItemMediaType.All;
                 NeedsRefresh = false;
             }
         }
@@ -236,6 +242,29 @@ namespace Tustler.Models
         {
             get;
             set;
+        }
+    }
+
+    public class MediaFilteredBucketItemViewModel
+    {
+        public MediaFilteredBucketItemViewModel()
+        {
+            BucketItems = new ObservableCollection<BucketItem>();
+        }
+
+        public ObservableCollection<BucketItem> BucketItems
+        {
+            get;
+            private set;
+        }
+
+        public void Select(BucketItemViewModel bucketItemViewModel, BucketItemMediaType selectedMediaType)
+        {
+            var filtered = bucketItemViewModel.BucketItems.Where(item => BucketItemViewModel.IsRquiredMediaType(selectedMediaType, (item as BucketItem)));
+            foreach (var item in filtered)
+            {
+                BucketItems.Add(item);
+            }
         }
     }
 }

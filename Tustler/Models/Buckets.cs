@@ -27,9 +27,9 @@ namespace Tustler.Models
             this.NeedsRefresh = true;
         }
 
-        public async Task Refresh(NotificationsList notifications)
+        public async Task Refresh(bool forceRefresh, NotificationsList notifications)
         {
-            if (NeedsRefresh)
+            if (NeedsRefresh || forceRefresh)
             {
                 // the underlying collection must be refreshed from the Dispatcher thread, not from within the awaited method
                 var bucketsResult = await TustlerAWSLib.S3.ListBuckets().ConfigureAwait(true);

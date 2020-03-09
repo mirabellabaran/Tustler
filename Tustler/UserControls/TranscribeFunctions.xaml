@@ -9,10 +9,10 @@
              d:DesignHeight="450" d:DesignWidth="800">
     <DockPanel>
         <TabControl Margin="20">
-            <TabItem Header="Manage Transcription Jobs" Width="150">
+            <TabItem Header="Manage Transcription Jobs" Width="180">
                 <uc:TranscribeFunctionTranscriptionTasks />
             </TabItem>
-            <TabItem Header="Manage Vocabularies" Width="150">
+            <TabItem Header="Manage Vocabularies" Width="180">
                 <uc:TranscribeFunctionVocabularies />
             </TabItem>
         </TabControl>

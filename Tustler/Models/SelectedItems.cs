@@ -19,7 +19,12 @@ namespace Tustler.Models
 
         public SelectedItemsViewModel()
         {
-            this.Items = new ObservableCollection<string>();
+            Items = new ObservableCollection<string>();
+        }
+
+        public void Clear()
+        {
+            Items.Clear();
         }
 
         public void Update(IEnumerable<object> items)
@@ -35,18 +40,13 @@ namespace Tustler.Models
         {
             return objects.Select(o =>
             {
-                if (o is LanguageCode)
+                return o switch
                 {
-                    return (o as LanguageCode).Code;
-                }
-                else if (o is Terminology)
-                {
-                    return (o as Terminology).Name;
-                }
-                else
-                {
-                    return o.ToString();
-                }
+                    LanguageCode languageCode => languageCode.Code,
+                    Terminology terminology => terminology.Name,
+                    Vocabulary vocabulary => vocabulary.VocabularyName,
+                    _ => o.ToString()
+                };
             });
         }
     }

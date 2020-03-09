@@ -24,7 +24,17 @@ namespace Tustler.UserControls
             notifications = this.FindResource("applicationNotifications") as NotificationsList;
         }
 
+        private async void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            await LoadBuckets(false).ConfigureAwait(true);
+        }
+
         private async void ListBuckets_Button_Click(object sender, RoutedEventArgs e)
+        {
+            await LoadBuckets(true).ConfigureAwait(true);
+        }
+
+        private async Task LoadBuckets(bool forceRefresh)
         {
             BucketViewModel bucketViewModel = this.FindResource("bucketsInstance") as BucketViewModel;
 
@@ -33,7 +43,7 @@ namespace Tustler.UserControls
                 Mouse.OverrideCursor = Cursors.Wait;
 
                 //await Dispatcher.InvokeAsync<Task>(() => bucketViewModel.Refresh(notifications));
-                await bucketViewModel.Refresh(notifications).ConfigureAwait(true);
+                await bucketViewModel.Refresh(forceRefresh, notifications).ConfigureAwait(true);
             }
             finally
             {
@@ -46,19 +56,22 @@ namespace Tustler.UserControls
             var listBox = (ListBox)e.Source;
             Bucket selectedBucket = (Bucket)listBox.SelectedItem;
 
-            var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
-
-            try
+            if (!(selectedBucket is null))
             {
-                Mouse.OverrideCursor = Cursors.Wait;
+                var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
 
-                // refresh and then enable the headers
-                await bucketItemsInstance.Refresh(notifications, selectedBucket.Name)
-                .ContinueWith(task => dgBucketItems.HeadersVisibility = DataGridHeadersVisibility.All, TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
-            }
-            finally
-            {
-                Mouse.OverrideCursor = null;
+                try
+                {
+                    Mouse.OverrideCursor = Cursors.Wait;
+
+                    // refresh and then enable the headers
+                    await bucketItemsInstance.Refresh(notifications, selectedBucket.Name)
+                    .ContinueWith(task => dgBucketItems.HeadersVisibility = DataGridHeadersVisibility.All, TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
+                }
+                finally
+                {
+                    Mouse.OverrideCursor = null;
+                }
             }
         }
 
@@ -75,17 +88,17 @@ namespace Tustler.UserControls
             bucketItemsInstance.FilteredMediaType = (radioButton.Name) switch
             {
                 "rbFilterAll" =>
-                    bucketItemsInstance.FilteredMediaType = BucketItemViewModel.MediaType.All,
+                    bucketItemsInstance.FilteredMediaType = BucketItemMediaType.All,
                 "rbFilterAudio" =>
-                    bucketItemsInstance.FilteredMediaType = BucketItemViewModel.MediaType.Audio,
+                    bucketItemsInstance.FilteredMediaType = BucketItemMediaType.Audio,
                 "rbFilterVideo" =>
-                    bucketItemsInstance.FilteredMediaType = BucketItemViewModel.MediaType.Video,
+                    bucketItemsInstance.FilteredMediaType = BucketItemMediaType.Video,
                 "rbFilterText" =>
-                    bucketItemsInstance.FilteredMediaType = BucketItemViewModel.MediaType.Text,
+                    bucketItemsInstance.FilteredMediaType = BucketItemMediaType.Text,
                 "rbFilterDefined" =>
-                    bucketItemsInstance.FilteredMediaType = BucketItemViewModel.MediaType.Defined,
+                    bucketItemsInstance.FilteredMediaType = BucketItemMediaType.Defined,
                 _ =>
-                    bucketItemsInstance.FilteredMediaType = BucketItemViewModel.MediaType.All,
+                    bucketItemsInstance.FilteredMediaType = BucketItemMediaType.All,
             };
         }
 

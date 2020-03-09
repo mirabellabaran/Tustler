@@ -66,7 +66,7 @@ namespace Tustler.UserControls
                 List<string> targetLanguageCodes = GetTargetLanguageCodes();
                 string s3InputFolderName = ApplicationSettings.BatchTranslateInputFolder;
                 string s3OutputFolderName = ApplicationSettings.BatchTranslateOutputFolder;
-                List<string> terminologyNames = Helpers.UIServices.UIHelpers.GetTerminologyNames(chkIncludeTerminologyNames, lbTerminologyNames);
+                List<string> terminologyNames = Helpers.UIServices.UIHelpers.GetFieldFromListBoxSelectedItems<Terminology>(chkIncludeTerminologyNames, lbTerminologyNames, term => term.Name);
 
                 await translationJobsInstance.AddNewTask(notifications, jobName, RegionEndpoint.GetBySystemName(regionSystemName), dataAccessRoleArn, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
             }
@@ -124,18 +124,28 @@ namespace Tustler.UserControls
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                var terminologiesInstance = this.FindResource("terminologiesInstance") as TranslationTerminologiesViewModel;
+                if (chkIncludeTerminologyNames.IsChecked.HasValue && chkIncludeTerminologyNames.IsChecked.Value)
+                {
+                    var terminologiesInstance = this.FindResource("terminologiesInstance") as TranslationTerminologiesViewModel;
+                    await terminologiesInstance.Refresh(notifications).ConfigureAwait(true);
 
-                await terminologiesInstance.Refresh(notifications).ConfigureAwait(true);
+                    if (lbTerminologyNames.Items.Count == 0)
+                    {
+                        notifications.ShowMessage("No terminologies", "No terminologies have been defined. Use the Amazon Console to add new terminologies.");
+                    }
+                }
+                else
+                {
+                    // clear selections
+                    var selectedTerminologies = lbTerminologyNames.FindResource("selectedTerminologies") as SelectedItemsViewModel;
+                    selectedTerminologies.Clear();
+
+                    lbTerminologyNames.SelectedItem = null;
+                }
             }
             finally
             {
                 Mouse.OverrideCursor = null;
-            }
-
-            if (lbTerminologyNames.Items.Count == 0)
-            {
-                notifications.ShowMessage("No terminologies", "No terminologies have been defined. Use the Amazon Console to add new terminologies.");
             }
         }
 
