@@ -52,5 +52,13 @@ namespace Tustler.UserControls
                 typeof(TranscribeCommands),
                 null
             );
+
+        public static readonly RoutedUICommand RefreshTaskList = new RoutedUICommand
+            (
+                "RefreshTaskList",
+                "RefreshTaskList",
+                typeof(TranscribeCommands),
+                null
+            );
     }
 }

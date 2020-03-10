@@ -60,7 +60,7 @@ namespace Tustler.Models
                     StartTime = job.StartTime,
                     CompletionTime = job.CompletionTime,
                     LanguageCode = job.LanguageCode,
-                    OutputLocationType = job.Transcript.TranscriptFileUri,
+                    OutputLocationType = job.Transcript?.TranscriptFileUri,
                     FailureReason = job.FailureReason,
                     MediaFormat = job.MediaFormat,
                     MediaSampleRateHertz = job.MediaSampleRateHertz

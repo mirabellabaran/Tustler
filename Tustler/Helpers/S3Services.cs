@@ -54,7 +54,7 @@ namespace Tustler.Helpers
                 var success = (resultFlag.HasValue && resultFlag.Value);
                 var successStr = success ? "succeeded" : "failed";
                 var message = $"Download {successStr}";
-                notifications.ShowMessage(message, $"Task: Download item to S3 completed @ {DateTime.Now.ToShortTimeString()}");
+                notifications.ShowMessage(message, $"Task: Download item from S3 completed @ {DateTime.Now.ToShortTimeString()}");
             }
         }
 

@@ -26,23 +26,25 @@ namespace TustlerAWSLib
             {
                 using (var client = new AmazonTranscribeServiceClient())
                 {
-                    var medias3Location = $"s3://{bucketName}/{s3MediaKey}";
+                    var region = client.Config.RegionEndpoint.SystemName;
+                    var medias3Location = $"https://s3.{region}.amazonaws.com/{bucketName}/{s3MediaKey}";
                     var request = new StartTranscriptionJobRequest
                     {
                         TranscriptionJobName = jobName,
                         LanguageCode = languageCode,
                         OutputBucketName = bucketName,
-                        Settings =
+                        Settings = new Settings
                         {
                             VocabularyName = vocabularyName,
                             ShowAlternatives = false
                         },
-                        Media =
+                        Media = new Media
                         {
                             MediaFileUri = medias3Location
-                        },
-                        JobExecutionSettings = null        // requires configuring a service role
+                        }
+                        //JobExecutionSettings = null        // requires configuring a service role
                     };
+
                     var response = await client.StartTranscriptionJobAsync(request);
 
                     return new AWSResult<TranscriptionJob>(response.TranscriptionJob, null);
@@ -59,6 +61,10 @@ namespace TustlerAWSLib
             catch (LimitExceededException ex)
             {
                 return new AWSResult<TranscriptionJob>(null, new AWSException(nameof(StartTranscriptionJob), "Either you have sent too many requests or your input file is too long.", ex));
+            }
+            catch (ConflictException ex)
+            {
+                return new AWSResult<TranscriptionJob>(null, new AWSException(nameof(StartTranscriptionJob), "Conflicting parameters e.g. a jobname is already in use.", ex));
             }
         }
 

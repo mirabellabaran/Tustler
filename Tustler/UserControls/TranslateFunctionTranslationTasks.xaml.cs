@@ -69,6 +69,10 @@ namespace Tustler.UserControls
                 List<string> terminologyNames = Helpers.UIServices.UIHelpers.GetFieldFromListBoxSelectedItems<Terminology>(chkIncludeTerminologyNames, lbTerminologyNames, term => term.Name);
 
                 await translationJobsInstance.AddNewTask(notifications, jobName, RegionEndpoint.GetBySystemName(regionSystemName), dataAccessRoleArn, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
+                if (dgTranslationTasks.Items.Count > 0)
+                {
+                    dgTranslationTasks.HeadersVisibility = DataGridHeadersVisibility.All;
+                }
             }
             finally
             {

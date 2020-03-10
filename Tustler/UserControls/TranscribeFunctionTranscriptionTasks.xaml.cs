@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -50,19 +51,61 @@ namespace Tustler.UserControls
             e.CanExecute = (!string.IsNullOrEmpty(tbJobName.Text) && !(lbBuckets.SelectedItem is null) && !(lbBucketItems.SelectedItem is null));
         }
 
-        private void StartTranscriptionJob_Executed(object sender, ExecutedRoutedEventArgs e)
+        private async void StartTranscriptionJob_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            var transcriptionJobsInstance = this.FindResource("transcriptionJobsInstance") as TranscriptionJobsViewModel;
+
+            var jobName = tbJobName.Text;
+            var bucketName = (lbBuckets.SelectedItem as Bucket).Name;
+            var s3MediaKey = (lbBucketItems.SelectedItem as BucketItem).Key;
+            var languageCode = (cbSourceLanguage.SelectedItem as LanguageCode).Code;
+            List<string> vocabularyNames = Helpers.UIServices.UIHelpers.GetFieldFromListBoxSelectedItems<Vocabulary>(chkIncludeVocabulary, lbVocabularyNames, vocab => vocab.VocabularyName);
+            var vocabularyName = vocabularyNames?[0];
+
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                await transcriptionJobsInstance.AddNewTask(notifications, jobName, bucketName, s3MediaKey, languageCode, vocabularyName).ConfigureAwait(true);
+                if (dgTranscriptionTasks.Items.Count > 0)
+                {
+                    dgTranscriptionTasks.HeadersVisibility = DataGridHeadersVisibility.All;
+                    notifications.ShowMessage("The output file will be saved to your S3 bucket", $"The output transcript will be named {jobName}.json");
+                }
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        private void RefreshTaskList_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = true;
+        }
+
+        private async void RefreshTaskList_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             try
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                List<string> terminologyNames = Helpers.UIServices.UIHelpers.GetFieldFromListBoxSelectedItems<Vocabulary>(chkIncludeVocabulary, lbVocabularyNames, vocab => vocab.VocabularyName);
+                var transcriptionJobsInstance = this.FindResource("transcriptionJobsInstance") as TranscriptionJobsViewModel;
 
-                //await Helpers.Tran.TranslateSentences(notifications, progress, useArchivedJob, jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames).ConfigureAwait(true);
+                await transcriptionJobsInstance.ListTasks(notifications)
+                    .ContinueWith(task => (dgTranscriptionTasks.Items.Count > 0) ?
+                            dgTranscriptionTasks.HeadersVisibility = DataGridHeadersVisibility.All :
+                            dgTranscriptionTasks.HeadersVisibility = DataGridHeadersVisibility.None,
+                            TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
             }
             finally
             {
                 Mouse.OverrideCursor = null;
+            }
+
+            if (dgTranscriptionTasks.Items.Count == 0)
+            {
+                notifications.ShowMessage("No transcription tasks defined", "No transcription tasks have been defined.");
             }
         }
 

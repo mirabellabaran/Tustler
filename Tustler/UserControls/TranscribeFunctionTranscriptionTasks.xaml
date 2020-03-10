@@ -9,16 +9,18 @@
              d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static uc:TranscribeCommands.StartTranscriptionJob}" CanExecute="StartTranscriptionJob_CanExecute" Executed="StartTranscriptionJob_Executed" />
+        <CommandBinding Command="{x:Static uc:TranscribeCommands.RefreshTaskList}" CanExecute="RefreshTaskList_CanExecute" Executed="RefreshTaskList_Executed" />
         <CommandBinding Command="{x:Static uc:TranscribeCommands.AddVocabulary}" CanExecute="AddVocabulary_CanExecute" Executed="AddVocabulary_Executed" />
     </UserControl.CommandBindings>
 
     <UserControl.Resources>
+        <local:TranscriptionJobsViewModel x:Key="transcriptionJobsInstance" />
         <local:MediaFilteredBucketItemViewModel x:Key="audioBucketItemsInstance"/>
     </UserControl.Resources>
     
     <DockPanel Background="{StaticResource ContrastingBackground}" Margin="20">
         <StackPanel Orientation="Vertical">
-            <Grid ShowGridLines="False" Margin="10">
+            <Grid ShowGridLines="False" Margin="0">
                 <Grid.Resources>
                     <local:SelectedItemsViewModel x:Key="selectedVocabularies" />
 
@@ -49,7 +51,7 @@
                     </DataTemplate>
                 </Grid.Resources>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="40" />
+                    <RowDefinition Height="20" />
                     <RowDefinition Height="40" />
                     <RowDefinition Height="10" />
                     <RowDefinition Height="20" />
@@ -57,20 +59,29 @@
                     <RowDefinition Height="40" />
                     <RowDefinition Height="40" />
                     <RowDefinition Height="10" />
-                    <RowDefinition Height="40" />
-                    <RowDefinition Height="40" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="300 "/>
                     <ColumnDefinition Width="300" />
+                    <ColumnDefinition Width="30" />
                     <ColumnDefinition Width="100" />
-                    <ColumnDefinition Width="120" />
-                    <ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="100" />
+                    <ColumnDefinition Width="50" />
                     <ColumnDefinition Width="200" />
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Text="Job name:" VerticalAlignment="Bottom" Grid.Row="0" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
                 <TextBox x:Name="tbJobName" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" ToolTip="This is used to construct the output file name" Style="{StaticResource textBoxStyles}" />
+
+                <TextBlock Text="Language/Accent:" VerticalAlignment="Bottom" Grid.Row="0" Grid.Column="4" Grid.ColumnSpan="2" Width="116" Margin="0,0,5,0" HorizontalAlignment="Right" Style="{StaticResource textBlockStyles}" />
+                <ComboBox x:Name="cbSourceLanguage" Grid.Row="1" Grid.Column="4" Grid.ColumnSpan="2" Height="30" Width="116" Margin="0,0,5,0" HorizontalAlignment="Right" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource transcriptionLanguageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource LanguageCodesListItemTempate}" SelectedValue="en-GB" SelectedValuePath="Code">
+                    <ComboBox.ItemContainerStyle>
+                        <Style TargetType="ComboBoxItem">
+                            <Setter Property="Background" Value="Yellow"/>
+                            <Setter Property="Foreground" Value="Red"/>
+                        </Style>
+                    </ComboBox.ItemContainerStyle>
+                </ComboBox>
 
                 <TextBlock Text="Audio file location:" VerticalAlignment="Bottom" Grid.Row="3" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
                 <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="5" Grid.Row="4" Grid.Column="0" Grid.RowSpan="3" Grid.ColumnSpan="2">
@@ -86,10 +97,10 @@
                     </StackPanel>
                 </Border>
 
-                <StackPanel Orientation="Horizontal" Grid.Row="8" Grid.Column="0" Grid.RowSpan="2" Grid.ColumnSpan="2">
+                <StackPanel Orientation="Horizontal" Grid.Row="4" Grid.Column="3" Grid.RowSpan="2" Grid.ColumnSpan="3" Margin="5" >
                     <StackPanel.Resources>
                         <Style x:Key="listBoxStyles" TargetType="ListBox" BasedOn="{StaticResource ListBoxDark}">
-                            <Setter Property="Width" Value="140" />
+                            <Setter Property="Width" Value="106" />
                             <Setter Property="Margin" Value="10" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding ElementName=chkIncludeVocabulary, Path=IsChecked}" Value="True">
@@ -107,18 +118,17 @@
                     </StackPanel>
                     <ListBox x:Name="lbVocabularyNames" SelectionMode="Single" Style="{StaticResource listBoxStyles}" ItemsSource="{Binding Source={StaticResource vocabulariesInstance}, Path=TranscriptionVocabularies}" ItemTemplate="{StaticResource VocabulariesListItemTempate}" SelectedValuePath="Name" SelectionChanged="lbVocabularyNames_SelectionChanged"/>
                 </StackPanel>
-
-                <TextBlock Text="Language/Accent:" VerticalAlignment="Bottom" Grid.Row="0" Grid.Column="3" Style="{StaticResource textBlockStyles}" />
-                <ComboBox x:Name="cbSourceLanguage" Grid.Row="1" Grid.Column="3" Height="30" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource transcriptionLanguageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource LanguageCodesListItemTempate}" SelectedValue="en-GB" SelectedValuePath="Code">
-                    <ComboBox.ItemContainerStyle>
-                        <Style TargetType="ComboBoxItem">
-                            <Setter Property="Background" Value="Yellow"/>
-                            <Setter Property="Foreground" Value="Red"/>
-                        </Style>
-                    </ComboBox.ItemContainerStyle>
-                </ComboBox>
             </Grid>
-            <Button Content="Start Transcription" Width="120" Height="30" Style="{StaticResource ButtonDark}" Command="{x:Static uc:TranscribeCommands.StartTranscriptionJob}" />
+
+            <DataGrid x:Name="dgTranscriptionTasks"  Height="130" Margin="5" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource transcriptionJobsInstance}, Path=TranscriptionJobs}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
+
+            </DataGrid>
+
+            <UniformGrid Rows="1" Columns="2" Margin="10">
+                <Button Content="Refresh" Width="120" Height="30" Style="{StaticResource ButtonDark}" Command="{x:Static uc:TranscribeCommands.RefreshTaskList}" />
+                <Button Content="Start Transcription" Width="120" Height="30" Style="{StaticResource ButtonDark}" Command="{x:Static uc:TranscribeCommands.StartTranscriptionJob}" />
+            </UniformGrid>
+
         </StackPanel>
     </DockPanel>
 </UserControl>
