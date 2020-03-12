@@ -1,23 +1,12 @@
-﻿using System;
+﻿using Amazon;
+using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using Tustler.Models;
-using Microsoft.Win32;
-using System.Windows.Markup;
-using System.Globalization;
-using Amazon;
+using AppSettings = TustlerWinPlatformLib.ApplicationSettings;
 
 namespace Tustler.UserControls
 {
@@ -34,8 +23,8 @@ namespace Tustler.UserControls
 
             notifications = this.FindResource("applicationNotifications") as NotificationsList;
 
-            tbInputFolder.Text = ApplicationSettings.BatchTranslateInputFolder;
-            tbOutputFolder.Text = ApplicationSettings.BatchTranslateOutputFolder;
+            tbInputFolder.Text = AppSettings.BatchTranslateInputFolder;
+            tbOutputFolder.Text = AppSettings.BatchTranslateOutputFolder;
         }
 
         private void StartTranslationTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -60,12 +49,12 @@ namespace Tustler.UserControls
                 Mouse.OverrideCursor = Cursors.Wait;
 
                 string jobName = string.IsNullOrEmpty(tbJobName.Text) ? $"TranslateJob-{DateTime.Now.Ticks}" : tbJobName.Text;
-                string regionSystemName = ApplicationSettings.BatchTranslateRegion;
-                string dataAccessRoleArn = ApplicationSettings.BatchTranslateServiceRole;
+                string regionSystemName = AppSettings.BatchTranslateRegion;
+                string dataAccessRoleArn = AppSettings.BatchTranslateServiceRole;
                 string sourceLanguageCode = (cbSourceLanguage.SelectedItem as LanguageCode).Code;
                 List<string> targetLanguageCodes = GetTargetLanguageCodes();
-                string s3InputFolderName = ApplicationSettings.BatchTranslateInputFolder;
-                string s3OutputFolderName = ApplicationSettings.BatchTranslateOutputFolder;
+                string s3InputFolderName = AppSettings.BatchTranslateInputFolder;
+                string s3OutputFolderName = AppSettings.BatchTranslateOutputFolder;
                 List<string> terminologyNames = Helpers.UIServices.UIHelpers.GetFieldFromListBoxSelectedItems<Terminology>(chkIncludeTerminologyNames, lbTerminologyNames, term => term.Name);
 
                 await translationJobsInstance.AddNewTask(notifications, jobName, RegionEndpoint.GetBySystemName(regionSystemName), dataAccessRoleArn, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
@@ -98,7 +87,7 @@ namespace Tustler.UserControls
                 Mouse.OverrideCursor = Cursors.Wait;
 
                 var translationJobsInstance = this.FindResource("translationJobsInstance") as TranslationJobsViewModel;
-                string regionSystemName = ApplicationSettings.BatchTranslateRegion;
+                string regionSystemName = AppSettings.BatchTranslateRegion;
 
                 await translationJobsInstance.ListTasks(notifications, RegionEndpoint.GetBySystemName(regionSystemName))
                     .ContinueWith(task => (dgTranslationTasks.Items.Count > 0) ?

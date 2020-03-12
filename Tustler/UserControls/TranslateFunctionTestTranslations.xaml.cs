@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Tustler.Models;
+using AppSettings = TustlerWinPlatformLib.ApplicationSettings;
 
 namespace Tustler.UserControls
 {
@@ -55,7 +56,7 @@ namespace Tustler.UserControls
             SaveFileDialog dlg = new SaveFileDialog
             {
                 Title = "Choose a destination",
-                InitialDirectory = ApplicationSettings.FileCachePath
+                InitialDirectory = AppSettings.FileCachePath
             };
 
             Nullable<bool> result = dlg.ShowDialog();

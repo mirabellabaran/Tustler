@@ -13,6 +13,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using Tustler.Models;
+using AppSettings = TustlerWinPlatformLib.ApplicationSettings;
 
 namespace Tustler.UserControls
 {
@@ -147,7 +148,7 @@ namespace Tustler.UserControls
             {
                 Title = "Choose a file to upload",
                 Multiselect = false,
-                InitialDirectory = ApplicationSettings.FileCachePath
+                InitialDirectory = AppSettings.FileCachePath
             };
 
             Nullable<bool> result = dlg.ShowDialog();

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using Tustler.Models;
+using TustlerWinPlatformLib;
 
 namespace Tustler
 {
@@ -18,15 +19,6 @@ namespace Tustler
     public partial class App : Application
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(App));
-        private IConfigurationRoot appConfig;
-
-        public IConfigurationRoot AppConfig
-        {
-            get
-            {
-                return appConfig;
-            }
-        }
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
@@ -46,11 +38,15 @@ namespace Tustler
                 Application.Current.Shutdown();
             }
 
-            var builder = new ConfigurationBuilder()
-                .SetBasePath(System.AppContext.BaseDirectory)
-                .AddJsonFile(appSettingsFileName, optional: true, reloadOnChange: true);
-
-            appConfig = builder.Build();
+            try
+            {
+                JsonConfiguration.ParseConfiguration(baseDirectory, appSettingsFileName);
+            }
+            catch (FormatException ex)
+            {
+                MessageBox.Show($"The configuration file is incorrectly formatted: {appSettingsPath}", "Configuration file error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.Current.Shutdown();
+            }
 
             // set the path to the FFmpeg directory
             Unosquare.FFME.Library.FFmpegDirectory = @"C:\Users\Zev\Downloads\ffmpeg-20191122-27c6c92-win64-shared\bin";

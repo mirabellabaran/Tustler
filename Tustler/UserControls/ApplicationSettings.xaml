@@ -1,0 +1,52 @@
+﻿<UserControl x:Class="Tustler.UserControls.ApplicationSettings"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:uc="clr-namespace:Tustler.UserControls"
+             xmlns:local="clr-namespace:Tustler.Models"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
+    <UserControl.Resources>
+        <local:ApplicationSettingsViewModel x:Key="applicationSettingsInstance" />
+    </UserControl.Resources>
+    <UserControl.CommandBindings>
+        <CommandBinding Command="{x:Static uc:ApplicationSettingsCommands.SaveSettings}" CanExecute="SaveSettings_CanExecute" Executed="SaveSettings_Executed" />
+    </UserControl.CommandBindings>
+
+    <Grid ShowGridLines="False" Margin="100" Background="{StaticResource ContrastingBackground}">
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition Height="70"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+        <DataGrid x:Name="dgApplicationSettings" Grid.Row="0" Grid.Column="0" Margin="20" AutoGenerateColumns="False" RowHeaderWidth="15" HeadersVisibility="All" CanUserResizeRows="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False" ItemsSource="{Binding Source={StaticResource applicationSettingsInstance}, Path=Settings}" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
+            <DataGrid.RowValidationRules>
+                <local:SettingsValidationRule ValidationStep="UpdatedValue"/>
+            </DataGrid.RowValidationRules>
+            <DataGrid.RowValidationErrorTemplate>
+                <ControlTemplate>
+                    <Grid Margin="0,-2,0,-2"
+                      ToolTip="{Binding RelativeSource={RelativeSource
+                      FindAncestor, AncestorType={x:Type DataGridRow}},
+                      Path=(Validation.Errors)[0].ErrorContent}">
+                        <Ellipse StrokeThickness="0" Fill="Red" 
+                            Width="{TemplateBinding FontSize}" 
+                            Height="{TemplateBinding FontSize}" />
+                        <TextBlock Text="!" FontSize="{TemplateBinding FontSize}" 
+                            FontWeight="Bold" Foreground="White" 
+                            HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                </ControlTemplate>
+            </DataGrid.RowValidationErrorTemplate>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Key" Binding="{Binding Key}" IsReadOnly="True" />
+                <DataGridTextColumn Header="Value" Binding="{Binding Value}" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <Button Content="Save Configuration" Width="130" Margin="20" Grid.Row="1" Grid.Column="0" Command="{x:Static uc:ApplicationSettingsCommands.SaveSettings}" Style="{StaticResource ButtonDark}" />
+    </Grid>
+</UserControl>

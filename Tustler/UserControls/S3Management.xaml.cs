@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Tustler.Models;
+using AppSettings = TustlerWinPlatformLib.ApplicationSettings;
 using Path = System.IO.Path;
 
 namespace Tustler.UserControls
@@ -297,7 +298,7 @@ namespace Tustler.UserControls
             {
                 Title = "Choose a file to upload",
                 Multiselect = false,
-                InitialDirectory = ApplicationSettings.FileCachePath
+                InitialDirectory = AppSettings.FileCachePath
             };
 
             Nullable<bool> result = dlg.ShowDialog();
@@ -312,7 +313,7 @@ namespace Tustler.UserControls
             SaveFileDialog dlg = new SaveFileDialog
             {
                 Title = "Choose a download destination",
-                InitialDirectory = ApplicationSettings.FileCachePath
+                InitialDirectory = AppSettings.FileCachePath
             };
 
             Nullable<bool> result = dlg.ShowDialog();

@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using Tustler.Helpers;
 using Tustler.Models;
+using AppSettings = TustlerWinPlatformLib.ApplicationSettings;
 
 namespace Tustler.UserControls
 {
@@ -33,9 +34,9 @@ namespace Tustler.UserControls
         {
             var speechTasksInstance = this.FindResource("speechTasksInstance") as SpeechSynthesisTasksViewModel;
 
-            string bucketName = ApplicationSettings.DefaultBucketName;
+            string bucketName = AppSettings.DefaultBucketName;
             string key = $"SpeechTaskOutput-{DateTime.Now.Ticks}";
-            string arn = ApplicationSettings.NotificationsARN;
+            string arn = AppSettings.NotificationsARN;
             string filePath = tbTextFilePath.Text;
             bool useNeural = (string)(cbEngine.SelectedItem as ComboBoxItem).Tag == "neural";
             string voiceId = (cbVoice.SelectedItem as ComboBoxItem).Content as string;
@@ -103,7 +104,7 @@ namespace Tustler.UserControls
             {
                 Title = "Choose a file to upload",
                 Multiselect = false,
-                InitialDirectory = ApplicationSettings.FileCachePath
+                InitialDirectory = AppSettings.FileCachePath
             };
 
             Nullable<bool> result = dlg.ShowDialog();

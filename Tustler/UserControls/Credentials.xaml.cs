@@ -10,6 +10,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using TustlerWinPlatformLib;
 
 namespace Tustler.UserControls
 {
@@ -33,6 +34,11 @@ namespace Tustler.UserControls
             var region = TustlerAWSLib.Utilities.GetRegion();
             message = (region != null) ? string.Format("{0} ({1})", message, region) : message;
             MessageBox.Show(message, "Access Key");
+
+            if (accessKey is null)
+            {
+                TustlerAWSLib.Utilities.StoreCredentials("my-access-key", "my-secret-key");
+            }
         }
     }
 }

@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -77,7 +78,7 @@ namespace Tustler
             }
         }
 
-        private void lbNotifications_ItemsChanged(object sender, System.Windows.Controls.Primitives.ItemsChangedEventArgs e)
+        private void lbNotifications_ItemsChanged(object sender, ItemsChangedEventArgs e)
         {
             if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
             {
@@ -264,6 +265,8 @@ namespace Tustler
                     // fallthru
                 case "credentials":
                 // fallthru
+                case "appSettings":
+                // fallthru
                 case "translate":
                 // fallthru
                 case "transcribe":
@@ -297,6 +300,9 @@ namespace Tustler
                         break;
                     case "credentials":
                         panControlsContainer.Children.Add(new Credentials());
+                        break;
+                    case "appSettings":
+                        panControlsContainer.Children.Add(new ApplicationSettings());
                         break;
                     case "polly":
                         panControlsContainer.Children.Add(new PollyFunctions());

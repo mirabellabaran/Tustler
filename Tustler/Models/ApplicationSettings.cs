@@ -1,86 +1,72 @@
-﻿using Microsoft.Extensions.Configuration;
-using System;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.IO;
-using System.Windows;
+using System.Text;
+using System.Windows.Controls;
+using System.Windows.Data;
+using TustlerWinPlatformLib;
 
 namespace Tustler.Models
 {
-    public static class ApplicationSettings
+    public class ApplicationSettingsViewModel
     {
-        public static string FileCachePath
+        public ObservableCollection<Setting> Settings
         {
-            get
-            {
-                var fileCachePath = GetAppConfig().GetValue<string>("FileCache");
-
-                if (string.IsNullOrEmpty(fileCachePath))
-                    return Path.Combine(System.AppContext.BaseDirectory, "FileCache");
-                else
-                    //// json format required forward slash; convert back to standard MS path format
-                    return fileCachePath.Replace(@"/", @"\", StringComparison.InvariantCulture);
-            }
+            get;
+            private set;
         }
 
-        public static string DefaultBucketName
+        public ApplicationSettingsViewModel()
         {
-            get
-            {
-                return GetAppConfig().GetValue<string>("DefaultBucketName");
-            }
+            Settings = new ObservableCollection<Setting>();
+            Settings.CollectionChanged += Settings_CollectionChanged;
+            HasChanged = false;
         }
 
-        public static string BatchTranslateServiceRole
+        private void Settings_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            get
-            {
-                return GetAppConfig().GetValue<string>("BatchTranslateServiceRole");
-            }
+            HasChanged = true;
         }
 
-        public static string BatchTranslateRegion
+        public bool HasChanged
         {
-            get
-            {
-                return GetAppConfig().GetValue<string>("BatchTranslateRegion");
-            }
+            get;
+            internal set;
         }
 
-        public static string BatchTranslateInputFolder
+        public void Refresh()
         {
-            get
+            Settings.Clear();
+            foreach (var kvp in JsonConfiguration.KeyValuePairs)
             {
-                return GetAppConfig().GetValue<string>("BatchTranslateInputFolder");
+                Settings.Add(new Setting { Key = kvp.Key, Value = kvp.Value });
             }
         }
+    }
 
-        public static string BatchTranslateOutputFolder
+    public class Setting// : IEditableObject, INotifyPropertyChanged
+    {
+        public string Key { get; internal set; }
+        public string Value { get; set; }
+    }
+
+    public class SettingsValidationRule : ValidationRule
+    {
+        public override ValidationResult Validate(object value,
+            System.Globalization.CultureInfo cultureInfo)
         {
-            get
+            Setting setting = (value as BindingGroup).Items[0] as Setting;
+            if (setting.Key == "FileCache" && !Directory.Exists(setting.Value))
             {
-                return GetAppConfig().GetValue<string>("BatchTranslateOutputFolder");
+                return new ValidationResult(false, "The value for FileCache must be a valid folder path.");
             }
-        }
-
-        public static string NotificationsARN
-        {
-            get
+            else
             {
-                return GetAppConfig().GetValue<string>("NotificationsARN");
+                return ValidationResult.ValidResult;
             }
-        }
-
-        public static string NotificationsQueue
-        {
-            get
-            {
-                return GetAppConfig().GetValue<string>("NotificationsQueue");
-            }
-        }
-
-        private static IConfigurationRoot GetAppConfig()
-        {
-            App current = Application.Current as App;
-            return current.AppConfig;
         }
     }
 }
