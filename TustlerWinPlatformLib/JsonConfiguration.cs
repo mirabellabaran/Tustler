@@ -15,6 +15,7 @@ namespace TustlerWinPlatformLib
     public static class JsonConfiguration
     {
         private static IConfigurationRoot appConfig;
+        private static string FilePathKey = "AppSettingsFilePath";
 
         public static IConfigurationRoot AppConfig
         {
@@ -24,14 +25,17 @@ namespace TustlerWinPlatformLib
             }
         }
 
-        public static string FilePathKey
+        public static string ConfigurationFilePath
         {
             get
             {
-                return "AppSettingsFilePath";
+                return appConfig.GetValue<string>(FilePathKey);
             }
         }
 
+        /// <summary>
+        /// Return all settings as a sequence of KeyValuePairs (excluding the cached FilePathKey)
+        /// </summary>
         public static IEnumerable<KeyValuePair<string, string>> KeyValuePairs
         {
             get
@@ -39,7 +43,7 @@ namespace TustlerWinPlatformLib
                 var providers = JsonConfiguration.AppConfig.Providers as List<IConfigurationProvider>;
                 var provider = providers[0] as MemoryConfigurationProvider;
 
-                return provider.AsEnumerable();
+                return provider.AsEnumerable().Where(kvp => kvp.Key != FilePathKey);
             }
         }
 
@@ -65,7 +69,7 @@ namespace TustlerWinPlatformLib
 
             if (!pairs.ContainsKey(FilePathKey))
             {
-                // add the file path value for later lookup
+                // cache the file path value for later lookup (not exposed to consumers)
                 var filePath = Path.Combine(basePath, appSettingsFileName);
                 pairs.Add(FilePathKey, filePath);
             }
@@ -79,9 +83,17 @@ namespace TustlerWinPlatformLib
 
         public static void SaveConfiguration(Dictionary<string, string> keyValuePairs)
         {
-            // TODO need to update the current configuration
-            // TODO need to set datagrid editor background to a dark colour for readability
-            // TODO ApplicationSettingsViewModel HasChanged is not working correctly
+            // temporarily add the cached file path
+            var filePath = ConfigurationFilePath;
+            keyValuePairs.Add(FilePathKey, filePath);
+
+            // update the current configuration
+            var builder = new ConfigurationBuilder()
+                .AddInMemoryCollection(keyValuePairs);
+            appConfig = builder.Build();
+
+            // remove the file path so it is not saved
+            keyValuePairs.Remove(FilePathKey);
 
             var sb = new StringBuilder("{");
             sb.AppendLine();
@@ -91,7 +103,6 @@ namespace TustlerWinPlatformLib
             sb.Append('}');
             sb.AppendLine();
 
-            var filePath = keyValuePairs[FilePathKey];
             File.WriteAllText(filePath, sb.ToString());
         }
     }

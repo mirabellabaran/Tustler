@@ -22,7 +22,11 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
-        <DataGrid x:Name="dgApplicationSettings" Grid.Row="0" Grid.Column="0" Margin="20" AutoGenerateColumns="False" RowHeaderWidth="15" HeadersVisibility="All" CanUserResizeRows="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False" ItemsSource="{Binding Source={StaticResource applicationSettingsInstance}, Path=Settings}" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
+        <DataGrid x:Name="dgApplicationSettings" Grid.Row="0" Grid.Column="0" Margin="20" AutoGenerateColumns="False" RowHeaderWidth="15"
+                  HeadersVisibility="All" CanUserResizeRows="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False"
+                  ItemsSource="{Binding Source={StaticResource applicationSettingsInstance}, Path=Settings}"
+                  RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"
+                  AlternationCount="2">
             <DataGrid.RowValidationRules>
                 <local:SettingsValidationRule ValidationStep="UpdatedValue"/>
             </DataGrid.RowValidationRules>

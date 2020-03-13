@@ -26,6 +26,7 @@
             <SolidColorBrush x:Key="{x:Static SystemColors.HotTrackColorKey}" Color="#535c60"/>
             <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#535c60"/>
             <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="LightGray"/>
+            <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="DarkSlateBlue"/>
 
             <Style TargetType="TabControl">
                 <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />

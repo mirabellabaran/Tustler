@@ -3,6 +3,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using Tustler.Models;
 using TustlerWinPlatformLib;
 
@@ -29,19 +30,39 @@ namespace Tustler.UserControls
         {
             var applicationSettingsInstance = this.FindResource("applicationSettingsInstance") as ApplicationSettingsViewModel;
 
-            e.CanExecute = (applicationSettingsInstance.HasChanged);
+            e.CanExecute = (applicationSettingsInstance.HasChanged && IsValid(dgApplicationSettings as DependencyObject));
         }
 
         private void SaveSettings_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             var applicationSettingsInstance = this.FindResource("applicationSettingsInstance") as ApplicationSettingsViewModel;
-
-            var keyValuePairs = new Dictionary<string, string>(applicationSettingsInstance.Settings.Select(setting => new KeyValuePair<string, string>(setting.Key, setting.Value)));
-            JsonConfiguration.SaveConfiguration(keyValuePairs);
+            applicationSettingsInstance.Save();
+            applicationSettingsInstance.HasChanged = false;
 
             var notifications = this.FindResource("applicationNotifications") as NotificationsList;
-            var filePath = keyValuePairs[JsonConfiguration.FilePathKey];
+            var filePath = JsonConfiguration.ConfigurationFilePath;
             notifications.ShowMessage("Configuration saved", $"Application settings were saved to {filePath}");
+        }
+
+        /// <summary>
+        /// Check validation state for the datagrid and child elements
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <returns></returns>
+        /// <remarks>see https://stackoverflow.com/questions/127477/detecting-wpf-validation-errors </remarks>
+        private bool IsValid(DependencyObject parent)
+        {
+            if (Validation.GetHasError(parent))
+                return false;
+
+            // Validate all the bindings on the children
+            for (int i = 0; i != VisualTreeHelper.GetChildrenCount(parent); ++i)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(parent, i);
+                if (!IsValid(child)) { return false; }
+            }
+
+            return true;
         }
     }
 
