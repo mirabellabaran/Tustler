@@ -1,16 +1,10 @@
-﻿using System;
+﻿using Amazon;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using TustlerWinPlatformLib;
+using Tustler.Models;
 
 namespace Tustler.UserControls
 {
@@ -24,21 +18,50 @@ namespace Tustler.UserControls
             InitializeComponent();
         }
 
-        private void Credentials_Button_Click(object sender, RoutedEventArgs e)
+        private void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
-            var accessKey = TustlerAWSLib.Utilities.CheckCredentials();
-            // TODO redirect to a form asking for accessKey and secretKey
-            // and then store in shared credentials file
+            var credentials = TustlerAWSLib.Utilities.GetCredentials();
+            tbAccessKey.Text = credentials?.AccessKey;
+            tbSecretKey.Password = credentials?.SecretKey;
 
-            var message = (accessKey != null) ? accessKey : "None";
-            var region = TustlerAWSLib.Utilities.GetRegion();
-            message = (region != null) ? string.Format("{0} ({1})", message, region) : message;
-            MessageBox.Show(message, "Access Key");
-
-            if (accessKey is null)
+            var configuredRegion = TustlerAWSLib.Utilities.GetRegion();
+            if (!(configuredRegion is null))
             {
-                TustlerAWSLib.Utilities.StoreCredentials("my-access-key", "my-secret-key");
+                var regions = cbRegion.ItemsSource as IEnumerable<Tustler.Models.Endpoint>;
+                var hits = regions.Where(region => region.Code == configuredRegion.SystemName).ToArray();
+                if (hits.Length > 0)
+                {
+                    var configuredRegionItem = hits.First();
+                    cbRegion.SelectedItem = configuredRegionItem;
+                }
             }
         }
+
+        private void SaveCredentials_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = (!string.IsNullOrEmpty(tbAccessKey.Text) && !string.IsNullOrEmpty(tbSecretKey.Password));
+        }
+
+        private void SaveCredentials_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            var regionModel = cbRegion.SelectedItem as Tustler.Models.Endpoint;
+            var region = RegionEndpoint.GetBySystemName(regionModel.Code);
+
+            TustlerAWSLib.Utilities.StoreCredentials(tbAccessKey.Text, tbSecretKey.Password, region);
+
+            var notifications = this.FindResource("applicationNotifications") as NotificationsList;
+            notifications.ShowMessage("Credentials saved", $"Credentials were saved to a folder named .aws in your home directory");
+        }
+    }
+
+    public static class CredentialsCommands
+    {
+        public static readonly RoutedUICommand SaveCredentials = new RoutedUICommand
+            (
+                "SaveCredentials",
+                "SaveCredentials",
+                typeof(CredentialsCommands),
+                null
+            );
     }
 }

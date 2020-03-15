@@ -25,14 +25,14 @@ namespace TustlerAWSLib
         //    }
         //}
 
-        public static string CheckCredentials()
+        public static ImmutableCredentials GetCredentials()
         {
             var chain = new CredentialProfileStoreChain();
             AWSCredentials awsCredentials;
             if (chain.TryGetAWSCredentials("default", out awsCredentials))
             {
                 var creds = awsCredentials.GetCredentials();
-                return creds.AccessKey;
+                return creds;
             }
             else
             {
@@ -69,7 +69,7 @@ namespace TustlerAWSLib
         /// <remarks>Subsequent calls to CheckCredentials should return a non-null value</remarks>
         /// <param name="accessKey"></param>
         /// <param name="secretKey"></param>
-        public static void StoreCredentials(string accessKey, string secretKey)
+        public static void StoreCredentials(string accessKey, string secretKey, RegionEndpoint region)
         {
             var options = new CredentialProfileOptions
             {
@@ -77,7 +77,8 @@ namespace TustlerAWSLib
                 SecretKey = secretKey
             };
             var profile = new CredentialProfile("default", options);
-            profile.Region = RegionEndpoint.APSoutheast2;
+            profile.Region = region;
+
             var sharedFile = new SharedCredentialsFile();
             sharedFile.RegisterProfile(profile);
         }

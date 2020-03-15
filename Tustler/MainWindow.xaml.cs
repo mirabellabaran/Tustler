@@ -49,8 +49,8 @@ namespace Tustler
 
             menuTasks.Items.Add(CreateMenuItem(new TreeViewItemData { Name = "Tasks", Tag = "tasks", HasChildren = true }));
 
-            var accessKey = TustlerAWSLib.Utilities.CheckCredentials();
-            if (accessKey != null)  // MG change to ==
+            var credentials = TustlerAWSLib.Utilities.GetCredentials();
+            if (credentials is null)
             {
                 // find the Settings tag
                 var settingsMenuItem = tvActions.Items.Cast<TreeViewItem>().First(item => (item.Tag as string) == "settings");
