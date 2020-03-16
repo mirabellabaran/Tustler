@@ -7,24 +7,6 @@ namespace TustlerAWSLib
 {
     public class Utilities
     {
-        //RegionEndpoint _region;
-
-        //public RegionEndpoint Region
-        //{
-        //    get
-        //    {
-        //        if (_region == null)
-        //        {
-        //            _region = GetRegion();
-        //            return _region;
-        //        }
-        //        else
-        //        {
-        //            return _region;
-        //        }
-        //    }
-        //}
-
         public static ImmutableCredentials GetCredentials()
         {
             var chain = new CredentialProfileStoreChain();
@@ -52,15 +34,6 @@ namespace TustlerAWSLib
             {
                 return null;
             }
-        }
-
-        /// <summary>
-        /// Set the configured region for all clients
-        /// </summary>
-        public static void SetSessionRegion(string region)
-        {
-            // e.g. "ap-southeast-2"
-            AWSConfigs.AWSRegion = region;
         }
 
         /// <summary>

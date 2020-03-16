@@ -47,6 +47,7 @@ namespace Tustler.UserControls
             var regionModel = cbRegion.SelectedItem as Tustler.Models.Endpoint;
             var region = RegionEndpoint.GetBySystemName(regionModel.Code);
 
+            // save the credentials and region
             TustlerAWSLib.Utilities.StoreCredentials(tbAccessKey.Text, tbSecretKey.Password, region);
 
             var notifications = this.FindResource("applicationNotifications") as NotificationsList;

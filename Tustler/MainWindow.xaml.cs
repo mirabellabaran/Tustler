@@ -278,8 +278,8 @@ namespace Tustler
                 case "do-not-handle":
                     break;
                 default:
-                    FormattableString message = $"Menu or Tree Item {item.Header} {tag}";
-                    MessageBox.Show(FormattableString.Invariant(message));
+                    //FormattableString message = $"Menu or Tree Item {item.Header} {tag}";
+                    //MessageBox.Show(FormattableString.Invariant(message));
                     break;
             }
 

@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -35,12 +37,21 @@ namespace Tustler.UserControls
 
         private void SaveSettings_Executed(object sender, ExecutedRoutedEventArgs e)
         {
+            var notifications = this.FindResource("applicationNotifications") as NotificationsList;
+
             var applicationSettingsInstance = this.FindResource("applicationSettingsInstance") as ApplicationSettingsViewModel;
-            applicationSettingsInstance.Save();
+            try
+            {
+                applicationSettingsInstance.Save();
+            }
+            catch (IOException ex)
+            {
+                notifications.HandleError("SaveSettings_Executed", "An error occurred during a save operation.", ex);
+            }
+
             applicationSettingsInstance.HasChanged = false;
 
-            var notifications = this.FindResource("applicationNotifications") as NotificationsList;
-            var filePath = JsonConfiguration.ConfigurationFilePath;
+            var filePath = TustlerWinPlatformLib.ApplicationSettings.AppSettingsFilePath;
             notifications.ShowMessage("Configuration saved", $"Application settings were saved to {filePath}");
         }
 

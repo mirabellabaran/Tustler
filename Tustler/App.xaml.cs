@@ -27,20 +27,21 @@ namespace Tustler
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
 
-            var appSettingsFileName = "appsettings.json";
-            var baseDirectory = System.AppContext.BaseDirectory;
-
-            var appSettingsPath = Path.Combine(baseDirectory, appSettingsFileName);
+            var appSettingsPath = ApplicationSettings.AppSettingsFilePath;
             if (!File.Exists(appSettingsPath))
             {
-                //PrepareConfigurationFirstTimeExecution(baseDirectory, appSettingsPath);
-                MessageBox.Show($"Missing configuration file {appSettingsPath}", "Configuration file missing", MessageBoxButton.OK, MessageBoxImage.Error);
-                Application.Current.Shutdown();
+                appSettingsPath = Path.Combine(System.AppContext.BaseDirectory, ApplicationSettings.AppSettingsFileName);
+                if (!File.Exists(appSettingsPath))
+                {
+                    MessageBox.Show($"Missing configuration file {appSettingsPath}", "Configuration file missing", MessageBoxButton.OK, MessageBoxImage.Error);
+                    Application.Current.Shutdown();
+                }
             }
 
             try
             {
-                JsonConfiguration.ParseConfiguration(baseDirectory, appSettingsFileName);
+                var baseDirectory = Path.GetDirectoryName(appSettingsPath);
+                JsonConfiguration.ParseConfiguration(baseDirectory, ApplicationSettings.AppSettingsFileName);
             }
             catch (FormatException ex)
             {
