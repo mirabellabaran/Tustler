@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -52,29 +53,21 @@ namespace Tustler
             var credentials = TustlerAWSLib.Utilities.GetCredentials();
             if (credentials is null)
             {
-                // find the Settings tag
-                var settingsMenuItem = tvActions.Items.Cast<TreeViewItem>().First(item => (item.Tag as string) == "settings");
+                SwitchTo("credentials");    // show credentials editor
+            }
 
-                // expand it if necessary
-                if ((settingsMenuItem.Items.Count == 1) && (settingsMenuItem.Items[0] is string))
-                {
-                    settingsMenuItem.Items.Clear();
-                    AddItems<TreeViewItem>(CreateTreeItem, settingsMenuItem, new SettingsTreeViewDataModel().TreeViewItemDataCollection);
+            // check if the FFmpeg library can be loaded
+            try
+            {
+                Unosquare.FFME.Library.LoadFFmpeg();
+            }
+            catch (FileNotFoundException ex)
+            {
+                var notifications = this.FindResource("applicationNotifications") as NotificationsList;
+                notifications.HandleError("Window_Loaded", "The setting for FFmpegDirectory is incorrect", ex);
+                notifications.ShowMessage("FFmpeg shared binaries are required", "The FFmpeg libraries can be downloaded from: https://ffmpeg.zeranoe.com/builds/");
 
-                    settingsMenuItem.IsExpanded = true;
-                }
-
-                // find the credentials tag (throws InvalidOperationException if not found)
-                var credentialsMenuItem = settingsMenuItem.Items.Cast<TreeViewItem>().First(item => (item.Tag as string) == "credentials");
-
-                // set focus so that the command can execute
-                credentialsMenuItem.Focus();
-
-                // invoke the bound command
-                if (MainWindowCommands.Switch.CanExecute(null, tvActions))
-                {
-                    MainWindowCommands.Switch.Execute(null, tvActions);
-                }
+                SwitchTo("appSettings");
             }
         }
 
@@ -318,6 +311,37 @@ namespace Tustler
             finally
             {
                 Mouse.OverrideCursor = null;
+            }
+        }
+
+        /// <summary>
+        /// Switch to the required Settings user control
+        /// </summary>
+        /// <param name="userControlTagName">The tag name of the user control</param>
+        private void SwitchTo(string userControlTagName)
+        {
+            // find the Settings tag
+            var settingsMenuItem = tvActions.Items.Cast<TreeViewItem>().First(item => (item.Tag as string) == "settings");
+
+            // expand it if necessary
+            if ((settingsMenuItem.Items.Count == 1) && (settingsMenuItem.Items[0] is string))
+            {
+                settingsMenuItem.Items.Clear();
+                AddItems<TreeViewItem>(CreateTreeItem, settingsMenuItem, new SettingsTreeViewDataModel().TreeViewItemDataCollection);
+
+                settingsMenuItem.IsExpanded = true;
+            }
+
+            // find the reguired menu item tag (throws InvalidOperationException if not found)
+            var requiredMenuItem = settingsMenuItem.Items.Cast<TreeViewItem>().First(item => (item.Tag as string) == userControlTagName);
+
+            // ... and set the focus so that the command can execute
+            requiredMenuItem.Focus();
+
+            // invoke the bound command
+            if (MainWindowCommands.Switch.CanExecute(null, tvActions))
+            {
+                MainWindowCommands.Switch.Execute(null, tvActions);
             }
         }
     }

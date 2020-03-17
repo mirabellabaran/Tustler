@@ -123,6 +123,14 @@ namespace TustlerWinPlatformLib
             }
         }
 
+        public static string FFmpegDirectory
+        {
+            get
+            {
+                return GetAppConfig().GetValue<string>("FFmpegDirectory");
+            }
+        }
+
         private static IConfigurationRoot GetAppConfig()
         {
             return JsonConfiguration.AppConfig;

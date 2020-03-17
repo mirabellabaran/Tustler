@@ -27,6 +27,9 @@
                   ItemsSource="{Binding Source={StaticResource applicationSettingsInstance}, Path=Settings}"
                   RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"
                   AlternationCount="2">
+            <DataGrid.Resources>
+                <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="DarkSlateBlue"/>
+            </DataGrid.Resources>
             <DataGrid.RowValidationRules>
                 <local:SettingsValidationRule ValidationStep="UpdatedValue"/>
             </DataGrid.RowValidationRules>

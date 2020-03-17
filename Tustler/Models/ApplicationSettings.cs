@@ -116,15 +116,19 @@ namespace Tustler.Models
             System.Globalization.CultureInfo cultureInfo)
         {
             Setting setting = (value as BindingGroup).Items[0] as Setting;
-            // FileCache is allowed to be empty (as it has a default value); if it is set it must refer to an existing folder
-            if (setting.Key == "FileCache" && !string.IsNullOrEmpty(setting.Value) && !Directory.Exists(setting.Value))
+
+            var result = setting.Key switch
             {
-                return new ValidationResult(false, "The value for FileCache must be a valid folder path.");
-            }
-            else
-            {
-                return ValidationResult.ValidResult;
-            }
+                // FileCache is allowed to be empty (as it has a default value); if it is set it must refer to an existing folder
+                "FileCache" => (!string.IsNullOrEmpty(setting.Value) && !Directory.Exists(setting.Value))?
+                    new ValidationResult(false, "The value for FileCache must be a valid folder path.") : ValidationResult.ValidResult,
+                // FFmpegDirectory must refer to an existing folder
+                "FFmpegDirectory" => !Directory.Exists(setting.Value)?
+                    new ValidationResult(false, "The value for FFmpegDirectory must be a valid folder path.") : ValidationResult.ValidResult,
+                _ => ValidationResult.ValidResult
+            };
+
+            return result;
         }
     }
 }

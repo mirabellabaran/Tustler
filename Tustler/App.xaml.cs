@@ -50,7 +50,7 @@ namespace Tustler
             }
 
             // set the path to the FFmpeg directory
-            Unosquare.FFME.Library.FFmpegDirectory = @"C:\Users\Zev\Downloads\ffmpeg-20191122-27c6c92-win64-shared\bin";
+            Unosquare.FFME.Library.FFmpegDirectory = ApplicationSettings.FFmpegDirectory;
         }
 
         private void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)

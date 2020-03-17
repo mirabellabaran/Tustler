@@ -43,7 +43,7 @@ namespace Tustler
 
         public SettingsTreeViewDataModel()
         {
-            var divisions = new (string name, string tag)[] { ("Credentials Management", "credentials"), ("Application Settings", "appSettings"), ("Setting C", "c") };
+            var divisions = new (string name, string tag)[] { ("Credentials Management", "credentials"), ("Application Settings", "appSettings") };
             var divisionItems = from division in divisions select new TreeViewItemData { Name = division.name, Tag = division.tag, HasChildren = false };
 
             this.TreeViewItemDataCollection = new ObservableCollection<TreeViewItemData>(divisionItems);
