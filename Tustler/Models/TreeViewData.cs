@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
+using TustlerWinPlatformLib;
 
 namespace Tustler
 {
@@ -67,7 +70,7 @@ namespace Tustler
         }
     }
 
-    public class TasksTreeViewDataModel
+    public class ScriptsTreeViewDataModel
     {
         public ObservableCollection<TreeViewItemData> TreeViewItemDataCollection
         {
@@ -75,12 +78,35 @@ namespace Tustler
             private set;
         }
 
-        public TasksTreeViewDataModel()
+        public ScriptsTreeViewDataModel()
         {
-            var tasks = new (string name, string tag)[] { ("Task A", "a"), ("Task B", "b"), ("Task C", "c") };
-            var divisionItems = from task in tasks select new TreeViewItemData { Name = task.name, Tag = task.tag, HasChildren = false };
+            TreeViewItemDataCollection = new ObservableCollection<TreeViewItemData>();
+        }
 
-            this.TreeViewItemDataCollection = new ObservableCollection<TreeViewItemData>(divisionItems);
+        public async Task InitializeAsync()
+        {
+            var treeViewItems = await FetchScriptsAsync().ConfigureAwait(false);
+            foreach (var item in treeViewItems)
+            {
+                TreeViewItemDataCollection.Add(item);
+            }
+        }
+
+        private async Task<IEnumerable<TreeViewItemData>> FetchScriptsAsync()
+        {
+            var scripts = await Task.Run(() => GetScriptNames()).ConfigureAwait(false);
+            var divisionItems = from script in scripts select new TreeViewItemData { Name = script.name, Tag = script.tag, HasChildren = false };
+
+            return divisionItems;
+        }
+
+        private static IEnumerable<(string name, string tag)> GetScriptNames()
+        {
+            return Directory.EnumerateFiles(ApplicationSettings.ScriptsDirectoryPath, "*.fsx", SearchOption.TopDirectoryOnly)
+                            .Select(scriptPath => {
+                                var scriptName = Path.GetFileNameWithoutExtension(scriptPath);
+                                return (scriptName, scriptName);
+                                });
         }
     }
 }

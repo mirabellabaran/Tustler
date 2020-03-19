@@ -53,6 +53,14 @@ namespace TustlerWinPlatformLib
             }
         }
 
+        public static string ScriptsDirectoryPath
+        {
+            get
+            {
+                return Path.Combine(System.AppContext.BaseDirectory, "Scripts");
+            }
+        }
+
         public static string FileCachePath
         {
             get

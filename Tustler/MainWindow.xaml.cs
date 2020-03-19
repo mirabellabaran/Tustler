@@ -15,7 +15,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
-using System.Windows.Shapes;
 using Tustler.Models;
 using Tustler.UserControls;
 using TustlerServicesLib;
@@ -47,9 +46,9 @@ namespace Tustler
             await CreateSubTree(functionSubTree).ConfigureAwait(true);
             functionSubTree.IsExpanded = true;
 
-            tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "Tasks", Tag = "tasks", HasChildren = true }));
+            tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "Scripts", Tag = "scripts", HasChildren = true }));
 
-            menuTasks.Items.Add(CreateMenuItem(new TreeViewItemData { Name = "Tasks", Tag = "tasks", HasChildren = true }));
+            menuTasks.Items.Add(CreateMenuItem(new TreeViewItemData { Name = "Scripts", Tag = "scripts", HasChildren = true }));
 
             var credentials = TustlerAWSLib.Utilities.GetCredentials();
             if (credentials is null)
@@ -163,14 +162,15 @@ namespace Tustler
 
         private async void MenuItem_SubmenuOpenedAsync(object sender, RoutedEventArgs e)
         {
-            await Task.Delay(2000).ConfigureAwait(false);
+            // a menu has been clicked (perhaps the Scripts menu)
             MenuItem item = e.OriginalSource as MenuItem;
             if ((item.Items.Count == 1) && (item.Items[0] is string))
             {
                 item.Items.Clear();
 
-                var tasks = new TasksTreeViewDataModel();
-                AddItems<MenuItem>(CreateMenuItem, item, tasks.TreeViewItemDataCollection);
+                var scripts = new ScriptsTreeViewDataModel();
+                await scripts.InitializeAsync().ConfigureAwait(true);
+                AddItems<MenuItem>(CreateMenuItem, item, scripts.TreeViewItemDataCollection);
             }
         }
 
@@ -212,19 +212,18 @@ namespace Tustler
 
         private static async Task CreateSubTree(TreeViewItem parentItem)
         {
-            static async Task<ObservableCollection<TreeViewItemData>> GetTasks()
+            static async Task<ObservableCollection<TreeViewItemData>> GetScripts()
             {
-                await Task.Delay(2000).ConfigureAwait(false);
-
-                var tasks = new TasksTreeViewDataModel();
-                return tasks.TreeViewItemDataCollection;
+                var scripts = new ScriptsTreeViewDataModel();
+                await scripts.InitializeAsync().ConfigureAwait(true);
+                return scripts.TreeViewItemDataCollection;
             }
 
             var collection = (parentItem.Tag) switch
             {
                 "settings" => new SettingsTreeViewDataModel().TreeViewItemDataCollection,
                 "functions" => new FunctionsTreeViewDataModel().TreeViewItemDataCollection,
-                "tasks" => await GetTasks().ConfigureAwait(true),
+                "scripts" => await GetScripts().ConfigureAwait(true),
                 _ => throw new ArgumentException("TreeView Expansion: Unexpected item tag")
             };
 
@@ -272,15 +271,26 @@ namespace Tustler
                 case "do-not-handle":
                     break;
                 default:
-                    //FormattableString message = $"Menu or Tree Item {item.Header} {tag}";
-                    //MessageBox.Show(FormattableString.Invariant(message));
+                    // should normally be the name of a script
+                    var filePath = Path.Combine(TustlerWinPlatformLib.ApplicationSettings.ScriptsDirectoryPath, Path.ChangeExtension(tag, "fsx"));
+                    if (File.Exists(filePath))
+                    {
+                        // pass to Scripts user control
+                        SwitchForm("script", filePath);
+                    }
+                    else
+                    {
+                        var notifications = this.FindResource("applicationNotifications") as NotificationsList;
+                        notifications.HandleError("CheckIfHandled", "Unexpected menu or item tag", new ApplicationException($"The tag '{tag}' has no defined meaning"));
+                    }
+                    handled = true;
                     break;
             }
 
             return handled;
         }
 
-        private void SwitchForm(string tag)
+        private void SwitchForm(string tag, string arg = null)
         {
             try
             {
@@ -306,6 +316,11 @@ namespace Tustler
                         break;
                     case "transcribe":
                         panControlsContainer.Children.Add(new TranscribeFunctions());
+                        break;
+                    case "script":
+                        var uc = new Scripts();
+                        uc.ScriptName = arg;
+                        panControlsContainer.Children.Add(uc);
                         break;
                 }
             }
