@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Tustler"
         xmlns:models="clr-namespace:Tustler.Models"
-        xmlns:usercontrols="clr-namespace:Tustler.UserControls"
+        xmlns:services="clr-namespace:TustlerServicesLib;assembly=TustlerServicesLib"
         xmlns:helpers="clr-namespace:Tustler.Helpers"
         mc:Ignorable="d"
         Title="Tustler" Height="962" Width="1681"
@@ -20,8 +20,8 @@
     
     <Window.Resources>
         <helpers:FractionConverter x:Key="FractionConverter"/>
-        
-        <DataTemplate DataType="{x:Type models:ApplicationMessageInfo}">
+
+        <DataTemplate DataType="{x:Type services:ApplicationMessageInfo}">
             <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
                 <Border.Resources>
                     <Style x:Key="textBlockHeaderStyles" TargetType="TextBlock" >
@@ -41,7 +41,7 @@
             </Border>
         </DataTemplate>
 
-        <DataTemplate DataType="{x:Type models:ApplicationErrorInfo}">
+        <DataTemplate DataType="{x:Type services:ApplicationErrorInfo}">
             <StackPanel Orientation="Horizontal" Height="40" HorizontalAlignment="Stretch">
                 <StackPanel.Resources>
                     <Style x:Key="textBlockHeaderStyles" TargetType="TextBlock" >

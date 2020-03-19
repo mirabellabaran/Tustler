@@ -5,6 +5,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TustlerInterfaces;
+using TustlerServicesLib;
 
 namespace Tustler.Models
 {
@@ -37,7 +39,7 @@ namespace Tustler.Models
             }
         }
 
-        private void ProcessTerminologies(NotificationsList errorList, TustlerAWSLib.AWSResult<List<TerminologyProperties>> terminologies)
+        private void ProcessTerminologies(NotificationsList errorList, AWSResult<List<TerminologyProperties>> terminologies)
         {
             if (terminologies.IsError)
             {

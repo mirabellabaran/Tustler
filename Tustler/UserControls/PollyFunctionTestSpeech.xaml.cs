@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Tustler.Models;
+using TustlerServicesLib;
 using AppSettings = TustlerWinPlatformLib.ApplicationSettings;
 
 namespace Tustler.UserControls
@@ -28,6 +29,14 @@ namespace Tustler.UserControls
             notifications = this.FindResource("applicationNotifications") as NotificationsList;
         }
 
+        private void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (dgVoices.Items.Count > 0)
+            {
+                dgVoices.HeadersVisibility = DataGridHeadersVisibility.All;
+            }
+        }
+
         public bool IsAudioStreamDefined => audioStream != null;
 
         private void ListVoices_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -41,9 +50,18 @@ namespace Tustler.UserControls
 
             string languageCode = null;
 
-            // refresh and then enable the headers
-            await voicesInstance.Refresh(notifications, languageCode)
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                // refresh and then enable the headers
+                await voicesInstance.Refresh(notifications, languageCode)
                 .ContinueWith(task => dgVoices.HeadersVisibility = DataGridHeadersVisibility.All, TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
         }
 
         private void SynthesizeSpeech_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -53,16 +71,25 @@ namespace Tustler.UserControls
 
         private async void SynthesizeSpeech_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var selectedVoice = (dgVoices.SelectedCells.Count > 0) ? (dgVoices.SelectedCells[0].Item as Voice) : null;
-            var voiceId = (selectedVoice is null) ? null : selectedVoice.Id;
-            var useNeural = (selectedVoice is null) ? true : selectedVoice.SupportedEngines.Contains("neural", StringComparison.InvariantCulture);
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
 
-            var result = await Helpers.PollyServices.SynthesizeSpeech(tbSpeechText.Text, useNeural, voiceId).ConfigureAwait(true);
+                var selectedVoice = (dgVoices.SelectedCells.Count > 0) ? (dgVoices.SelectedCells[0].Item as Voice) : null;
+                var voiceId = (selectedVoice is null) ? null : selectedVoice.Id;
+                var useNeural = (selectedVoice is null) ? true : selectedVoice.SupportedEngines.Contains("neural", StringComparison.InvariantCulture);
 
-            (audioStream, contentType) = Helpers.PollyServices.ProcessSynthesizeSpeechResult(notifications, result);
-            CommandManager.InvalidateRequerySuggested();
+                var result = await Helpers.PollyServices.SynthesizeSpeech(tbSpeechText.Text, useNeural, voiceId).ConfigureAwait(true);
 
-            await PlayAudioStream().ConfigureAwait(true);
+                (audioStream, contentType) = Helpers.PollyServices.ProcessSynthesizeSpeechResult(notifications, result);
+                CommandManager.InvalidateRequerySuggested();
+
+                await PlayAudioStream().ConfigureAwait(true);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
         }
 
         private void ReplaySpeech_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -72,7 +99,16 @@ namespace Tustler.UserControls
 
         private async void ReplaySpeech_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            await PlayAudioStream().ConfigureAwait(true);
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                await PlayAudioStream().ConfigureAwait(true);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
         }
 
         private void SaveSynthesizedSpeech_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -91,17 +127,27 @@ namespace Tustler.UserControls
             Nullable<bool> result = dlg.ShowDialog();
             if (result == true)
             {
-                var filePath = dlg.FileName;
-                if (!Path.HasExtension(filePath))
+                try
                 {
-                    var extension = TustlerServicesLib.MimeTypeDictionary.GetExtensionFromMimeType(contentType);
-                    filePath = Path.ChangeExtension(filePath, extension);
+                    Mouse.OverrideCursor = Cursors.Wait;
+
+                    var filePath = dlg.FileName;
+                    var currentExtension = Path.GetExtension(filePath);
+                    if (!Path.HasExtension(filePath) || currentExtension != ".mp3")
+                    {
+                        var extension = TustlerServicesLib.MimeTypeDictionary.GetExtensionFromMimeType(contentType);
+                        filePath = Path.ChangeExtension(filePath, extension);
+                    }
+                    using (FileStream fileStream = File.Create(filePath, (int)audioStream.Length))
+                    {
+                        audioStream.Seek(0, SeekOrigin.Begin);
+                        await audioStream.CopyToAsync(fileStream).ConfigureAwait(false);
+                        fileStream.Close();
+                    }
                 }
-                using (FileStream fileStream = File.Create(filePath, (int)audioStream.Length))
+                finally
                 {
-                    audioStream.Seek(0, SeekOrigin.Begin);
-                    await audioStream.CopyToAsync(fileStream).ConfigureAwait(false);
-                    fileStream.Close();
+                    Dispatcher.Invoke(() => Mouse.OverrideCursor = null);
                 }
             }
         }
@@ -131,6 +177,5 @@ namespace Tustler.UserControls
                 await mePlayer.Open(new Uri(prefix));
             }
         }
-
     }
 }

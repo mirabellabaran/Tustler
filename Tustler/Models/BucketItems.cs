@@ -8,6 +8,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Data;
+using TustlerInterfaces;
+using TustlerServicesLib;
 
 namespace Tustler.Models
 {
@@ -161,7 +163,7 @@ namespace Tustler.Models
             };
         }
 
-        private void ProcessS3BucketItems(NotificationsList notifications, TustlerAWSLib.AWSResult<List<S3Object>> bucketItemsResult)
+        private void ProcessS3BucketItems(NotificationsList notifications, AWSResult<List<S3Object>> bucketItemsResult)
         {
             if (bucketItemsResult.IsError)
             {
@@ -186,7 +188,7 @@ namespace Tustler.Models
             }
         }
 
-        private void ProcessS3ItemMetadata(NotificationsList notifications, TustlerAWSLib.AWSResult<MetadataCollection> metadataResult, string key)
+        private void ProcessS3ItemMetadata(NotificationsList notifications, AWSResult<MetadataCollection> metadataResult, string key)
         {
             if (metadataResult.IsError)
             {

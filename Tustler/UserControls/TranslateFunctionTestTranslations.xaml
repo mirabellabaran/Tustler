@@ -40,6 +40,9 @@
                         </Trigger>
                     </Style.Triggers>
                 </Style>
+                <Style x:Key="comboBoxStyles" TargetType="ComboBox" BasedOn="{StaticResource ComboBoxStyleCustom}">
+                    <Setter Property="VerticalContentAlignment" Value="Center" />
+                </Style>
                 <DataTemplate x:Key="comboBoxItemTempate">
                     <TextBlock Text="{Binding Path=Name}" />
                 </DataTemplate>
@@ -50,21 +53,15 @@
                 <RowDefinition Height="100" />
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="150"/>
                 <ColumnDefinition />
             </Grid.ColumnDefinitions>
 
-            <ComboBox x:Name="cbSourceLanguage" Grid.Row="0" Grid.Column="0" Height="30" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource translationLanguageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource comboBoxItemTempate}" SelectedValue="en" SelectedValuePath="Code">
-                <ComboBox.ItemContainerStyle>
-                    <Style TargetType="ComboBoxItem">
-                        <Setter Property="Background" Value="Yellow"/>
-                        <Setter Property="Foreground" Value="Red"/>
-                    </Style>
-                </ComboBox.ItemContainerStyle>
+            <ComboBox x:Name="cbSourceLanguage" Grid.Row="0" Grid.Column="0" Height="30" Style="{StaticResource comboBoxStyles}" ItemsSource="{Binding Source={StaticResource translationLanguageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource comboBoxItemTempate}" SelectedValue="en" SelectedValuePath="Code">
             </ComboBox>
             <TextBox x:Name="tbSourceText" Grid.Row="0" Grid.Column="1" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Visible" TextChanged="tbSourceText_TextChanged" Style="{StaticResource textBoxStyles}" />
 
-            <ComboBox x:Name="cbTargetLanguage" Grid.Row="1" Grid.Column="0" Height="30" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource translationLanguageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource comboBoxItemTempate}" SelectedValue="en" SelectedValuePath="Code">
+            <ComboBox x:Name="cbTargetLanguage" Grid.Row="1" Grid.Column="0" Height="30" Style="{StaticResource comboBoxStyles}" ItemsSource="{Binding Source={StaticResource translationLanguageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource comboBoxItemTempate}" SelectedValue="en" SelectedValuePath="Code">
             </ComboBox>
             <TextBox x:Name="tbTranslatedText" Grid.Row="1" Grid.Column="1" TextWrapping="Wrap" Margin="10" IsReadOnly="True" VerticalScrollBarVisibility="Visible" Style="{StaticResource TextBoxDark}" />
             <UniformGrid Rows="1" Columns="2" Grid.Row="2" Grid.Column="1">

@@ -4,6 +4,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TustlerInterfaces;
+using TustlerServicesLib;
 
 namespace Tustler.Models
 {
@@ -37,7 +39,7 @@ namespace Tustler.Models
             }
         }
 
-        private void ProcessS3Buckets(NotificationsList errorList, TustlerAWSLib.AWSResult<List<Amazon.S3.Model.S3Bucket>> bucketsResult)
+        private void ProcessS3Buckets(NotificationsList errorList, AWSResult<List<Amazon.S3.Model.S3Bucket>> bucketsResult)
         {
             if (bucketsResult.IsError)
             {

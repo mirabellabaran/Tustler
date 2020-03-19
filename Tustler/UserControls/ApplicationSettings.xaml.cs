@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using Tustler.Models;
+using TustlerServicesLib;
 using TustlerWinPlatformLib;
 
 namespace Tustler.UserControls
@@ -42,11 +43,17 @@ namespace Tustler.UserControls
             var applicationSettingsInstance = this.FindResource("applicationSettingsInstance") as ApplicationSettingsViewModel;
             try
             {
+                Mouse.OverrideCursor = Cursors.Wait;
+
                 applicationSettingsInstance.Save();
             }
             catch (IOException ex)
             {
                 notifications.HandleError("SaveSettings_Executed", "An error occurred during a save operation.", ex);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
             }
 
             applicationSettingsInstance.HasChanged = false;

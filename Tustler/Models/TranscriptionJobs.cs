@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using TustlerInterfaces;
+using TustlerServicesLib;
 
 namespace Tustler.Models
 {
@@ -43,7 +45,7 @@ namespace Tustler.Models
             }
         }
 
-        private void ProcessPollyNewTranslationJob(NotificationsList notifications, TustlerAWSLib.AWSResult<Amazon.TranscribeService.Model.TranscriptionJob> result)
+        private void ProcessPollyNewTranslationJob(NotificationsList notifications, AWSResult<Amazon.TranscribeService.Model.TranscriptionJob> result)
         {
             if (result.IsError)
             {
@@ -68,7 +70,7 @@ namespace Tustler.Models
             }
         }
 
-        private void ProcessTranslationJobs(NotificationsList errorList, TustlerAWSLib.AWSResult<List<TranscriptionJobSummary>> transcriptionJobs)
+        private void ProcessTranslationJobs(NotificationsList errorList, AWSResult<List<TranscriptionJobSummary>> transcriptionJobs)
         {
             if (transcriptionJobs.IsError)
             {

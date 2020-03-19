@@ -12,6 +12,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Tustler.Models;
+using TustlerServicesLib;
 
 namespace Tustler.UserControls
 {

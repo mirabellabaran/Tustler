@@ -4,6 +4,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TustlerInterfaces;
+using TustlerServicesLib;
 
 namespace Tustler.Models
 {
@@ -36,7 +38,7 @@ namespace Tustler.Models
             }
         }
 
-        private void ProcessPollyVoices(NotificationsList notifications, TustlerAWSLib.AWSResult<List<Amazon.Polly.Model.Voice>> result)
+        private void ProcessPollyVoices(NotificationsList notifications, AWSResult<List<Amazon.Polly.Model.Voice>> result)
         {
             if (result.IsError)
             {
@@ -49,8 +51,10 @@ namespace Tustler.Models
                 {
                     static void AppendCollection(ObservableCollection<Voice> collection, List<Amazon.Polly.Model.Voice> voices)
                     {
-                        var items = from voice in voices select new Voice { Id = voice.Id, Name = voice.LanguageName, LanguageCode = voice.LanguageCode.Value, Gender = voice.Gender.Value, SupportedEngines = string.Join(", ", voice.SupportedEngines) };
-
+                        var items = from voice in voices
+                                    orderby voice.Id.Value
+                                    select new Voice { Id = voice.Id, Name = voice.LanguageName, LanguageCode = voice.LanguageCode.Value, Gender = voice.Gender.Value, SupportedEngines = string.Join(", ", voice.SupportedEngines) };
+                                    
                         collection.Clear();
                         foreach (var voice in items)
                         {

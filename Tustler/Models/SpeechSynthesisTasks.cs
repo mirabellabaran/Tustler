@@ -5,6 +5,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TustlerInterfaces;
+using TustlerServicesLib;
 
 namespace Tustler.Models
 {
@@ -56,7 +58,7 @@ namespace Tustler.Models
             ProcessPollySpeechSynthesisTasks(notifications, result);
         }
 
-        private void ProcessPollySpeechSynthesisTasks(NotificationsList notifications, TustlerAWSLib.AWSResult<List<Amazon.Polly.Model.SynthesisTask>> result)
+        private void ProcessPollySpeechSynthesisTasks(NotificationsList notifications, AWSResult<List<Amazon.Polly.Model.SynthesisTask>> result)
         {
             if (result.IsError)
             {
@@ -95,7 +97,7 @@ namespace Tustler.Models
         /// <param name="notifications">A reference to the global notifications list</param>
         /// <param name="result">The result to process</param>
         /// <returns>The task Id</returns>
-        private string ProcessPollyNewSpeechSynthesisTask(NotificationsList notifications, TustlerAWSLib.AWSResult<Amazon.Polly.Model.SynthesisTask> result)
+        private string ProcessPollyNewSpeechSynthesisTask(NotificationsList notifications, AWSResult<Amazon.Polly.Model.SynthesisTask> result)
         {
             if (result.IsError)
             {

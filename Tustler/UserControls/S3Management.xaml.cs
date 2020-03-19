@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Tustler.Models;
+using TustlerServicesLib;
 using AppSettings = TustlerWinPlatformLib.ApplicationSettings;
 using Path = System.IO.Path;
 
@@ -86,21 +87,31 @@ namespace Tustler.UserControls
             var radioButton = e.OriginalSource as RadioButton;
 
             var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
-            bucketItemsInstance.FilteredMediaType = (radioButton.Name) switch
+
+            try
             {
-                "rbFilterAll" =>
-                    bucketItemsInstance.FilteredMediaType = BucketItemMediaType.All,
-                "rbFilterAudio" =>
-                    bucketItemsInstance.FilteredMediaType = BucketItemMediaType.Audio,
-                "rbFilterVideo" =>
-                    bucketItemsInstance.FilteredMediaType = BucketItemMediaType.Video,
-                "rbFilterText" =>
-                    bucketItemsInstance.FilteredMediaType = BucketItemMediaType.Text,
-                "rbFilterDefined" =>
-                    bucketItemsInstance.FilteredMediaType = BucketItemMediaType.Defined,
-                _ =>
-                    bucketItemsInstance.FilteredMediaType = BucketItemMediaType.All,
-            };
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                bucketItemsInstance.FilteredMediaType = (radioButton.Name) switch
+                {
+                    "rbFilterAll" =>
+                        bucketItemsInstance.FilteredMediaType = BucketItemMediaType.All,
+                    "rbFilterAudio" =>
+                        bucketItemsInstance.FilteredMediaType = BucketItemMediaType.Audio,
+                    "rbFilterVideo" =>
+                        bucketItemsInstance.FilteredMediaType = BucketItemMediaType.Video,
+                    "rbFilterText" =>
+                        bucketItemsInstance.FilteredMediaType = BucketItemMediaType.Text,
+                    "rbFilterDefined" =>
+                        bucketItemsInstance.FilteredMediaType = BucketItemMediaType.Defined,
+                    _ =>
+                        bucketItemsInstance.FilteredMediaType = BucketItemMediaType.All,
+                };
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
         }
 
         private void DeleteBucketItem_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -125,15 +136,24 @@ namespace Tustler.UserControls
             switch (result)
             {
                 case MessageBoxResult.OK:
-                    var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
-                    var bucketName = bucketItemsInstance.CurrentBucketName;
-
-                    var deleteResult = await Helpers.S3Services.DeleteItem(bucketName, key).ConfigureAwait(true);
-
-                    var success = Helpers.S3Services.ProcessDeleteBucketItemResult(notifications, deleteResult, key);
-                    if (success)
+                    try
                     {
-                        await bucketItemsInstance.RefreshAsync(notifications).ConfigureAwait(true);
+                        Mouse.OverrideCursor = Cursors.Wait;
+
+                        var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+                        var bucketName = bucketItemsInstance.CurrentBucketName;
+
+                        var deleteResult = await Helpers.S3Services.DeleteItem(bucketName, key).ConfigureAwait(true);
+
+                        var success = Helpers.S3Services.ProcessDeleteBucketItemResult(notifications, deleteResult, key);
+                        if (success)
+                        {
+                            await bucketItemsInstance.RefreshAsync(notifications).ConfigureAwait(true);
+                        }
+                    }
+                    finally
+                    {
+                        Mouse.OverrideCursor = null;
                     }
                     break;
             }

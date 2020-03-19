@@ -37,6 +37,9 @@
                     <Style x:Key="textBoxStyles" TargetType="TextBox" BasedOn="{StaticResource TextBoxDark}">
                         <Setter Property="Margin" Value="5, 5, 0, 5" />
                     </Style>
+                    <Style x:Key="comboBoxStyles" TargetType="ComboBox" BasedOn="{StaticResource ComboBoxStyleCustom}">
+                        <Setter Property="VerticalContentAlignment" Value="Center" />
+                    </Style>
                     <DataTemplate x:Key="LanguageCodesListItemTempate">
                         <TextBlock Text="{Binding Path=Name}" />
                     </DataTemplate>
@@ -66,21 +69,15 @@
                     <ColumnDefinition Width="30" />
                     <ColumnDefinition Width="100" />
                     <ColumnDefinition Width="100" />
-                    <ColumnDefinition Width="50" />
+                    <ColumnDefinition Width="100" />
                     <ColumnDefinition Width="200" />
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Text="Job name:" VerticalAlignment="Bottom" Grid.Row="0" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
                 <TextBox x:Name="tbJobName" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" ToolTip="This is used to construct the output file name" Style="{StaticResource textBoxStyles}" />
 
-                <TextBlock Text="Language/Accent:" VerticalAlignment="Bottom" Grid.Row="0" Grid.Column="4" Grid.ColumnSpan="2" Width="116" Margin="0,0,5,0" HorizontalAlignment="Right" Style="{StaticResource textBlockStyles}" />
-                <ComboBox x:Name="cbSourceLanguage" Grid.Row="1" Grid.Column="4" Grid.ColumnSpan="2" Height="30" Width="116" Margin="0,0,5,0" HorizontalAlignment="Right" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource transcriptionLanguageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource LanguageCodesListItemTempate}" SelectedValue="en-GB" SelectedValuePath="Code">
-                    <ComboBox.ItemContainerStyle>
-                        <Style TargetType="ComboBoxItem">
-                            <Setter Property="Background" Value="Yellow"/>
-                            <Setter Property="Foreground" Value="Red"/>
-                        </Style>
-                    </ComboBox.ItemContainerStyle>
+                <TextBlock Text="Language/Accent:" VerticalAlignment="Bottom" Grid.Row="0" Grid.Column="4" Grid.ColumnSpan="2" Width="166" Margin="0,0,5,0" HorizontalAlignment="Right" Style="{StaticResource textBlockStyles}" />
+                <ComboBox x:Name="cbSourceLanguage" Grid.Row="1" Grid.Column="4" Grid.ColumnSpan="2" Height="30" Width="166" Margin="0,0,5,0" HorizontalAlignment="Right" Style="{StaticResource comboBoxStyles}" ItemsSource="{Binding Source={StaticResource transcriptionLanguageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource LanguageCodesListItemTempate}" SelectedValue="en-GB" SelectedValuePath="Code">
                 </ComboBox>
 
                 <TextBlock Text="Audio file location:" VerticalAlignment="Bottom" Grid.Row="3" Grid.Column="0" Style="{StaticResource textBlockStyles}" />
@@ -97,11 +94,11 @@
                     </StackPanel>
                 </Border>
 
-                <StackPanel Orientation="Horizontal" Grid.Row="4" Grid.Column="3" Grid.RowSpan="2" Grid.ColumnSpan="3" Margin="5" >
+                <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" Grid.Row="4" Grid.Column="3" Grid.RowSpan="2" Grid.ColumnSpan="3" Margin="5" >
                     <StackPanel.Resources>
                         <Style x:Key="listBoxStyles" TargetType="ListBox" BasedOn="{StaticResource ListBoxDark}">
-                            <Setter Property="Width" Value="106" />
-                            <Setter Property="Margin" Value="10" />
+                            <Setter Property="Width" Value="164" />
+                            <Setter Property="Margin" Value="0" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding ElementName=chkIncludeVocabulary, Path=IsChecked}" Value="True">
                                     <Setter Property="IsEnabled" Value="True" />

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Threading.Tasks;
+using TustlerInterfaces;
+using TustlerServicesLib;
 
 namespace Tustler.Models
 {
@@ -35,7 +37,7 @@ namespace Tustler.Models
             }
         }
 
-        private void ProcessLexiconAttributes(NotificationsList notifications, TustlerAWSLib.AWSResult<Amazon.Polly.Model.LexiconAttributes> result)
+        private void ProcessLexiconAttributes(NotificationsList notifications, AWSResult<Amazon.Polly.Model.LexiconAttributes> result)
         {
             if (result.IsError)
             {

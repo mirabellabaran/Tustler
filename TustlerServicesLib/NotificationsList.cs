@@ -1,37 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Net.Http;
-using System.Text;
-using TustlerAWSLib;
+using TustlerInterfaces;
 
-namespace Tustler.Models
+namespace TustlerServicesLib
 {
     public sealed class NotificationsList
     {
-        private ObservableCollection<Notification> notifications;
-
         public NotificationsList()
         {
-            notifications = new ObservableCollection<Notification>();
+            Notifications = new ObservableCollection<Notification>();
         }
 
-        public ObservableCollection<Notification> Notifications
-        {
-            get
-            {
-                return notifications;
-            }
-        }
+        public ObservableCollection<Notification> Notifications { get; }
 
         public void Clear()
         {
-            notifications.Clear();
+            Notifications.Clear();
         }
 
         public void Add(Notification errorInfo)
         {
-            notifications.Add(errorInfo);
+            Notifications.Add(errorInfo);
         }
 
         public void HandleError<T>(AWSResult<T> result)

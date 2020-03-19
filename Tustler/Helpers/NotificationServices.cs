@@ -10,6 +10,8 @@ using System.Windows;
 using System.Windows.Threading;
 using Tustler.Models;
 using TustlerAWSLib;
+using TustlerInterfaces;
+using TustlerServicesLib;
 using TustlerWinPlatformLib;
 
 namespace Tustler.Helpers

@@ -13,4 +13,8 @@
     <PackageReference Include="AWSSDK.Translate" Version="3.3.101.8" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\TustlerInterfaces\TustlerInterfaces.csproj" />
+  </ItemGroup>
+
 </Project>

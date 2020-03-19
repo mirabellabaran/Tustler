@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Tustler.Models;
+using TustlerServicesLib;
 using AppSettings = TustlerWinPlatformLib.ApplicationSettings;
 
 namespace Tustler.UserControls

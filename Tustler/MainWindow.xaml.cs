@@ -18,6 +18,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Tustler.Models;
 using Tustler.UserControls;
+using TustlerServicesLib;
 
 namespace Tustler
 {

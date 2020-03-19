@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Tustler.Models;
+using TustlerServicesLib;
 using AppSettings = TustlerWinPlatformLib.ApplicationSettings;
 
 namespace Tustler.UserControls
@@ -62,13 +63,22 @@ namespace Tustler.UserControls
             Nullable<bool> result = dlg.ShowDialog();
             if (result == true)
             {
-                var filePath = dlg.FileName;
-                if (!Path.HasExtension(filePath))
+                try
                 {
-                    filePath = Path.ChangeExtension(filePath, "txt");
-                }
+                    Mouse.OverrideCursor = Cursors.Wait;
 
-                File.WriteAllText(filePath, tbTranslatedText.Text);
+                    var filePath = dlg.FileName;
+                    if (!Path.HasExtension(filePath))
+                    {
+                        filePath = Path.ChangeExtension(filePath, "txt");
+                    }
+
+                    File.WriteAllText(filePath, tbTranslatedText.Text);
+                }
+                finally
+                {
+                    Mouse.OverrideCursor = null;
+                }
             }
         }
 

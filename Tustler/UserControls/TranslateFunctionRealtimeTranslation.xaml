@@ -31,6 +31,9 @@
                     <Style x:Key="textBoxStyles" TargetType="TextBox" BasedOn="{StaticResource TextBoxDark}">
                         <Setter Property="Margin" Value="5, 5, 0, 5" />
                     </Style>
+                    <Style x:Key="comboBoxStyles" TargetType="ComboBox" BasedOn="{StaticResource ComboBoxStyleCustom}">
+                        <Setter Property="VerticalContentAlignment" Value="Center" />
+                    </Style>
                     <DataTemplate x:Key="ListItemTempate">
                         <TextBlock Text="{Binding Path=Name}" />
                     </DataTemplate>
@@ -84,17 +87,11 @@
 
                 <CheckBox x:Name="chkTextFileContainsOneSentencePerLine" Grid.Row="4" Grid.Column="0" Margin="10" IsThreeState="False" IsChecked="False" ToolTip="The file contains exactly one sentence per line">One sentence per line</CheckBox>
                 <TextBlock Text="Source Language:" Grid.Row="5" Grid.Column="4" Style="{StaticResource textBlockStyles}" />
-                <ComboBox x:Name="cbSourceLanguage" Grid.Row="5" Grid.Column="5" Height="30" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource translationLanguageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en" SelectedValuePath="Code">
-                    <ComboBox.ItemContainerStyle>
-                        <Style TargetType="ComboBoxItem">
-                            <Setter Property="Background" Value="Yellow"/>
-                            <Setter Property="Foreground" Value="Red"/>
-                        </Style>
-                    </ComboBox.ItemContainerStyle>
+                <ComboBox x:Name="cbSourceLanguage" Grid.Row="5" Grid.Column="5" Height="30" Style="{StaticResource comboBoxStyles}" ItemsSource="{Binding Source={StaticResource translationLanguageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en" SelectedValuePath="Code">
                 </ComboBox>
 
                 <TextBlock Text="Target Language:" Grid.Row="6" Grid.Column="4" Style="{StaticResource textBlockStyles}" />
-                <ComboBox x:Name="cbTargetLanguage" Grid.Row="6" Grid.Column="5" Height="30" Style="{StaticResource ComboBoxDark}" ItemsSource="{Binding Source={StaticResource translationLanguageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en" SelectedValuePath="Code">
+                <ComboBox x:Name="cbTargetLanguage" Grid.Row="6" Grid.Column="5" Height="30" Style="{StaticResource comboBoxStyles}" ItemsSource="{Binding Source={StaticResource translationLanguageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en" SelectedValuePath="Code">
                 </ComboBox>
             </Grid>
             <ProgressBar x:Name="pbTranslationJob" Height="10" Margin="10" Minimum="0" Maximum="100" Value="0" Visibility="Collapsed" />

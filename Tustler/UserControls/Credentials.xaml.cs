@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Tustler.Models;
+using TustlerServicesLib;
 
 namespace Tustler.UserControls
 {
@@ -44,14 +45,23 @@ namespace Tustler.UserControls
 
         private void SaveCredentials_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var regionModel = cbRegion.SelectedItem as Tustler.Models.Endpoint;
-            var region = RegionEndpoint.GetBySystemName(regionModel.Code);
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
 
-            // save the credentials and region
-            TustlerAWSLib.Utilities.StoreCredentials(tbAccessKey.Text, tbSecretKey.Password, region);
+                var regionModel = cbRegion.SelectedItem as Tustler.Models.Endpoint;
+                var region = RegionEndpoint.GetBySystemName(regionModel.Code);
 
-            var notifications = this.FindResource("applicationNotifications") as NotificationsList;
-            notifications.ShowMessage("Credentials saved", $"Credentials were saved to a folder named .aws in your home directory");
+                // save the credentials and region
+                TustlerAWSLib.Utilities.StoreCredentials(tbAccessKey.Text, tbSecretKey.Password, region);
+
+                var notifications = this.FindResource("applicationNotifications") as NotificationsList;
+                notifications.ShowMessage("Credentials saved", $"Credentials were saved to a folder named .aws in your home directory");
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
         }
     }
 

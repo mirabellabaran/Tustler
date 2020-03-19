@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Amazon.Polly;
 using Amazon.Polly.Model;
+using TustlerInterfaces;
 
 namespace TustlerAWSLib
 {

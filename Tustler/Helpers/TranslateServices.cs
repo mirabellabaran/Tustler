@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Tustler.Models;
 using TustlerAWSLib;
+using TustlerInterfaces;
 using TustlerServicesLib;
 using TustlerWinPlatformLib;
 

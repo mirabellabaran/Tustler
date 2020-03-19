@@ -7,6 +7,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TustlerAWSLib;
+using TustlerInterfaces;
+using TustlerServicesLib;
 
 namespace Tustler.Models
 {
@@ -45,7 +47,7 @@ namespace Tustler.Models
             }
         }
 
-        private void ProcessPollyNewTranslationJob(NotificationsList notifications, TustlerAWSLib.AWSResult<TranslateJobStatus> result)
+        private void ProcessPollyNewTranslationJob(NotificationsList notifications, AWSResult<TranslateJobStatus> result)
         {
             if (result.IsError)
             {
@@ -63,7 +65,7 @@ namespace Tustler.Models
             }
         }
 
-        private void ProcessTranslationJobs(NotificationsList errorList, TustlerAWSLib.AWSResult<List<TextTranslationJobProperties>> translationJobs)
+        private void ProcessTranslationJobs(NotificationsList errorList, AWSResult<List<TextTranslationJobProperties>> translationJobs)
         {
             if (translationJobs.IsError)
             {

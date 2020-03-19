@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Tustler.Models;
+using TustlerInterfaces;
+using TustlerServicesLib;
 
 namespace Tustler.Helpers
 {
@@ -11,22 +13,22 @@ namespace Tustler.Helpers
     /// </summary>
     public static class S3Services
     {
-        public static async Task<TustlerAWSLib.AWSResult<bool?>> UploadItem(string bucketName, string filePath, string mimetype, string extension)
+        public static async Task<AWSResult<bool?>> UploadItem(string bucketName, string filePath, string mimetype, string extension)
         {
             return await TustlerAWSLib.S3.UploadItem(bucketName, filePath, mimetype, extension).ConfigureAwait(false);
         }
 
-        public static async Task<TustlerAWSLib.AWSResult<bool?>> DownloadItem(string bucketName, string key, string filePath)
+        public static async Task<AWSResult<bool?>> DownloadItem(string bucketName, string key, string filePath)
         {
             return await TustlerAWSLib.S3.DownloadItem(bucketName, key, filePath).ConfigureAwait(false);
         }
 
-        public static async Task<TustlerAWSLib.AWSResult<bool?>> DeleteItem(string bucketName, string key)
+        public static async Task<AWSResult<bool?>> DeleteItem(string bucketName, string key)
         {
             return await TustlerAWSLib.S3.DeleteBucketItem(bucketName, key).ConfigureAwait(false);
         }
 
-        public static void ProcessUploadItemResult(NotificationsList notifications, TustlerAWSLib.AWSResult<bool?> uploadResult)
+        public static void ProcessUploadItemResult(NotificationsList notifications, AWSResult<bool?> uploadResult)
         {
             if (uploadResult.IsError)
             {
@@ -42,7 +44,7 @@ namespace Tustler.Helpers
             }
         }
 
-        public static void ProcessDownloadItemResult(NotificationsList notifications, TustlerAWSLib.AWSResult<bool?> downloadResult)
+        public static void ProcessDownloadItemResult(NotificationsList notifications, AWSResult<bool?> downloadResult)
         {
             if (downloadResult.IsError)
             {
@@ -58,7 +60,7 @@ namespace Tustler.Helpers
             }
         }
 
-        public static bool ProcessDeleteBucketItemResult(NotificationsList notifications, TustlerAWSLib.AWSResult<bool?> deleteResult, string key)
+        public static bool ProcessDeleteBucketItemResult(NotificationsList notifications, AWSResult<bool?> deleteResult, string key)
         {
             bool success = false;
 

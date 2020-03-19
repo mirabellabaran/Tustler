@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using TustlerInterfaces;
+using TustlerServicesLib;
 
 namespace Tustler.Models
 {
@@ -36,7 +38,7 @@ namespace Tustler.Models
             }
         }
 
-        private void ProcessVocabularies(NotificationsList errorList, TustlerAWSLib.AWSResult<List<VocabularyInfo>> vocabularyList)
+        private void ProcessVocabularies(NotificationsList errorList, AWSResult<List<VocabularyInfo>> vocabularyList)
         {
             if (vocabularyList.IsError)
             {
