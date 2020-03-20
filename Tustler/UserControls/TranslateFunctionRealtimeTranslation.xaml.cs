@@ -14,7 +14,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using Tustler.Models;
 using TustlerServicesLib;
-using AppSettings = TustlerWinPlatformLib.ApplicationSettings;
+using AppSettings = TustlerServicesLib.ApplicationSettings;
 
 namespace Tustler.UserControls
 {

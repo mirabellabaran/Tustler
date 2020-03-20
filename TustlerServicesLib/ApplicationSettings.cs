@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 
-namespace TustlerWinPlatformLib
+namespace TustlerServicesLib
 {
     [GuidAttribute("E4BC2ECF-8852-4F86-9569-7E60A43F9FB5")]
     public static class ApplicationSettings

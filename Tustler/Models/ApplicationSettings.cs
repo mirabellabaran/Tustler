@@ -5,10 +5,9 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Windows.Controls;
 using System.Windows.Data;
-using TustlerWinPlatformLib;
+using TustlerServicesLib;
 
 namespace Tustler.Models
 {

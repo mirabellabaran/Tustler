@@ -7,7 +7,7 @@ using System.Windows.Input;
 using Tustler.Helpers;
 using Tustler.Models;
 using TustlerServicesLib;
-using AppSettings = TustlerWinPlatformLib.ApplicationSettings;
+using AppSettings = TustlerServicesLib.ApplicationSettings;
 
 namespace Tustler.UserControls
 {

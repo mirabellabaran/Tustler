@@ -19,7 +19,17 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class Scripts : UserControl
     {
-        public static readonly DependencyProperty ScriptNameProperty = DependencyProperty.Register("ScriptName", typeof(string), typeof(Scripts));
+        public static readonly DependencyProperty ScriptNameProperty = DependencyProperty.Register("ScriptName", typeof(string), typeof(Scripts), new PropertyMetadata("", PropertyChangedCallback));
+
+        private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
+        {
+            var ctrl = dependencyObject as Scripts;
+            if (ctrl != null)
+            {
+                //if (dependencyPropertyChangedEventArgs.NewValue != null)
+                //    ctrl.ReportViewerLoad(dependencyPropertyChangedEventArgs.NewValue.ToString());
+            }
+        }
 
         public string ScriptName
         {

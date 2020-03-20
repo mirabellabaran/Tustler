@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="AWSInterface.fs" />
+    <None Include="Scripts\Test.fsx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <Compile Include="Library.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TustlerAWSLib\TustlerAWSLib.csproj" />
+    <ProjectReference Include="..\TustlerInterfaces\TustlerInterfaces.csproj" />
+  </ItemGroup>
+
+</Project>

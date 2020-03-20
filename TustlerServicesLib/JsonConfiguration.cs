@@ -7,7 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace TustlerWinPlatformLib
+namespace TustlerServicesLib
 {
     /// <summary>
     /// Used throughout the application to retrieve application settings

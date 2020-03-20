@@ -58,7 +58,7 @@ namespace Tustler.UserControls
 
             applicationSettingsInstance.HasChanged = false;
 
-            var filePath = TustlerWinPlatformLib.ApplicationSettings.AppSettingsFilePath;
+            var filePath = TustlerServicesLib.ApplicationSettings.AppSettingsFilePath;
             notifications.ShowMessage("Configuration saved", $"Application settings were saved to {filePath}");
         }
 

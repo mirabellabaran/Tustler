@@ -18,6 +18,8 @@ using System.Windows.Navigation;
 using Tustler.Models;
 using Tustler.UserControls;
 using TustlerServicesLib;
+using AppSettings = TustlerServicesLib.ApplicationSettings;
+using AppSettingsControl = Tustler.UserControls.ApplicationSettings;
 
 namespace Tustler
 {
@@ -272,7 +274,7 @@ namespace Tustler
                     break;
                 default:
                     // should normally be the name of a script
-                    var filePath = Path.Combine(TustlerWinPlatformLib.ApplicationSettings.ScriptsDirectoryPath, Path.ChangeExtension(tag, "fsx"));
+                    var filePath = Path.Combine(AppSettings.ScriptsDirectoryPath, Path.ChangeExtension(tag, "fsx"));
                     if (File.Exists(filePath))
                     {
                         // pass to Scripts user control
@@ -306,7 +308,7 @@ namespace Tustler
                         panControlsContainer.Children.Add(new Credentials());
                         break;
                     case "appSettings":
-                        panControlsContainer.Children.Add(new ApplicationSettings());
+                        panControlsContainer.Children.Add(new AppSettingsControl());
                         break;
                     case "polly":
                         panControlsContainer.Children.Add(new PollyFunctions());
