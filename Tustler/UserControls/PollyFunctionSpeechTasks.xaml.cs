@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Tustler.Helpers;
-using Tustler.Models;
+using TustlerModels;
 using TustlerServicesLib;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
 

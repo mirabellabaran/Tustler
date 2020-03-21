@@ -1,19 +1,15 @@
 ﻿#nullable enable
 using Amazon.Translate;
-using Amazon.Translate.Model;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
-using Tustler.Models;
 using TustlerAWSLib;
 using TustlerInterfaces;
 using TustlerServicesLib;
-using TustlerWinPlatformLib;
 
-namespace Tustler.Helpers
+namespace TustlerModels.Services
 {
     public static class TranslateServices
     {

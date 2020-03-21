@@ -1,17 +1,11 @@
 ﻿using Amazon.Polly;
-using Amazon.Polly.Model;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
-using Tustler.Models;
 using TustlerAWSLib;
 using TustlerInterfaces;
 using TustlerServicesLib;
 
-namespace Tustler.Helpers
+namespace TustlerModels.Services
 {
     /// <summary>
     /// Manages Polly services

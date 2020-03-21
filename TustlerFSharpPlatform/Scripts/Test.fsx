@@ -1,23 +1,22 @@
-﻿#r "mscorlib.dll"
+﻿//#r "mscorlib.dll"
+//#r "System.IO.dll"
 //#r "System.Runtime.dll"
-#r "netstandard.dll"
-#r "System.Threading.dll"
-#r "System.Threading.Tasks.dll"
-#I "C:\\Users\\Zev\\Projects\\C#\\Tustler\\TustlerAWSLib\\bin\\Debug\\netcoreapp3.1\\"
+//#r "System.Runtime.Extensions.dll"
+//#r "netstandard.dll"
+//#r "System.Threading.dll"
+//#r "System.Threading.Tasks.dll"
+//#I "C:\\Users\\Zev\\Projects\\C#\\Tustler\\TustlerAWSLib\\bin\\Debug\\netcoreapp3.1\\"
+//#r "TustlerAWSLib.dll"
+//#r "TustlerInterfaces.dll"
+#I "C:\\Users\\Zev\\Projects\\C#\\Tustler\\TustlerFSharpPlatform\\bin\\Debug\\netcoreapp3.1"
 #r "TustlerAWSLib.dll"
 #r "TustlerInterfaces.dll"
+#r "TustlerModels.dll"
+#r "TustlerServicesLib.dll"
+#r "TustlerFSharpPlatform.dll"
 
-open System.IO
-open System.Threading.Tasks
-open TustlerAWSLib
+open TustlerFSharpPlatform
+open TustlerModels
 
-let getValueFromLibrary param =
-    async {
-        let! value = TustlerAWSLib.S3.ListBuckets() |> Async.AwaitTask
-        return value
-    }
-
-let getValueFromLibrary param =
-    TustlerAWSLib.S3.ListBuckets()
-    |> Async.AwaitTask
-    |> Async.RunSynchronously
+let bucket = AWSInterface.getBuckets
+printfn "%A" bucket

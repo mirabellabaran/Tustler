@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:Tustler.Models"
+             xmlns:model="clr-namespace:TustlerModels;assembly=TustlerModels"
              xmlns:uc="clr-namespace:Tustler.UserControls"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
@@ -14,7 +15,7 @@
     </UserControl.CommandBindings>
 
     <UserControl.Resources>
-        <local:TranscriptionJobsViewModel x:Key="transcriptionJobsInstance" />
+        <model:TranscriptionJobsViewModel x:Key="transcriptionJobsInstance" />
         <local:MediaFilteredBucketItemViewModel x:Key="audioBucketItemsInstance"/>
     </UserControl.Resources>
     
@@ -22,7 +23,7 @@
         <StackPanel Orientation="Vertical">
             <Grid ShowGridLines="False" Margin="0">
                 <Grid.Resources>
-                    <local:SelectedItemsViewModel x:Key="selectedVocabularies" />
+                    <model:SelectedItemsViewModel x:Key="selectedVocabularies" />
 
                     <Style x:Key="buttonStyles" TargetType="Button" BasedOn="{StaticResource ButtonDark}">
                         <Setter Property="Margin" Value="5" />
@@ -46,10 +47,10 @@
                     <DataTemplate x:Key="VocabulariesListItemTempate">
                         <TextBlock Text="{Binding Path=VocabularyName}" />
                     </DataTemplate>
-                    <DataTemplate DataType="{x:Type local:Bucket}">
+                    <DataTemplate DataType="{x:Type model:Bucket}">
                         <TextBlock Text="{Binding Path=Name}" HorizontalAlignment="Stretch" />
                     </DataTemplate>
-                    <DataTemplate DataType="{x:Type local:BucketItem}">
+                    <DataTemplate DataType="{x:Type model:BucketItem}">
                         <TextBlock Text="{Binding Path=Key}" HorizontalAlignment="Stretch" />
                     </DataTemplate>
                 </Grid.Resources>

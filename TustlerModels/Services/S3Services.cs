@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
-using Tustler.Models;
 using TustlerInterfaces;
 using TustlerServicesLib;
 
-namespace Tustler.Helpers
+namespace TustlerModels.Services
 {
     /// <summary>
     /// Manages S3 services such as uploads and downloads from an S3 bucket

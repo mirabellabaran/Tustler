@@ -9,50 +9,11 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using TustlerInterfaces;
+using TustlerModels;
 using TustlerServicesLib;
 
 namespace Tustler.Models
 {
-    public class BucketItemsCollection: ObservableCollection<BucketItem>
-    {
-        readonly Dictionary<string, BucketItem> keyLookup;
-
-        public BucketItemsCollection() => keyLookup = new Dictionary<string, BucketItem>();
-
-        public Dictionary<string, BucketItem>.KeyCollection Keys
-        {
-            get
-            {
-                return keyLookup.Keys;
-            }
-        }
-
-        public void Add(string key, BucketItem item)
-        {
-            this.Add(item);
-            keyLookup.Add(key, item);
-        }
-
-        public new void Clear()
-        {
-            base.Clear();
-            keyLookup.Clear();
-        }
-
-        public void UpdateItem(string key, string mimetype, string extension)
-        {
-            keyLookup.TryGetValue(key, out BucketItem currentItem);
-
-            currentItem.MimeType = mimetype;
-            currentItem.Extension = extension;
-
-            using (this.BlockReentrancy())
-            {
-                OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-            }
-        }
-    }
-
     public enum BucketItemMediaType
     {
         All,
@@ -62,38 +23,21 @@ namespace Tustler.Models
         Defined     // the mime type is non-null
     }
 
-    public class BucketItemViewModel
+    /// <summary>
+    /// Wraps TustlerModels.BucketItemViewModel adding an ICollectionView property for filtering 
+    /// </summary>
+    /// <remarks>The dependency on System.Windows.Data requires PresentationFramework.dll</remarks>
+    public class BucketItemViewSourceModel : BucketItemViewModel
     {
         private BucketItemMediaType filteredMediaType;
 
-        public BucketItemViewModel()
+        public BucketItemViewSourceModel() : base()
         {
-            this.BucketItems = new BucketItemsCollection();
-            this.NeedsRefresh = true;
-            this.CurrentBucketName = null;
-        }
-
-        public BucketItemsCollection BucketItems
-        {
-            get;
-            private set;
         }
 
         public ICollectionView BucketItemsView
         {
             get { return CollectionViewSource.GetDefaultView(BucketItems); }
-        }
-
-        public bool NeedsRefresh
-        {
-            get;
-            set;
-        }
-
-        public string CurrentBucketName
-        {
-            get;
-            set;
         }
 
         public BucketItemMediaType FilteredMediaType
@@ -109,40 +53,14 @@ namespace Tustler.Models
             }
         }
 
-        public async Task RefreshAsync(NotificationsList notifications)
-        {
-            this.NeedsRefresh = true;
-            await Refresh(notifications, CurrentBucketName).ConfigureAwait(true);
-        }
-
         public async Task Refresh(NotificationsList notifications, string bucketName)
         {
-            if (NeedsRefresh)
-            {
-                this.BucketItems.Clear();
+            await base.Refresh(notifications, bucketName).ConfigureAwait(true);
 
-                var bucketItemsResult = await TustlerAWSLib.S3.ListBucketItems(bucketName).ConfigureAwait(true);
-                ProcessS3BucketItems(notifications, bucketItemsResult);
-                CurrentBucketName = bucketName;
-
-                foreach (var key in this.BucketItems.Keys) {
-                    var metadataResult = await TustlerAWSLib.S3.GetItemMetadata(bucketName, key).ConfigureAwait(true);
-                    ProcessS3ItemMetadata(notifications, metadataResult, key);
-                }
-            }
+            this.FilteredMediaType = BucketItemMediaType.All;
         }
 
-        /// <summary>
-        /// Set a filter on the view, showing only the specified mime types e.g. audio
-        /// </summary>
-        /// <param name="requiredMediaType"></param>
-        private void SetFilter(BucketItemMediaType selectedMediaType)
-        {
-            BucketItemsView.Filter = new Predicate<object>(item => IsRquiredMediaType(selectedMediaType, (item as BucketItem)));
-            BucketItemsView.Refresh();
-        }
-
-        internal static bool IsRquiredMediaType (BucketItemMediaType selectedMediaType, BucketItem item)
+        internal static bool IsRquiredMediaType(BucketItemMediaType selectedMediaType, BucketItem item)
         {
             static bool CheckTypeIs(string mimeType, string type)
             {
@@ -163,90 +81,21 @@ namespace Tustler.Models
             };
         }
 
-        private void ProcessS3BucketItems(NotificationsList notifications, AWSResult<List<S3Object>> bucketItemsResult)
+        /// <summary>
+        /// Set a filter on the view, showing only the specified mime types e.g. audio
+        /// </summary>
+        /// <param name="requiredMediaType"></param>
+        private void SetFilter(BucketItemMediaType selectedMediaType)
         {
-            if (bucketItemsResult.IsError)
-            {
-                notifications.HandleError(bucketItemsResult);
-            }
-            else
-            {
-                var bucketItems = bucketItemsResult.Result;
-                if (bucketItems.Count > 0)
-                {
-                    var items = from item in bucketItems select new BucketItem { Key = item.Key, Size = item.Size, LastModified = item.LastModified, Owner = item.Owner?.DisplayName };
-
-                    ObservableCollection<BucketItem> data = new ObservableCollection<BucketItem>(items);
-                    for (var i = 0; i < data.Count; i++)
-                    {
-                        this.BucketItems.Add(data[i].Key, data[i]);
-                    }
-                }
-
-                this.FilteredMediaType = BucketItemMediaType.All;
-                NeedsRefresh = false;
-            }
-        }
-
-        private void ProcessS3ItemMetadata(NotificationsList notifications, AWSResult<MetadataCollection> metadataResult, string key)
-        {
-            if (metadataResult.IsError)
-            {
-                notifications.HandleError(metadataResult);
-                NeedsRefresh = true;
-            }
-            else
-            {
-                var metadata = metadataResult.Result;
-
-                // patch the current item with the returned metadata
-                this.BucketItems.UpdateItem(key, metadata["mimetype"], metadata["extension"]);
-            }
-
-            NeedsRefresh = false;
-        }
-
-    }
-
-    public class BucketItem
-    {
-        public string Key
-        {
-            get;
-            set;
-        }
-
-        public long Size
-        {
-            get;
-            set;
-        }
-
-        public DateTime LastModified
-        {
-            get;
-            set;
-        }
-
-        public string Owner
-        {
-            get;
-            set;
-        }
-
-        public string MimeType
-        {
-            get;
-            set;
-        }
-
-        public string Extension
-        {
-            get;
-            set;
+            BucketItemsView.Filter = new Predicate<object>(item => IsRquiredMediaType(selectedMediaType, (item as BucketItem)));
+            BucketItemsView.Refresh();
         }
     }
 
+    /// <summary>
+    /// A local filterable instance used by the Transcribe functions that consumes bucket items from the global instance
+    /// </summary>
+    /// <remarks>Used to select audio media for transcription</remarks>
     public class MediaFilteredBucketItemViewModel
     {
         public MediaFilteredBucketItemViewModel()
@@ -262,7 +111,7 @@ namespace Tustler.Models
 
         public void Select(BucketItemViewModel bucketItemViewModel, BucketItemMediaType selectedMediaType)
         {
-            var filtered = bucketItemViewModel.BucketItems.Where(item => BucketItemViewModel.IsRquiredMediaType(selectedMediaType, (item as BucketItem)));
+            var filtered = bucketItemViewModel.BucketItems.Where(item => BucketItemViewSourceModel.IsRquiredMediaType(selectedMediaType, (item as BucketItem)));
             foreach (var item in filtered)
             {
                 BucketItems.Add(item);

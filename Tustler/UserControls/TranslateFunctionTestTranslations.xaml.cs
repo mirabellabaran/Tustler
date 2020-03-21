@@ -3,7 +3,8 @@ using System;
 using System.IO;
 using System.Windows.Controls;
 using System.Windows.Input;
-using Tustler.Models;
+using TustlerModels;
+using TustlerModels.Services;
 using TustlerServicesLib;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
 
@@ -36,8 +37,8 @@ namespace Tustler.UserControls
 
                 var sourceLanguageCode = (cbSourceLanguage.SelectedItem as LanguageCode).Code;
                 var targetLanguageCode = (cbTargetLanguage.SelectedItem as LanguageCode).Code;
-                var translatedResult = await Helpers.TranslateServices.TranslateText(sourceLanguageCode, targetLanguageCode, tbSourceText.Text).ConfigureAwait(true);
-                tbTranslatedText.Text = Helpers.TranslateServices.ProcessTranslatedResult(notifications, translatedResult);
+                var translatedResult = await TranslateServices.TranslateText(sourceLanguageCode, targetLanguageCode, tbSourceText.Text).ConfigureAwait(true);
+                tbTranslatedText.Text = TranslateServices.ProcessTranslatedResult(notifications, translatedResult);
 
                 CommandManager.InvalidateRequerySuggested();
             }

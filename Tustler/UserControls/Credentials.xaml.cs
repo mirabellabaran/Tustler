@@ -4,7 +4,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using Tustler.Models;
+using TustlerModels;
 using TustlerServicesLib;
 
 namespace Tustler.UserControls
@@ -28,7 +28,7 @@ namespace Tustler.UserControls
             var configuredRegion = TustlerAWSLib.Utilities.GetRegion();
             if (!(configuredRegion is null))
             {
-                var regions = cbRegion.ItemsSource as IEnumerable<Tustler.Models.Endpoint>;
+                var regions = cbRegion.ItemsSource as IEnumerable<Endpoint>;
                 var hits = regions.Where(region => region.Code == configuredRegion.SystemName).ToArray();
                 if (hits.Length > 0)
                 {
@@ -49,7 +49,7 @@ namespace Tustler.UserControls
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                var regionModel = cbRegion.SelectedItem as Tustler.Models.Endpoint;
+                var regionModel = cbRegion.SelectedItem as Endpoint;
                 var region = RegionEndpoint.GetBySystemName(regionModel.Code);
 
                 // save the credentials and region

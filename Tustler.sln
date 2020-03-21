@@ -25,6 +25,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TustlerInterfaces", "Tustle
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TustlerFSharpPlatform", "TustlerFSharpPlatform\TustlerFSharpPlatform.fsproj", "{DB2A4791-8B90-48CA-9701-BB09887C721D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TustlerModels", "TustlerModels\TustlerModels.csproj", "{EF05B5B2-D418-41A9-839E-5777A848B3E8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,6 +61,10 @@ Global
 		{DB2A4791-8B90-48CA-9701-BB09887C721D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DB2A4791-8B90-48CA-9701-BB09887C721D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DB2A4791-8B90-48CA-9701-BB09887C721D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EF05B5B2-D418-41A9-839E-5777A848B3E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EF05B5B2-D418-41A9-839E-5777A848B3E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EF05B5B2-D418-41A9-839E-5777A848B3E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EF05B5B2-D418-41A9-839E-5777A848B3E8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

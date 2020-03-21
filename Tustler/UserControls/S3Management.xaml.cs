@@ -6,6 +6,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Tustler.Models;
+using TustlerModels;
+using TustlerModels.Services;
 using TustlerServicesLib;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
 using Path = System.IO.Path;
@@ -60,7 +62,7 @@ namespace Tustler.UserControls
 
             if (!(selectedBucket is null))
             {
-                var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+                var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewSourceModel;
 
                 try
                 {
@@ -86,7 +88,7 @@ namespace Tustler.UserControls
         {
             var radioButton = e.OriginalSource as RadioButton;
 
-            var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+            var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewSourceModel;
 
             try
             {
@@ -140,12 +142,12 @@ namespace Tustler.UserControls
                     {
                         Mouse.OverrideCursor = Cursors.Wait;
 
-                        var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+                        var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewSourceModel;
                         var bucketName = bucketItemsInstance.CurrentBucketName;
 
-                        var deleteResult = await Helpers.S3Services.DeleteItem(bucketName, key).ConfigureAwait(true);
+                        var deleteResult = await S3Services.DeleteItem(bucketName, key).ConfigureAwait(true);
 
-                        var success = Helpers.S3Services.ProcessDeleteBucketItemResult(notifications, deleteResult, key);
+                        var success = S3Services.ProcessDeleteBucketItemResult(notifications, deleteResult, key);
                         if (success)
                         {
                             await bucketItemsInstance.RefreshAsync(notifications).ConfigureAwait(true);
@@ -167,7 +169,7 @@ namespace Tustler.UserControls
             }
             else
             {
-                var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+                var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewSourceModel;
                 var bucketNameIsSet = bucketItemsInstance.CurrentBucketName != null;
                 e.CanExecute = (tbUploadPath.Text.Length > 0) && File.Exists(tbUploadPath.Text) && bucketNameIsSet;
             }
@@ -222,14 +224,14 @@ namespace Tustler.UserControls
             (bool proceed, string path, string mimetype, string extension) = CheckAddExtension(tbUploadPath.Text);
             if (proceed)
             {
-                var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+                var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewSourceModel;
                 var bucketName = bucketItemsInstance.CurrentBucketName;
 
                 try
                 {
                     Mouse.OverrideCursor = Cursors.Wait;
-                    var uploadResult = await Helpers.S3Services.UploadItem(bucketName, path, mimetype, extension).ConfigureAwait(true);
-                    Helpers.S3Services.ProcessUploadItemResult(notifications, uploadResult);
+                    var uploadResult = await S3Services.UploadItem(bucketName, path, mimetype, extension).ConfigureAwait(true);
+                    S3Services.ProcessUploadItemResult(notifications, uploadResult);
 
                     await bucketItemsInstance.RefreshAsync(notifications).ConfigureAwait(true);
                 }
@@ -268,7 +270,7 @@ namespace Tustler.UserControls
         {
             if (dgBucketItems.SelectedCells[0].Item is BucketItem selectedItem)
             {
-                var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+                var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewSourceModel;
                 var bucketName = bucketItemsInstance.CurrentBucketName;
                 var key = selectedItem.Key;
                 var absolutePath = Path.GetFullPath(tbDownloadPath.Text);
@@ -280,8 +282,8 @@ namespace Tustler.UserControls
                 {
                     Mouse.OverrideCursor = Cursors.Wait;
 
-                    var downloadResult = await Helpers.S3Services.DownloadItem(bucketName, key, filePath).ConfigureAwait(true);
-                    Helpers.S3Services.ProcessDownloadItemResult(notifications, downloadResult);
+                    var downloadResult = await S3Services.DownloadItem(bucketName, key, filePath).ConfigureAwait(true);
+                    S3Services.ProcessDownloadItemResult(notifications, downloadResult);
                 }
                 finally
                 {
@@ -292,13 +294,13 @@ namespace Tustler.UserControls
 
         private void RefreshItems_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+            var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewSourceModel;
             e.CanExecute = bucketItemsInstance.CurrentBucketName != null;
         }
 
         private async void RefreshItems_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+            var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewSourceModel;
 
             try
             {

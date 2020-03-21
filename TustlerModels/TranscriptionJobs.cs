@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using TustlerInterfaces;
 using TustlerServicesLib;
 
-namespace Tustler.Models
+namespace TustlerModels
 {
     public class TranscriptionJobsViewModel
     {

@@ -5,7 +5,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using Tustler.Models;
+using TustlerModels;
+using TustlerModels.Services;
 using TustlerServicesLib;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
 
@@ -79,9 +80,9 @@ namespace Tustler.UserControls
                 var voiceId = (selectedVoice is null) ? null : selectedVoice.Id;
                 var useNeural = (selectedVoice is null) ? true : selectedVoice.SupportedEngines.Contains("neural", StringComparison.InvariantCulture);
 
-                var result = await Helpers.PollyServices.SynthesizeSpeech(tbSpeechText.Text, useNeural, voiceId).ConfigureAwait(true);
+                var result = await PollyServices.SynthesizeSpeech(tbSpeechText.Text, useNeural, voiceId).ConfigureAwait(true);
 
-                (audioStream, contentType) = Helpers.PollyServices.ProcessSynthesizeSpeechResult(notifications, result);
+                (audioStream, contentType) = PollyServices.ProcessSynthesizeSpeechResult(notifications, result);
                 CommandManager.InvalidateRequerySuggested();
 
                 await PlayAudioStream().ConfigureAwait(true);

@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Text;
+﻿using System.Collections.ObjectModel;
 
-namespace Tustler.Models
+namespace TustlerModels
 {
     public class RegionalEndpointsViewModel
     {

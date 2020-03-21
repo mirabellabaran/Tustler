@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
 
-namespace Tustler.Models
+namespace TustlerModels
 {
     /// <summary>
     /// Provides a list of string items that summarize the current selection for a multi-select listbox

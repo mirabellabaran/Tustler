@@ -3,16 +3,11 @@ using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using Tustler.Models;
+using TustlerModels;
+using TustlerModels.Services;
 using TustlerServicesLib;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
 
@@ -36,7 +31,7 @@ namespace Tustler.UserControls
         {
             e.CanExecute = 
                 (!string.IsNullOrEmpty(tbTranslationSourceDocument.Text) && File.Exists(tbTranslationSourceDocument.Text) && !string.IsNullOrEmpty(tbJobName.Text))
-                || !(Helpers.TranslateServices.GetArchivedJob(tbJobName.Text) is null);
+                || !(TranslateServices.GetArchivedJob(tbJobName.Text) is null);
         }
 
         private async void RealtimeTranslate_Executed(object sender, ExecutedRoutedEventArgs e)
@@ -44,7 +39,7 @@ namespace Tustler.UserControls
             // returns true if an archived job should be used
             bool CheckUseArchivedJob(string jobName)
             {
-                string? filePath = Helpers.TranslateServices.GetArchivedJob(jobName);
+                string? filePath = TranslateServices.GetArchivedJob(jobName);
                 if (string.IsNullOrEmpty(filePath))
                 {
                     return false;
@@ -90,9 +85,9 @@ namespace Tustler.UserControls
                 List<string> terminologyNames = Helpers.UIServices.UIHelpers.GetFieldFromListBoxSelectedItems<Terminology>(chkIncludeTerminologyNames, lbTerminologyNames, term => term.Name);
 
                 if (fileIsOneSentencePerLine)
-                    await Helpers.TranslateServices.TranslateSentences(notifications, progress, useArchivedJob, jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames).ConfigureAwait(true);
+                    await TranslateServices.TranslateSentences(notifications, progress, useArchivedJob, jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames).ConfigureAwait(true);
                 else
-                    await Helpers.TranslateServices.TranslateLargeText(notifications, progress, useArchivedJob, jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames).ConfigureAwait(true);
+                    await TranslateServices.TranslateLargeText(notifications, progress, useArchivedJob, jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames).ConfigureAwait(true);
             }
             finally
             {
