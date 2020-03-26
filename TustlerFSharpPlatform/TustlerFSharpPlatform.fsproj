@@ -7,6 +7,8 @@
 
   <ItemGroup>
     <Compile Include="AWSInterface.fs" />
+    <Compile Include="Tasks.fs" />
+    <Compile Include="TaskQueue.fs" />
     <None Include="Scripts\Test.fsx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -17,6 +19,10 @@
     <ProjectReference Include="..\TustlerInterfaces\TustlerInterfaces.csproj" />
     <ProjectReference Include="..\TustlerModels\TustlerModels.csproj" />
     <ProjectReference Include="..\TustlerServicesLib\TustlerServicesLib.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="4.7.1" />
   </ItemGroup>
 
 </Project>

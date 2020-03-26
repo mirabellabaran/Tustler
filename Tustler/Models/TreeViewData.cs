@@ -71,7 +71,7 @@ namespace Tustler
         }
     }
 
-    public class ScriptsTreeViewDataModel
+    public class TasksTreeViewDataModel
     {
         public ObservableCollection<TreeViewItemData> TreeViewItemDataCollection
         {
@@ -79,29 +79,29 @@ namespace Tustler
             private set;
         }
 
-        public ScriptsTreeViewDataModel()
+        public TasksTreeViewDataModel()
         {
             TreeViewItemDataCollection = new ObservableCollection<TreeViewItemData>();
         }
 
         public async Task InitializeAsync()
         {
-            var treeViewItems = await FetchScriptsAsync().ConfigureAwait(false);
+            var treeViewItems = await FetchTasksAsync().ConfigureAwait(false);
             foreach (var item in treeViewItems)
             {
                 TreeViewItemDataCollection.Add(item);
             }
         }
 
-        private async Task<IEnumerable<TreeViewItemData>> FetchScriptsAsync()
+        private static async Task<IEnumerable<TreeViewItemData>> FetchTasksAsync()
         {
-            var scripts = await Task.Run(() => GetScriptNames()).ConfigureAwait(false);
-            var divisionItems = from script in scripts select new TreeViewItemData { Name = script.name, Tag = script.tag, HasChildren = false };
+            var tasks = await Task.Run(() => GetTaskNames()).ConfigureAwait(false);
+            var divisionItems = from task in tasks select new TreeViewItemData { Name = task.name, Tag = task.tag, HasChildren = false };
 
             return divisionItems;
         }
 
-        private static IEnumerable<(string name, string tag)> GetScriptNames()
+        private static IEnumerable<(string name, string tag)> GetTaskNames()
         {
             return Directory.EnumerateFiles(ApplicationSettings.ScriptsDirectoryPath, "*.fsx", SearchOption.TopDirectoryOnly)
                             .Select(scriptPath => {

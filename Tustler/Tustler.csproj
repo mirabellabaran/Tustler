@@ -31,6 +31,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TustlerAWSLib\TustlerAWSLib.csproj" />
+    <ProjectReference Include="..\TustlerFSharpPlatform\TustlerFSharpPlatform.fsproj" />
     <ProjectReference Include="..\TustlerInterfaces\TustlerInterfaces.csproj" />
     <ProjectReference Include="..\TustlerModels\TustlerModels.csproj" />
     <ProjectReference Include="..\TustlerServicesLib\TustlerServicesLib.csproj" />

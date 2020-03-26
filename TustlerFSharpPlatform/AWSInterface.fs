@@ -3,28 +3,26 @@
 open TustlerModels
 open TustlerServicesLib
 
-module AWSInterface =
+module public AWSInterface =
 
-//let getBuckets =
-//    async {
-//        let! result =  TustlerAWSLib.S3.ListBuckets() |> Async.AwaitTask
-//        return result
-//    }
+    let downCastNotification (note:Notification) : string =
+        match note with
+        | :? ApplicationErrorInfo as error -> sprintf "%s: %s: %s" error.Context error.Message error.Exception.InnerException.Message
+        | :? ApplicationMessageInfo as message -> sprintf "%s: %s" message.Message message.Detail
+        | _ -> "Unknown type"
 
-    let getBuckets =
-        async {
-            let notifications = NotificationsList()
-            let model = BucketViewModel()
-            model.Refresh (true, notifications) |> Async.AwaitTask |> ignore
-            let buckets = model.Buckets
-            let bucket = if buckets.Count > 0 then Some(Seq.head buckets) else None
-            let note = if notifications.Notifications.Count > 0 then Some(downcast (Seq.head notifications.Notifications)) else None
-            return (bucket, buckets.Count, note)
-        }
-        |> Async.RunSynchronously
+    module S3 =
 
-    [<EntryPoint>]
-    let main argv =
-        let bucket, c, note = getBuckets
-        printfn "%A %d %A" (if Option.isSome bucket then bucket.Value.Name else "Null return") c (if note.IsSome then note.Value else "No notifications")
-        0 // Return an integer exit code
+        let getBuckets notifications =
+            async {
+                let model = BucketViewModel()
+                do! model.Refresh (true, notifications) |> Async.AwaitTask
+                return model.Buckets
+            }
+
+        let getBucketItems notifications bucketName =
+            async {
+                let model = BucketItemViewModel()
+                do! model.Refresh(notifications, bucketName) |> Async.AwaitTask
+                return model.BucketItems
+            }

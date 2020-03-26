@@ -48,9 +48,9 @@ namespace Tustler
             await CreateSubTree(functionSubTree).ConfigureAwait(true);
             functionSubTree.IsExpanded = true;
 
-            tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "Scripts", Tag = "scripts", HasChildren = true }));
+            tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "Tasks", Tag = "tasks", HasChildren = true }));
 
-            menuTasks.Items.Add(CreateMenuItem(new TreeViewItemData { Name = "Scripts", Tag = "scripts", HasChildren = true }));
+            menuTasks.Items.Add(CreateMenuItem(new TreeViewItemData { Name = "Tasks", Tag = "tasks", HasChildren = true }));
 
             var credentials = TustlerAWSLib.Utilities.GetCredentials();
             if (credentials is null)
@@ -164,15 +164,15 @@ namespace Tustler
 
         private async void MenuItem_SubmenuOpenedAsync(object sender, RoutedEventArgs e)
         {
-            // a menu has been clicked (perhaps the Scripts menu)
+            // a menu has been clicked (perhaps the Tasks menu)
             MenuItem item = e.OriginalSource as MenuItem;
             if ((item.Items.Count == 1) && (item.Items[0] is string))
             {
                 item.Items.Clear();
 
-                var scripts = new ScriptsTreeViewDataModel();
-                await scripts.InitializeAsync().ConfigureAwait(true);
-                AddItems<MenuItem>(CreateMenuItem, item, scripts.TreeViewItemDataCollection);
+                var tasks = new TasksTreeViewDataModel();
+                await tasks.InitializeAsync().ConfigureAwait(true);
+                AddItems<MenuItem>(CreateMenuItem, item, tasks.TreeViewItemDataCollection);
             }
         }
 
@@ -214,18 +214,18 @@ namespace Tustler
 
         private static async Task CreateSubTree(TreeViewItem parentItem)
         {
-            static async Task<ObservableCollection<TreeViewItemData>> GetScripts()
+            static async Task<ObservableCollection<TreeViewItemData>> GetTasks()
             {
-                var scripts = new ScriptsTreeViewDataModel();
-                await scripts.InitializeAsync().ConfigureAwait(true);
-                return scripts.TreeViewItemDataCollection;
+                var tasks = new TasksTreeViewDataModel();
+                await tasks.InitializeAsync().ConfigureAwait(true);
+                return tasks.TreeViewItemDataCollection;
             }
 
             var collection = (parentItem.Tag) switch
             {
                 "settings" => new SettingsTreeViewDataModel().TreeViewItemDataCollection,
                 "functions" => new FunctionsTreeViewDataModel().TreeViewItemDataCollection,
-                "scripts" => await GetScripts().ConfigureAwait(true),
+                "tasks" => await GetTasks().ConfigureAwait(true),
                 _ => throw new ArgumentException("TreeView Expansion: Unexpected item tag")
             };
 
@@ -273,12 +273,12 @@ namespace Tustler
                 case "do-not-handle":
                     break;
                 default:
-                    // should normally be the name of a script
+                    // should normally be the name of a task
                     var filePath = Path.Combine(AppSettings.ScriptsDirectoryPath, Path.ChangeExtension(tag, "fsx"));
                     if (File.Exists(filePath))
                     {
-                        // pass to Scripts user control
-                        SwitchForm("script", filePath);
+                        // pass to Tasks user control
+                        SwitchForm("task", filePath);
                     }
                     else
                     {
@@ -319,8 +319,8 @@ namespace Tustler
                     case "transcribe":
                         panControlsContainer.Children.Add(new TranscribeFunctions());
                         break;
-                    case "script":
-                        var uc = new Scripts();
+                    case "task":
+                        var uc = new Tasks();
                         uc.ScriptName = arg;
                         panControlsContainer.Children.Add(uc);
                         break;
