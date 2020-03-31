@@ -10,9 +10,9 @@ namespace TustlerModels.Services
     /// </summary>
     public static class S3Services
     {
-        public static async Task<AWSResult<bool?>> UploadItem(string bucketName, string filePath, string mimetype, string extension)
+        public static async Task<AWSResult<bool?>> UploadItem(string bucketName, string newKey, string filePath, string mimetype, string extension)
         {
-            return await TustlerAWSLib.S3.UploadItem(bucketName, filePath, mimetype, extension).ConfigureAwait(false);
+            return await TustlerAWSLib.S3.UploadItem(bucketName, newKey, filePath, mimetype, extension).ConfigureAwait(false);
         }
 
         public static async Task<AWSResult<bool?>> DownloadItem(string bucketName, string key, string filePath)
@@ -25,36 +25,42 @@ namespace TustlerModels.Services
             return await TustlerAWSLib.S3.DeleteBucketItem(bucketName, key).ConfigureAwait(false);
         }
 
-        public static void ProcessUploadItemResult(NotificationsList notifications, AWSResult<bool?> uploadResult)
+        public static bool ProcessUploadItemResult(NotificationsList notifications, AWSResult<bool?> uploadResult)
         {
+            bool success = false;
+
             if (uploadResult.IsError)
             {
                 notifications.HandleError(uploadResult);
             }
             else
             {
-                var resultFlag = uploadResult.Result;
-                var success = (resultFlag.HasValue && resultFlag.Value);
+                success = (uploadResult.Result.HasValue && uploadResult.Result.Value);
                 var successStr = success ? "succeeded" : "failed";
                 var message = $"Upload {successStr}";
                 notifications.ShowMessage(message, $"Task: Upload item to S3 completed @ {DateTime.Now.ToShortTimeString()}");
             }
+
+            return success;
         }
 
-        public static void ProcessDownloadItemResult(NotificationsList notifications, AWSResult<bool?> downloadResult)
+        public static bool ProcessDownloadItemResult(NotificationsList notifications, AWSResult<bool?> downloadResult)
         {
+            bool success = false;
+
             if (downloadResult.IsError)
             {
                 notifications.HandleError(downloadResult);
             }
             else
             {
-                var resultFlag = downloadResult.Result;
-                var success = (resultFlag.HasValue && resultFlag.Value);
+                success = (downloadResult.Result.HasValue && downloadResult.Result.Value);
                 var successStr = success ? "succeeded" : "failed";
                 var message = $"Download {successStr}";
                 notifications.ShowMessage(message, $"Task: Download item from S3 completed @ {DateTime.Now.ToShortTimeString()}");
             }
+
+            return success;
         }
 
         public static bool ProcessDeleteBucketItemResult(NotificationsList notifications, AWSResult<bool?> deleteResult, string key)

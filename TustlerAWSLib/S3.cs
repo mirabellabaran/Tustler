@@ -1,4 +1,5 @@
-﻿using Amazon.S3;
+﻿using Amazon.Runtime.Internal;
+using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using System;
@@ -31,6 +32,14 @@ namespace TustlerAWSLib
             catch (HttpRequestException ex)
             {
                 return new AWSResult<List<S3Bucket>>(null, new AWSException("ListBuckets", "Not connected.", ex));
+            }
+            catch (AmazonS3Exception ex)
+            {
+                return new AWSResult<List<S3Bucket>>(null, new AWSException("ListBuckets", "S3 Exception.", ex));
+            }
+            catch (HttpErrorResponseException ex)
+            {
+                return new AWSResult<List<S3Bucket>>(null, new AWSException("ListBuckets", "Error Response Exception.", ex));
             }
         }
 
@@ -79,6 +88,14 @@ namespace TustlerAWSLib
             {
                 return new AWSResult<List<S3Object>>(null, new AWSException("ListBucketItems", "Not connected.", ex));
             }
+            catch (AmazonS3Exception ex)
+            {
+                return new AWSResult<List<S3Object>>(null, new AWSException("ListBucketItems", "S3 Exception.", ex));
+            }
+            catch (HttpErrorResponseException ex)
+            {
+                return new AWSResult<List<S3Object>>(null, new AWSException("ListBucketItems", "Error Response Exception.", ex));
+            }
         }
 
         public async static Task<AWSResult<MetadataCollection>> GetItemMetadata(string bucketName, string key)
@@ -95,6 +112,14 @@ namespace TustlerAWSLib
             catch (HttpRequestException ex)
             {
                 return new AWSResult<MetadataCollection>(null, new AWSException("GetItemMetadata", "Not connected.", ex));
+            }
+            catch (AmazonS3Exception ex)
+            {
+                return new AWSResult<MetadataCollection>(null, new AWSException("GetItemMetadata", "S3 Exception.", ex));
+            }
+            catch (HttpErrorResponseException ex)
+            {
+                return new AWSResult<MetadataCollection>(null, new AWSException("GetItemMetadata", "Error Response Exception.", ex));
             }
         }
 
@@ -125,6 +150,14 @@ namespace TustlerAWSLib
             {
                 return new AWSResult<bool?>(null, new AWSException("DeleteBucketItem", "Not connected.", ex));
             }
+            catch (AmazonS3Exception ex)
+            {
+                return new AWSResult<bool?>(null, new AWSException("DeleteBucketItem", "S3 Exception.", ex));
+            }
+            catch (HttpErrorResponseException ex)
+            {
+                return new AWSResult<bool?>(null, new AWSException("DeleteBucketItem", "Error Response Exception.", ex));
+            }
         }
 
         /// <summary>
@@ -135,13 +168,14 @@ namespace TustlerAWSLib
         /// <param name="mimetype">The mimetype of the file (may be null)</param>
         /// <param name="extension">The file extension of the file (may be null)</param>
         /// <returns></returns>
-        public async static Task<AWSResult<bool?>> UploadItem(string bucketName, string filePath, string mimetype, string extension)
+        public async static Task<AWSResult<bool?>> UploadItem(string bucketName, string newKey, string filePath, string mimetype, string extension)
         {
             try
             {
                 var fileTransferUtilityRequest = new TransferUtilityUploadRequest
                 {
                     BucketName = bucketName,
+                    Key = newKey,
                     FilePath = filePath,
                     StorageClass = S3StorageClass.Standard,
                 };
@@ -165,6 +199,14 @@ namespace TustlerAWSLib
             catch (HttpRequestException ex)
             {
                 return new AWSResult<bool?>(null, new AWSException("UploadItem", "Not connected.", ex));
+            }
+            catch (AmazonS3Exception ex)
+            {
+                return new AWSResult<bool?>(null, new AWSException("UploadItem", "S3 Exception.", ex));
+            }
+            catch (HttpErrorResponseException ex)
+            {
+                return new AWSResult<bool?>(null, new AWSException("UploadItem", "Error Response Exception.", ex));
             }
         }
 
@@ -190,6 +232,14 @@ namespace TustlerAWSLib
             catch (HttpRequestException ex)
             {
                 return new AWSResult<bool?>(null, new AWSException("DownloadItem", "Not connected.", ex));
+            }
+            catch (AmazonS3Exception ex)
+            {
+                return new AWSResult<bool?>(null, new AWSException("DownloadItem", "S3 Exception.", ex));
+            }
+            catch (HttpErrorResponseException ex)
+            {
+                return new AWSResult<bool?>(null, new AWSException("DownloadItem", "Error Response Exception.", ex));
             }
         }
 

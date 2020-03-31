@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Input;
 using TustlerFSharpPlatform;
 using TustlerModels;
 using TustlerServicesLib;
@@ -18,7 +19,7 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class Tasks : UserControl
     {
-        public static readonly DependencyProperty ScriptNameProperty = DependencyProperty.Register("ScriptName", typeof(string), typeof(Tasks), new PropertyMetadata("", PropertyChangedCallback));
+        public static readonly DependencyProperty TaskNameProperty = DependencyProperty.Register("TaskName", typeof(string), typeof(Tasks), new PropertyMetadata("", PropertyChangedCallback));
 
         private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
         {
@@ -30,10 +31,10 @@ namespace Tustler.UserControls
             }
         }
 
-        public string ScriptName
+        public string TaskName
         {
-            get { return (string) GetValue(ScriptNameProperty); }
-            set { SetValue(ScriptNameProperty, value); }
+            get { return (string) GetValue(TaskNameProperty); }
+            set { SetValue(TaskNameProperty, value); }
         }
 
         public Tasks()
@@ -41,12 +42,63 @@ namespace Tustler.UserControls
             InitializeComponent();
         }
 
-        private async void UserControl_Loaded(object sender, RoutedEventArgs e)
+        private void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
             var notifications = this.FindResource("applicationNotifications") as NotificationsList;
-            notifications.ShowMessage("Parameter set", $"Script name set to {ScriptName}");
+            notifications.ShowMessage("Parameter set", $"Task name set to {TaskName}");
+        }
 
-            var task = AWSTasks.S3FetchItems();
+        private async void Collection_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            var newItems = e.NewItems as System.Collections.IEnumerable;
+            foreach (var response in newItems.Cast<TaskResponse>())
+            {
+                switch (response)
+                {
+                    case TaskResponse.Notification note:
+                        switch (note.Item)
+                        {
+                            case ApplicationErrorInfo error:
+                                var errorMsg = $"{error.Context}: {error.Message}";
+                                await AddControlAsync(errorMsg, true).ConfigureAwait(false);
+                                break;
+                            case ApplicationMessageInfo msg:
+                                var infoMsg = $"{msg.Message}: {msg.Detail}";
+                                await AddControlAsync(infoMsg, true).ConfigureAwait(false);
+                                break;
+                        }
+                        break;
+                    case TaskResponse.Bucket taskBucket:
+                        await AddControlAsync(taskBucket.Item.Name, false).ConfigureAwait(false);
+                        break;
+                    case TaskResponse.BucketItem taskBucketItem:
+                        await AddControlAsync(taskBucketItem.Item.Key, false).ConfigureAwait(false);
+                        break;
+                }
+            }
+        }
+
+        private void StartTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = true;
+        }
+
+        private async void StartTask_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            await RunTaskAsync().ConfigureAwait(true);
+        }
+
+        private async Task RunTaskAsync()
+        {
+            var task = TaskName switch
+            {
+                "S3FetchItems" => AWSTasks.S3FetchItems(TaskArgument.NoArguments),
+                "TranscribeAudio" => AWSTasks.TranscribeAudio(TaskArgument.NewS3MediaReference(
+                        ("TranscribeAudio1", "tator", @"C:\Users\Zev\Projects\C#\Tustler\Tustler\bin\Debug\netcoreapp3.1\FileCache\SallyRide2.wav", "audio/wav", "wav")
+                    )),
+                _ => throw new ArgumentException($"RunTaskAsync: received an unknown tag")
+            };
+
             var collection = new ObservableCollection<TaskResponse>();
             collection.CollectionChanged += Collection_CollectionChanged;
 
@@ -61,35 +113,17 @@ namespace Tustler.UserControls
                 lbTaskResponses.Items.Add(tb);
             });
         }
-
-        private async void Collection_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        {
-            var newItems = e.NewItems as System.Collections.IEnumerable;
-            foreach (var response in newItems.Cast<TaskResponse>())
-            {
-                switch (response)
-                {
-                    case TaskResponse.TaskNotification note:
-                        switch (note.Item)
-                        {
-                            case ApplicationErrorInfo error:
-                                var errorMsg = $"{error.Context}: {error.Message}";
-                                await AddControlAsync(errorMsg, true).ConfigureAwait(false);
-                                break;
-                            case ApplicationMessageInfo msg:
-                                var infoMsg = $"{msg.Message}: {msg.Detail}";
-                                await AddControlAsync(infoMsg, true).ConfigureAwait(false);
-                                break;
-                        }
-                        break;
-                    case TaskResponse.TaskBucket taskBucket:
-                        await AddControlAsync(taskBucket.Item.Name, false).ConfigureAwait(false);
-                        break;
-                    case TaskResponse.TaskBucketItem taskBucketItem:
-                        await AddControlAsync(taskBucketItem.Item.Key, false).ConfigureAwait(false);
-                        break;
-                }
-            }
-        }
     }
+
+    public static class TaskCommands
+    {
+        public static readonly RoutedUICommand StartTask = new RoutedUICommand
+            (
+                "StartTask",
+                "StartTask",
+                typeof(TaskCommands),
+                null
+            );
+    }
+
 }

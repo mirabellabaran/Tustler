@@ -272,19 +272,11 @@ namespace Tustler
                     break;
                 case "do-not-handle":
                     break;
+                case "tasks":   // Tasks parent item
+                    break;
                 default:
-                    // should normally be the name of a task
-                    var filePath = Path.Combine(AppSettings.ScriptsDirectoryPath, Path.ChangeExtension(tag, "fsx"));
-                    if (File.Exists(filePath))
-                    {
-                        // pass to Tasks user control
-                        SwitchForm("task", filePath);
-                    }
-                    else
-                    {
-                        var notifications = this.FindResource("applicationNotifications") as NotificationsList;
-                        notifications.HandleError("CheckIfHandled", "Unexpected menu or item tag", new ApplicationException($"The tag '{tag}' has no defined meaning"));
-                    }
+                    // pass the tag to the Tasks user control
+                    SwitchForm("task", tag);
                     handled = true;
                     break;
             }
@@ -321,7 +313,7 @@ namespace Tustler
                         break;
                     case "task":
                         var uc = new Tasks();
-                        uc.ScriptName = arg;
+                        uc.TaskName = arg;
                         panControlsContainer.Children.Add(uc);
                         break;
                 }

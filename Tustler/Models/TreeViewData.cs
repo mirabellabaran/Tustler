@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using TustlerServicesLib;
@@ -103,11 +104,11 @@ namespace Tustler
 
         private static IEnumerable<(string name, string tag)> GetTaskNames()
         {
-            return Directory.EnumerateFiles(ApplicationSettings.ScriptsDirectoryPath, "*.fsx", SearchOption.TopDirectoryOnly)
-                            .Select(scriptPath => {
-                                var scriptName = Path.GetFileNameWithoutExtension(scriptPath);
-                                return (scriptName, scriptName);
-                                });
+            var asm = Assembly.Load("TustlerFSharpPlatform");
+            var tasksModule = asm.GetType("TustlerFSharpPlatform.Tasks");
+            var methods = tasksModule.GetMethods(BindingFlags.Public | BindingFlags.Static);
+
+            return methods.Select(mi => (mi.Name, mi.Name));
         }
     }
 }

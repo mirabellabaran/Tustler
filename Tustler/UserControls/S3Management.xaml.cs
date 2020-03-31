@@ -230,7 +230,8 @@ namespace Tustler.UserControls
                 try
                 {
                     Mouse.OverrideCursor = Cursors.Wait;
-                    var uploadResult = await S3Services.UploadItem(bucketName, path, mimetype, extension).ConfigureAwait(true);
+                    var newKey = Path.GetFileName(path);    // use the filename as the new S3 key
+                    var uploadResult = await S3Services.UploadItem(bucketName, newKey, path, mimetype, extension).ConfigureAwait(true);
                     S3Services.ProcessUploadItemResult(notifications, uploadResult);
 
                     await bucketItemsInstance.RefreshAsync(notifications).ConfigureAwait(true);

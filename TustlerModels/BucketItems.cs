@@ -16,6 +16,14 @@ namespace TustlerModels
 
         public BucketItemsCollection() => keyLookup = new Dictionary<string, BucketItem>();
 
+        public BucketItemsCollection(IEnumerable<BucketItem> items) : this()
+        {
+            foreach (var item in items)
+            {
+                Add(item.Key, item);
+            }
+        }
+
         public Dictionary<string, BucketItem>.KeyCollection Keys
         {
             get

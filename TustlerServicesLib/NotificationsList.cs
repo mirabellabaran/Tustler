@@ -39,6 +39,11 @@ namespace TustlerServicesLib
         {
             this.Add(new ApplicationMessageInfo { Message = message, Detail = detail });
         }
+
+        public static ApplicationErrorInfo CreateErrorNotification(string context, string message, Exception exception)
+        {
+            return new ApplicationErrorInfo() { Context = context, Message = message, Exception = exception };
+        }
     }
 
     public abstract class Notification

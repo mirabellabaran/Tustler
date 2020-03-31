@@ -67,6 +67,10 @@ namespace TustlerAWSLib
             {
                 return new AWSResult<TranscriptionJob>(null, new AWSException(nameof(StartTranscriptionJob), "Conflicting parameters e.g. a jobname is already in use.", ex));
             }
+            catch (BadRequestException ex)
+            {
+                return new AWSResult<TranscriptionJob>(null, new AWSException(nameof(StartTranscriptionJob), "The request didn't pass one or more validation tests.", ex));
+            }
         }
 
         public async static Task<AWSResult<TranscriptionJob>> GetTranscriptionJob(string jobName)
