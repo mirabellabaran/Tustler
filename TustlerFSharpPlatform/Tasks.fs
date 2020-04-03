@@ -1,29 +1,48 @@
 ﻿namespace TustlerFSharpPlatform
 
+open System.Threading.Tasks
 open TustlerServicesLib
 open AWSInterface
+open TaskArguments
 open TustlerModels
 open System.Collections.ObjectModel
 
-[<RequireQualifiedAccess>]
-type TaskArgument =
-    | NoArguments
-    | S3MediaReference of struct(string * string * string * string * string)    // taskName, bucketName, filePath, mimeType, extension
+//module public CommonArguments =
+//    type NotificationsOnly = {
+//        Notifications: NotificationsList
+//    }
+
+//    type MediaReference = {
+//        BucketName: string
+//        Key: string
+//        MimeType: string
+//        Extension: string
+//    }
+
+//module TranscribeAudio =
+//    type TranscriptionArguments = {
+//        Notifications: NotificationsList
+//        TaskName: string
+//        MediaRef: CommonArguments.MediaReference
+//        FilePath: string
+//        LanguageCode: string
+//        VocabularyName: string
+//    }
 
 [<RequireQualifiedAccess>]
 type TaskResponse =
     | Notification of Notification
+    | DelaySequence of int
+    | TaskComplete of string
     | Bucket of Bucket
     | BucketItem of BucketItem
     | TranscriptionJob of TranscriptionJob
     
 [<RequireQualifiedAccess>]
 type TaskFunction =
-    | Buckets of (NotificationsList -> ObservableCollection<Bucket>)
-    | BucketItems of (NotificationsList -> string -> BucketItemsCollection)
-    | UploadItem of (NotificationsList -> string -> string -> string -> string -> unit)
-    | StartTranscription of (NotificationsList -> string -> string -> string -> string -> string -> ObservableCollection<TranscriptionJob>)
-    | ListVocabularies of (NotificationsList -> ObservableCollection<Vocabulary>)
+    | GetBuckets of (NotificationsList -> Async<ObservableCollection<Bucket>>)
+    | GetBucketItems of (NotificationsList -> string -> Async<BucketItemsCollection>)
+    | StartTranscriptionJob of (TranscribeAudioArguments -> Async<ObservableCollection<TranscriptionJob>>)
 
 module public Tasks =            
 
@@ -38,66 +57,77 @@ module public Tasks =
 
     let private ReplaceWithConstant (fn:TaskFunction) =
         match fn with
-        | TaskFunction.Buckets _ ->
+        | TaskFunction.GetBuckets _ ->
             let bucket = Bucket(Name="Poop", CreationDate=System.DateTime.Now)
-            (TaskFunction.Buckets (fun notifications -> new ObservableCollection<Bucket>(seq { bucket } )))
-        | TaskFunction.BucketItems _ ->
+            (TaskFunction.GetBuckets (fun notifications -> async { return new ObservableCollection<Bucket>( seq { bucket } ) }))
+        | TaskFunction.GetBucketItems _ ->
             let bucketItems = [|
                 BucketItem(Key="AAA", Size=33L, LastModified=System.DateTime.Now, Owner="Me")
                 BucketItem(Key="BBB", Size=44L, LastModified=System.DateTime.Now, Owner="Me")
             |]
-            (TaskFunction.BucketItems (fun notifications string -> new BucketItemsCollection( bucketItems )))
+            (TaskFunction.GetBucketItems (fun notifications string -> async { return new BucketItemsCollection( bucketItems ) }))
 
-    let S3FetchItems (_: TaskArgument) =
+    let S3FetchItems (notifications: NotificationsList) =
 
-        //let (TaskArgument.TaskNameFilePath (taskName, filePath)) = args
+        let getBuckets (notifications: NotificationsList) =
+            S3.getBuckets notifications
+
+        let getBucketItems (notifications: NotificationsList) bucketName =
+            S3.getBucketItems notifications bucketName
 
         // prepare expensive function steps (may be replaced with cached values)
-        let (TaskFunction.Buckets getBuckets) = ReplaceWithConstant (TaskFunction.Buckets (fun notifications -> S3.getBuckets notifications |> Async.RunSynchronously))
-        let (TaskFunction.BucketItems getBucketItems) = ReplaceWithConstant (TaskFunction.BucketItems (fun notifications bucketName -> S3.getBucketItems notifications bucketName |> Async.RunSynchronously))
-
-        let notifications = NotificationsList()
+        let (TaskFunction.GetBuckets getBuckets) = ReplaceWithConstant (TaskFunction.GetBuckets (getBuckets))
+        let (TaskFunction.GetBucketItems getBucketItems) = ReplaceWithConstant (TaskFunction.GetBucketItems (getBucketItems))
 
         seq {
-            let buckets: ObservableCollection<Bucket> = getBuckets notifications
+            let buckets: ObservableCollection<Bucket> = getBuckets notifications |> Async.RunSynchronously
             yield! getNotificationResponse notifications
 
             if buckets.Count > 0 then
                 let bucket = Seq.head buckets
                 yield TaskResponse.Bucket bucket
 
-                let items = getBucketItems notifications bucket.Name
+                let items = getBucketItems notifications bucket.Name |> Async.RunSynchronously
                 yield! getNotificationResponse notifications
                 yield! Seq.map (fun item -> TaskResponse.BucketItem item) items
         }
 
     // upload and transcribe some audio
-    let TranscribeAudio (arg: TaskArgument) =
-
-        let (TaskArgument.S3MediaReference (taskName, bucketName, filePath, mimeType, extension)) = arg
+    let TranscribeAudio (notifications: NotificationsList, arguments: ITaskArgument) =
         
-        //let (TaskFunction.UploadItem uploadItem) = (TaskFunction.UploadItem (fun notifications bucketName filePath mimeType extension -> S3.uploadBucketItem notifications bucketName filePath mimeType extension |> Async.RunSynchronously))
-        let (TaskFunction.StartTranscription startTranscriptionJob) = (TaskFunction.StartTranscription (fun notifications jobName bucketName s3MediaKey languageCode vocabularyName -> Transcribe.startTranscriptionJob notifications jobName bucketName s3MediaKey languageCode vocabularyName |> Async.RunSynchronously))
-        let (TaskFunction.ListVocabularies listVocabularies) = (TaskFunction.ListVocabularies (fun notifications -> Transcribe.listVocabularies notifications |> Async.RunSynchronously))
+        let startTranscriptionJob (args: TranscribeAudioArguments) =
+            // note: task name used as job name and as S3 media key (from upload)
+            Transcribe.startTranscriptionJob notifications args.TaskName args.MediaRef.BucketName args.MediaRef.Key args.LanguageCode args.VocabularyName
 
-        let notifications = NotificationsList()
+        let (TaskFunction.StartTranscriptionJob startTranscriptionJob) = CheckFileExistsReplaceWithFilePath (TaskFunction.StartTranscriptionJob (startTranscriptionJob))
+
+        let isTranscriptionComplete (jobName: string) (jobs: ObservableCollection<TranscriptionJob>) =
+            let currentJob = jobs |> Seq.find (fun job -> job.TranscriptionJobName = jobName)
+            currentJob.TranscriptionJobStatus = "COMPLETED"
+
+        let args = arguments :?> TranscribeAudioArguments
+        let mediaReference = args.MediaRef
         
         seq {
-            // note: using task name as new S3 key
-            let success = S3.uploadBucketItem notifications bucketName taskName filePath mimeType extension |> Async.RunSynchronously
+            // note: the task name may be used as the new S3 key
+            let success = S3.uploadBucketItem notifications mediaReference.BucketName mediaReference.Key args.FilePath mediaReference.MimeType mediaReference.Extension |> Async.RunSynchronously
             yield! getNotificationResponse notifications
 
             if success then
 
-                let vocabs = listVocabularies notifications
-                yield! getNotificationResponse notifications
-
-                let vocab =
-                    let head = Seq.tryHead vocabs
-                    if head.IsSome then head.Value.VocabularyName else null
-
-                // note: task name used as job name and as S3 media key (from upload)
-                let transcribeTasks = startTranscriptionJob notifications taskName bucketName taskName "en" vocab   // should be "en-US"
+                let transcribeTasks = startTranscriptionJob args |> Async.RunSynchronously
                 yield! getNotificationResponse notifications
                 yield! Seq.map (fun item -> TaskResponse.TranscriptionJob item) transcribeTasks
+
+                let waitOnCompletionSeq =
+                    0 // try ten times from zero
+                    |> Seq.unfold (fun i ->
+                        Task.Delay(1000) |> Async.AwaitTask |> Async.RunSynchronously
+                        let jobs = Transcribe.listTranscriptionJobs notifications |> Async.RunSynchronously
+                        if i > 9 || isTranscriptionComplete args.TaskName jobs then
+                            None
+                        else
+                            Some( TaskResponse.DelaySequence i, i + 1))
+                yield! waitOnCompletionSeq
+                yield  TaskResponse.TaskComplete "Finished"
         }

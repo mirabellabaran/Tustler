@@ -26,8 +26,19 @@ namespace Tustler.UserControls
             var ctrl = dependencyObject as Tasks;
             if (ctrl != null)
             {
-                //if (dependencyPropertyChangedEventArgs.NewValue != null)
-                //    ctrl.ReportViewerLoad(dependencyPropertyChangedEventArgs.NewValue.ToString());
+                if (dependencyPropertyChangedEventArgs.NewValue != null)
+                {
+                    var taskName = dependencyPropertyChangedEventArgs.NewValue as string;
+                    switch (taskName)
+                    {
+                        case "S3FetchItems":
+                            ctrl.TaskArgument = null;
+                            break;
+                        case "TranscribeAudio":
+                            ctrl.TaskArgument = new TaskArguments.TranscribeAudioArguments();
+                            break;
+                    }
+                }
             }
         }
 
@@ -35,6 +46,12 @@ namespace Tustler.UserControls
         {
             get { return (string) GetValue(TaskNameProperty); }
             set { SetValue(TaskNameProperty, value); }
+        }
+
+        public TaskArguments.ITaskArgument TaskArgument
+        {
+            get;
+            internal set;
         }
 
         public Tasks()
@@ -92,10 +109,12 @@ namespace Tustler.UserControls
         {
             var task = TaskName switch
             {
-                "S3FetchItems" => AWSTasks.S3FetchItems(TaskArgument.NoArguments),
-                "TranscribeAudio" => AWSTasks.TranscribeAudio(TaskArgument.NewS3MediaReference(
-                        ("TranscribeAudio1", "tator", @"C:\Users\Zev\Projects\C#\Tustler\Tustler\bin\Debug\netcoreapp3.1\FileCache\SallyRide2.wav", "audio/wav", "wav")
-                    )),
+                "S3FetchItems" => AWSTasks.S3FetchItems(new NotificationsList()),
+                "TranscribeAudio" => AWSTasks.TranscribeAudio(new NotificationsList(), this.TaskArgument),
+                        //"TranscribeAudio1",
+                        //new MediaReference("tator", "TranscribeAudio1", "audio/wav", "wav"),
+                        //@"C:\Users\Zev\Projects\C#\Tustler\Tustler\bin\Debug\netcoreapp3.1\FileCache\SallyRide2.wav",
+                        //"en-US", "Test")
                 _ => throw new ArgumentException($"RunTaskAsync: received an unknown tag")
             };
 

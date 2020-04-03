@@ -1,11 +1,8 @@
 ﻿namespace TustlerFSharpPlatform
 
+open System
 open System.Collections.Generic
 open TustlerServicesLib
-open AWSInterface
-open System.Collections.ObjectModel
-open System.Collections.Specialized
-open System
 
 module public Queue =
 

@@ -7,11 +7,9 @@
 
   <ItemGroup>
     <Compile Include="AWSInterface.fs" />
+    <Compile Include="TaskArguments.fs" />
     <Compile Include="Tasks.fs" />
     <Compile Include="TaskQueue.fs" />
-    <None Include="Scripts\Test.fsx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
   <ItemGroup>
