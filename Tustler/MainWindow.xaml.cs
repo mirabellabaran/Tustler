@@ -312,8 +312,10 @@ namespace Tustler
                         panControlsContainer.Children.Add(new TranscribeFunctions());
                         break;
                     case "task":
-                        var uc = new Tasks();
-                        uc.TaskName = arg;
+                        var uc = new TasksManager
+                        {
+                            TaskName = arg
+                        };
                         panControlsContainer.Children.Add(uc);
                         break;
                 }

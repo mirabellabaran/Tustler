@@ -10,6 +10,7 @@ using System.Windows.Input;
 using TustlerFSharpPlatform;
 using TustlerModels;
 using TustlerServicesLib;
+using static TustlerFSharpPlatform.TaskArguments;
 using AWSTasks = TustlerFSharpPlatform.Tasks;
 
 namespace Tustler.UserControls
@@ -17,14 +18,13 @@ namespace Tustler.UserControls
     /// <summary>
     /// Interaction logic for Tasks.xaml
     /// </summary>
-    public partial class Tasks : UserControl
+    public partial class TasksManager : UserControl
     {
-        public static readonly DependencyProperty TaskNameProperty = DependencyProperty.Register("TaskName", typeof(string), typeof(Tasks), new PropertyMetadata("", PropertyChangedCallback));
+        public static readonly DependencyProperty TaskNameProperty = DependencyProperty.Register("TaskName", typeof(string), typeof(TasksManager), new PropertyMetadata("", PropertyChangedCallback));
 
         private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
         {
-            var ctrl = dependencyObject as Tasks;
-            if (ctrl != null)
+            if (dependencyObject is TasksManager ctrl)
             {
                 if (dependencyPropertyChangedEventArgs.NewValue != null)
                 {
@@ -32,10 +32,12 @@ namespace Tustler.UserControls
                     switch (taskName)
                     {
                         case "S3FetchItems":
-                            ctrl.TaskArgument = null;
+                            ctrl.TaskArguments = new TaskArguments.NotificationsOnlyArguments(new NotificationsList());
+                            ctrl.TaskFunction = AWSTasks.S3FetchItems;
                             break;
                         case "TranscribeAudio":
-                            ctrl.TaskArgument = new TaskArguments.TranscribeAudioArguments();
+                            ctrl.TaskArguments = new TaskArguments.TranscribeAudioArguments(new NotificationsList());
+                            ctrl.TaskFunction = AWSTasks.TranscribeAudio;
                             break;
                     }
                 }
@@ -48,13 +50,19 @@ namespace Tustler.UserControls
             set { SetValue(TaskNameProperty, value); }
         }
 
-        public TaskArguments.ITaskArgument TaskArgument
+        public ITaskArgumentCollection TaskArguments
         {
             get;
             internal set;
         }
 
-        public Tasks()
+        public Func<ITaskArgumentCollection, IEnumerable<TaskResponse>> TaskFunction
+        {
+            get;
+            internal set;
+        }
+
+        public TasksManager()
         {
             InitializeComponent();
         }
@@ -63,6 +71,43 @@ namespace Tustler.UserControls
         {
             var notifications = this.FindResource("applicationNotifications") as NotificationsList;
             notifications.ShowMessage("Parameter set", $"Task name set to {TaskName}");
+
+            var requiredMembersOption = this.TaskArguments.GetRequiredMembers();
+            if (requiredMembersOption.IsRequired)
+            {
+                // add the required number of rows
+                var numMembers = requiredMembersOption.Members.Length;
+                var numRows = (numMembers / 2) + 1;
+                grdMembers.RowDefinitions.Clear();
+                for (int i = 0; i < numRows; i++)
+                {
+                    grdMembers.RowDefinitions.Add(new RowDefinition());
+                }
+
+                for (var i = 0; i < numMembers; i++)
+                {
+                    var requiredMemberControlTag = requiredMembersOption.Members[i];
+                    var rowNum = i / 2;
+                    var colNum = (i % 2) == 0 ? 0 : 1;
+
+                    // instantiate the user control and add to grid container in read-order
+                    UserControl uc = requiredMemberControlTag switch
+                    {
+                        "taskName" => new TaskMemberControls.TaskName(),
+                        "mediaRef" => new TaskMemberControls.MediaReference(),
+                        "filePath" => new TaskMemberControls.FilePath(),
+                        "languageCode" => new TaskMemberControls.LanguageCode(),
+                        "vocabularyName" => new TaskMemberControls.VocabularyName(),
+                        _ => throw new ArgumentException("Unknown Task Member Control tag.")
+                    };
+
+                    if (uc is TaskMemberControls.FilePath)
+                        (uc as TaskMemberControls.FilePath).Command = TaskCommands.UpdateTaskArguments;
+                    Grid.SetRow(uc, rowNum);
+                    Grid.SetColumn(uc, colNum);
+                    grdMembers.Children.Add(uc);
+                }
+            }
         }
 
         private async void Collection_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -105,23 +150,29 @@ namespace Tustler.UserControls
             await RunTaskAsync().ConfigureAwait(true);
         }
 
+        private void UpdateTaskArguments_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = true;
+        }
+
+        private void UpdateTaskArguments_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            var data = e.Parameter as TaskArgumentMember;
+            this.TaskArguments.SetValue(data);
+        }
+
         private async Task RunTaskAsync()
         {
-            var task = TaskName switch
-            {
-                "S3FetchItems" => AWSTasks.S3FetchItems(new NotificationsList()),
-                "TranscribeAudio" => AWSTasks.TranscribeAudio(new NotificationsList(), this.TaskArgument),
-                        //"TranscribeAudio1",
-                        //new MediaReference("tator", "TranscribeAudio1", "audio/wav", "wav"),
-                        //@"C:\Users\Zev\Projects\C#\Tustler\Tustler\bin\Debug\netcoreapp3.1\FileCache\SallyRide2.wav",
-                        //"en-US", "Test")
-                _ => throw new ArgumentException($"RunTaskAsync: received an unknown tag")
-            };
+            //"TranscribeAudio1",
+            //new MediaReference("tator", "TranscribeAudio1", "audio/wav", "wav"),
+            //@"C:\Users\Zev\Projects\C#\Tustler\Tustler\bin\Debug\netcoreapp3.1\FileCache\SallyRide2.wav",
+            //"en-US", "Test")
 
+            var responseStream = this.TaskFunction(this.TaskArguments);
             var collection = new ObservableCollection<TaskResponse>();
             collection.CollectionChanged += Collection_CollectionChanged;
 
-            await TaskQueue.Run(task, collection).ConfigureAwait(true);
+            await TaskQueue.Run(responseStream, collection).ConfigureAwait(true);
         }
 
         private async Task AddControlAsync(string content, bool showBold)
@@ -140,6 +191,14 @@ namespace Tustler.UserControls
             (
                 "StartTask",
                 "StartTask",
+                typeof(TaskCommands),
+                null
+            );
+
+        public static readonly RoutedUICommand UpdateTaskArguments = new RoutedUICommand
+            (
+                "UpdateTaskArguments",
+                "UpdateTaskArguments",
                 typeof(TaskCommands),
                 null
             );

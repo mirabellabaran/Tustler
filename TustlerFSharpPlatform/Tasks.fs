@@ -7,28 +7,6 @@ open TaskArguments
 open TustlerModels
 open System.Collections.ObjectModel
 
-//module public CommonArguments =
-//    type NotificationsOnly = {
-//        Notifications: NotificationsList
-//    }
-
-//    type MediaReference = {
-//        BucketName: string
-//        Key: string
-//        MimeType: string
-//        Extension: string
-//    }
-
-//module TranscribeAudio =
-//    type TranscriptionArguments = {
-//        Notifications: NotificationsList
-//        TaskName: string
-//        MediaRef: CommonArguments.MediaReference
-//        FilePath: string
-//        LanguageCode: string
-//        VocabularyName: string
-//    }
-
 [<RequireQualifiedAccess>]
 type TaskResponse =
     | Notification of Notification
@@ -67,7 +45,7 @@ module public Tasks =
             |]
             (TaskFunction.GetBucketItems (fun notifications string -> async { return new BucketItemsCollection( bucketItems ) }))
 
-    let S3FetchItems (notifications: NotificationsList) =
+    let S3FetchItems (arguments: ITaskArgumentCollection) =
 
         let getBuckets (notifications: NotificationsList) =
             S3.getBuckets notifications
@@ -78,6 +56,8 @@ module public Tasks =
         // prepare expensive function steps (may be replaced with cached values)
         let (TaskFunction.GetBuckets getBuckets) = ReplaceWithConstant (TaskFunction.GetBuckets (getBuckets))
         let (TaskFunction.GetBucketItems getBucketItems) = ReplaceWithConstant (TaskFunction.GetBucketItems (getBucketItems))
+
+        let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
 
         seq {
             let buckets: ObservableCollection<Bucket> = getBuckets notifications |> Async.RunSynchronously
@@ -93,11 +73,11 @@ module public Tasks =
         }
 
     // upload and transcribe some audio
-    let TranscribeAudio (notifications: NotificationsList, arguments: ITaskArgument) =
+    let TranscribeAudio (arguments: ITaskArgumentCollection) =
         
         let startTranscriptionJob (args: TranscribeAudioArguments) =
             // note: task name used as job name and as S3 media key (from upload)
-            Transcribe.startTranscriptionJob notifications args.TaskName args.MediaRef.BucketName args.MediaRef.Key args.LanguageCode args.VocabularyName
+            Transcribe.startTranscriptionJob args.Notifications args.TaskName args.MediaRef.BucketName args.MediaRef.Key args.LanguageCode args.VocabularyName
 
         let (TaskFunction.StartTranscriptionJob startTranscriptionJob) = CheckFileExistsReplaceWithFilePath (TaskFunction.StartTranscriptionJob (startTranscriptionJob))
 
@@ -106,6 +86,7 @@ module public Tasks =
             currentJob.TranscriptionJobStatus = "COMPLETED"
 
         let args = arguments :?> TranscribeAudioArguments
+        let notifications = args.Notifications
         let mediaReference = args.MediaRef
         
         seq {

@@ -8,6 +8,14 @@ open System.Collections.ObjectModel
 
 module public TaskArguments =
 
+    type RequiredMembersOption(members: string[]) =
+
+        let mutable members = members
+
+        new() = RequiredMembersOption([||])
+        member this.Members with get() = members
+        member this.IsRequired with get () = members.Length > 0
+
     type MediaReference(bucketName: string, key: string, mimeType: string, extension: string) =
 
         member val BucketName = bucketName
@@ -21,11 +29,12 @@ module public TaskArguments =
         | FilePath of string
         | LanguageCode of string
         | VocabularyName of string
+        | Poop of string
 
-    type ITaskArgument =
+    type ITaskArgumentCollection =
 
         // get the names of the values required to populate the TaskArgument e.g. taskName, languageCode, or mediaReference (-> tag names of user controls)
-        abstract member GetRequiredMembers : unit -> seq<string>
+        abstract member GetRequiredMembers : unit -> RequiredMembersOption
         
         // set the value of a TaskArgument member
         abstract member SetValue : taskMember:TaskArgumentMember -> unit
@@ -33,7 +42,18 @@ module public TaskArguments =
         // true when all required members are no longer set to None
         abstract member IsComplete : unit -> bool
 
-    type TranscribeAudioArguments() =
+    type NotificationsOnlyArguments(notifications: NotificationsList) =
+
+        member val Notifications = notifications with get
+
+        interface ITaskArgumentCollection with
+            member this.GetRequiredMembers () = RequiredMembersOption()
+
+            member this.SetValue taskMember = ()
+
+            member this.IsComplete () = true
+
+    type TranscribeAudioArguments(notifications: NotificationsList) =
        
         let mutable taskName = None
         let mutable mediaRef = None
@@ -41,16 +61,18 @@ module public TaskArguments =
         let mutable languageCode = None
         let mutable vocabularyName = None
 
+        member val Notifications = notifications with get
+        
         member this.TaskName with get () = taskName.Value
         member this.MediaRef with get () = mediaRef.Value
         member this.FilePath with get () = filePath.Value
         member this.LanguageCode with get () = languageCode.Value
         member this.VocabularyName with get () = vocabularyName.Value
 
-        interface ITaskArgument with
+        interface ITaskArgumentCollection with
 
             member this.GetRequiredMembers () =
-                seq { "taskName"; "mediaRef"; "filePath"; "languageCode"; "vocabularyName" }
+                RequiredMembersOption( [| "taskName"; "mediaRef"; "filePath"; "languageCode"; "vocabularyName" |] )
 
             member this.SetValue taskMember =
                 match taskMember with
@@ -59,6 +81,7 @@ module public TaskArguments =
                 | FilePath myFilePath -> filePath <- Some(myFilePath)
                 | LanguageCode myLanguageCode -> languageCode <- Some(myLanguageCode)
                 | VocabularyName myVocabularyName -> vocabularyName <- Some(myVocabularyName)
+                | _ -> ()
 
             member this.IsComplete () =
                 taskName.IsSome && mediaRef.IsSome && filePath.IsSome && languageCode.IsSome && vocabularyName.IsSome
