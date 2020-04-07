@@ -27,7 +27,7 @@ module public TaskArguments =
         | TaskName of string
         | MediaRef of MediaReference
         | FilePath of string
-        | LanguageCode of string
+        | TranscriptionLanguageCode of string
         | VocabularyName of string
         | Poop of string
 
@@ -58,7 +58,7 @@ module public TaskArguments =
         let mutable taskName = None
         let mutable mediaRef = None
         let mutable filePath = None
-        let mutable languageCode = None
+        let mutable transcriptionLanguageCode = None
         let mutable vocabularyName = None
 
         member val Notifications = notifications with get
@@ -66,22 +66,22 @@ module public TaskArguments =
         member this.TaskName with get () = taskName.Value
         member this.MediaRef with get () = mediaRef.Value
         member this.FilePath with get () = filePath.Value
-        member this.LanguageCode with get () = languageCode.Value
+        member this.TranscriptionLanguageCode with get () = transcriptionLanguageCode.Value
         member this.VocabularyName with get () = vocabularyName.Value
 
         interface ITaskArgumentCollection with
 
             member this.GetRequiredMembers () =
-                RequiredMembersOption( [| "taskName"; "mediaRef"; "filePath"; "languageCode"; "vocabularyName" |] )
+                RequiredMembersOption( [| "taskName"; "mediaRef"; "filePath"; "transcriptionLanguageCode"; "vocabularyName" |] )
 
             member this.SetValue taskMember =
                 match taskMember with
                 | TaskName myTaskName -> taskName <- Some(myTaskName)
                 | MediaRef myMediaRef -> mediaRef <- Some(myMediaRef)
                 | FilePath myFilePath -> filePath <- Some(myFilePath)
-                | LanguageCode myLanguageCode -> languageCode <- Some(myLanguageCode)
+                | TranscriptionLanguageCode myLanguageCode -> transcriptionLanguageCode <- Some(myLanguageCode)
                 | VocabularyName myVocabularyName -> vocabularyName <- Some(myVocabularyName)
                 | _ -> ()
 
             member this.IsComplete () =
-                taskName.IsSome && mediaRef.IsSome && filePath.IsSome && languageCode.IsSome && vocabularyName.IsSome
+                taskName.IsSome && mediaRef.IsSome && filePath.IsSome && transcriptionLanguageCode.IsSome && vocabularyName.IsSome

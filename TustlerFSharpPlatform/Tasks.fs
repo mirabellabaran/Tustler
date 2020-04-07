@@ -77,7 +77,7 @@ module public Tasks =
         
         let startTranscriptionJob (args: TranscribeAudioArguments) =
             // note: task name used as job name and as S3 media key (from upload)
-            Transcribe.startTranscriptionJob args.Notifications args.TaskName args.MediaRef.BucketName args.MediaRef.Key args.LanguageCode args.VocabularyName
+            Transcribe.startTranscriptionJob args.Notifications args.TaskName args.MediaRef.BucketName args.MediaRef.Key args.TranscriptionLanguageCode args.VocabularyName
 
         let (TaskFunction.StartTranscriptionJob startTranscriptionJob) = CheckFileExistsReplaceWithFilePath (TaskFunction.StartTranscriptionJob (startTranscriptionJob))
 

@@ -13,16 +13,16 @@
         <CommandBinding Command="{x:Static uc:TaskCommands.UpdateTaskArguments}" CanExecute="UpdateTaskArguments_CanExecute" Executed="UpdateTaskArguments_Executed" />
     </UserControl.CommandBindings>
 
-    <StackPanel Orientation="Vertical" Margin="20">
-        <Button Content="Start Task" Grid.Row="0" Grid.Column="0" Height="30" Width="100" Margin="0,5,0,0" Command="{x:Static uc:TaskCommands.StartTask}" Style="{StaticResource ButtonDark}" />
-        <Grid x:Name="grdMembers" ShowGridLines="True" Margin="10">
+    <DockPanel  Margin="20">
+        <Grid x:Name="grdMembers" DockPanel.Dock="Top" ShowGridLines="True" Margin="10">
             <Grid.RowDefinitions>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition />
                 <ColumnDefinition />
             </Grid.ColumnDefinitions>
-            <ListBox x:Name="lbTaskResponses" Grid.Row="1" Grid.Column="0" Margin="20, 10, 20, 10" Background="{StaticResource ContrastingBackground}"></ListBox>
         </Grid>
-    </StackPanel>
+        <Button Content="Start Task" DockPanel.Dock="Top" Height="30" Width="100" Margin="0,5,0,0" Command="{x:Static uc:TaskCommands.StartTask}" Style="{StaticResource ButtonDark}" />
+        <ListBox x:Name="lbTaskResponses" Margin="20, 10, 20, 10" Background="{StaticResource ContrastingBackground}"></ListBox>
+    </DockPanel>
 </UserControl>

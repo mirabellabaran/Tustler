@@ -91,18 +91,49 @@ namespace Tustler.UserControls
                     var colNum = (i % 2) == 0 ? 0 : 1;
 
                     // instantiate the user control and add to grid container in read-order
-                    UserControl uc = requiredMemberControlTag switch
+                    UserControl uc;
+                    switch (requiredMemberControlTag)
                     {
-                        "taskName" => new TaskMemberControls.TaskName(),
-                        "mediaRef" => new TaskMemberControls.MediaReference(),
-                        "filePath" => new TaskMemberControls.FilePath(),
-                        "languageCode" => new TaskMemberControls.LanguageCode(),
-                        "vocabularyName" => new TaskMemberControls.VocabularyName(),
-                        _ => throw new ArgumentException("Unknown Task Member Control tag.")
-                    };
+                        case "taskName":
+                            var taskNameCtrl = new TaskMemberControls.TaskName
+                            {
+                                Command = TaskCommands.UpdateTaskArguments,      // Command must come first
+                                AttachedTask = TaskName
+                            };
+                            uc = taskNameCtrl;
+                            break;
+                        case "mediaRef":
+                            var mediaReferenceCtrl = new TaskMemberControls.MediaReference
+                            {
+                                Command = TaskCommands.UpdateTaskArguments
+                            };
+                            uc = mediaReferenceCtrl;
+                            break;
+                        case "filePath":
+                            var filePathCtrl = new TaskMemberControls.FilePath
+                            {
+                                Command = TaskCommands.UpdateTaskArguments
+                            };
+                            uc = filePathCtrl;
+                            break;
+                        case "transcriptionLanguageCode":
+                            var transcriptionLanguageCodeCtrl = new TaskMemberControls.TranscriptionLanguageCode
+                            {
+                                Command = TaskCommands.UpdateTaskArguments
+                            };
+                            uc = transcriptionLanguageCodeCtrl;
+                            break;
+                        case "vocabularyName":
+                            var vocabularyNameCtrl = new TaskMemberControls.VocabularyName
+                            {
+                                Command = TaskCommands.UpdateTaskArguments
+                            };
+                            uc = vocabularyNameCtrl;
+                            break;
+                        default:
+                            throw new ArgumentException("Unknown Task Member Control tag.");
+                    }
 
-                    if (uc is TaskMemberControls.FilePath)
-                        (uc as TaskMemberControls.FilePath).Command = TaskCommands.UpdateTaskArguments;
                     Grid.SetRow(uc, rowNum);
                     Grid.SetColumn(uc, colNum);
                     grdMembers.Children.Add(uc);
@@ -122,19 +153,19 @@ namespace Tustler.UserControls
                         {
                             case ApplicationErrorInfo error:
                                 var errorMsg = $"{error.Context}: {error.Message}";
-                                await AddControlAsync(errorMsg, true).ConfigureAwait(false);
+                                await AddResponseAsync(errorMsg, true).ConfigureAwait(false);
                                 break;
                             case ApplicationMessageInfo msg:
                                 var infoMsg = $"{msg.Message}: {msg.Detail}";
-                                await AddControlAsync(infoMsg, true).ConfigureAwait(false);
+                                await AddResponseAsync(infoMsg, true).ConfigureAwait(false);
                                 break;
                         }
                         break;
                     case TaskResponse.Bucket taskBucket:
-                        await AddControlAsync(taskBucket.Item.Name, false).ConfigureAwait(false);
+                        await AddResponseAsync(taskBucket.Item.Name, false).ConfigureAwait(false);
                         break;
                     case TaskResponse.BucketItem taskBucketItem:
-                        await AddControlAsync(taskBucketItem.Item.Key, false).ConfigureAwait(false);
+                        await AddResponseAsync(taskBucketItem.Item.Key, false).ConfigureAwait(false);
                         break;
                 }
             }
@@ -142,7 +173,7 @@ namespace Tustler.UserControls
 
         private void StartTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = true;
+            e.CanExecute = !(TaskArguments is null) && TaskArguments.IsComplete();
         }
 
         private async void StartTask_Executed(object sender, ExecutedRoutedEventArgs e)
@@ -158,7 +189,8 @@ namespace Tustler.UserControls
         private void UpdateTaskArguments_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             var data = e.Parameter as TaskArgumentMember;
-            this.TaskArguments.SetValue(data);
+            if (!(data is null))
+                this.TaskArguments.SetValue(data);
         }
 
         private async Task RunTaskAsync()
@@ -168,14 +200,17 @@ namespace Tustler.UserControls
             //@"C:\Users\Zev\Projects\C#\Tustler\Tustler\bin\Debug\netcoreapp3.1\FileCache\SallyRide2.wav",
             //"en-US", "Test")
 
-            var responseStream = this.TaskFunction(this.TaskArguments);
-            var collection = new ObservableCollection<TaskResponse>();
-            collection.CollectionChanged += Collection_CollectionChanged;
+            if (TaskArguments.IsComplete())
+            {
+                var responseStream = TaskFunction(TaskArguments);
+                var collection = new ObservableCollection<TaskResponse>();
+                collection.CollectionChanged += Collection_CollectionChanged;
 
-            await TaskQueue.Run(responseStream, collection).ConfigureAwait(true);
+                await TaskQueue.Run(responseStream, collection).ConfigureAwait(true);
+            }
         }
 
-        private async Task AddControlAsync(string content, bool showBold)
+        private async Task AddResponseAsync(string content, bool showBold)
         {
             await Dispatcher.InvokeAsync(() =>
             {

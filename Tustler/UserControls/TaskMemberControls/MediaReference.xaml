@@ -6,7 +6,13 @@
              xmlns:local="clr-namespace:Tustler.UserControls.TaskMemberControls"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
-            
-    </Grid>
+    <Border BorderThickness="10">
+        <StackPanel Orientation="Vertical">
+            <TextBlock Text="tator" />
+            <TextBlock Text="TranscribeAudio1" />
+            <TextBlock Text="audio/wav" />
+            <TextBlock Text="wav" />
+            <Button Content="Update" Click="Button_Click" />
+        </StackPanel>
+    </Border>
 </UserControl>

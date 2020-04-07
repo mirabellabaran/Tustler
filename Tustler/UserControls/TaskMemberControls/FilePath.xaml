@@ -10,17 +10,19 @@
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static uc:FilePathCommands.OpenFilePicker}" CanExecute="OpenFilePicker_CanExecute" Executed="OpenFilePicker_Executed" />
     </UserControl.CommandBindings>
-    
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition />
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition />
-            <ColumnDefinition Width="50" />
-        </Grid.ColumnDefinitions>
 
-        <TextBox x:Name="tbFilePath" Grid.Row="0" Grid.Column="0" Style="{StaticResource TextBoxDark}" TextChanged="TbFilePath_TextChanged" />
-        <Button Content="..." Grid.Row="0" Grid.Column="1" Style="{StaticResource ButtonDark}" Command="{x:Static uc:FilePathCommands.OpenFilePicker}" />
-    </Grid>
+    <Border BorderThickness="10">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="50" />
+            </Grid.ColumnDefinitions>
+
+            <TextBox x:Name="tbFilePath" Grid.Row="0" Grid.Column="0" Style="{StaticResource TextBoxDark}" TextChanged="TbFilePath_TextChanged" />
+            <Button Content="..." Grid.Row="0" Grid.Column="1" Style="{StaticResource ButtonDark}" Command="{x:Static uc:FilePathCommands.OpenFilePicker}" />
+        </Grid>
+    </Border>
 </UserControl>

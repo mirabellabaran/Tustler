@@ -18,7 +18,7 @@ namespace TustlerAWSLib
         /// <param name="bucketName">An S3 buvket name</param>
         /// <param name="s3MediaKey">An S3 bucket key referring to a audio file</param>
         /// <param name="languageCode">The launguage code of the language used in the audio file</param>
-        /// <param name="vocabularyName">The name of an optional trascribe vocabulary</param>
+        /// <param name="vocabularyName">The name of an optional transcribe vocabulary</param>
         /// <returns></returns>
         /// <remarks>Supported formats: Flac, Mp3, Mp4, Wav</remarks>
         public async static Task<AWSResult<TranscriptionJob>> StartTranscriptionJob(string jobName, string bucketName, string s3MediaKey, string languageCode, string vocabularyName)

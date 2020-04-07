@@ -1,19 +1,26 @@
-﻿using Microsoft.Win32;
-using System;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+using TustlerModels;
 using static TustlerFSharpPlatform.TaskArguments;
-using AppSettings = TustlerServicesLib.ApplicationSettings;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
     /// <summary>
-    /// Interaction logic for FilePath.xaml
+    /// Interaction logic for TranscriptionLanguageCode.xaml
     /// </summary>
-    public partial class FilePath : UserControl, ICommandSource
+    public partial class TranscriptionLanguageCode : UserControl, ICommandSource
     {
-        public FilePath()
+        public TranscriptionLanguageCode()
         {
             InitializeComponent();
         }
@@ -28,7 +35,7 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             get
             {
-                return (ICommand) GetValue(CommandProperty);
+                return (ICommand)GetValue(CommandProperty);
             }
             set
             {
@@ -100,21 +107,28 @@ namespace Tustler.UserControls.TaskMemberControls
             DependencyProperty.Register(
                 "Command",
                 typeof(ICommand),
-                typeof(FilePath),
+                typeof(TranscriptionLanguageCode),
                 new PropertyMetadata((ICommand)null,
                 new PropertyChangedCallback(CommandChanged)));
 
         private static void CommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            FilePath ctrl = (FilePath) d;
+            TranscriptionLanguageCode ctrl = (TranscriptionLanguageCode) d;
             ctrl.HookUpCommand((ICommand)e.OldValue, (ICommand)e.NewValue);
         }
 
-        public object CommandParameter => TaskArgumentMember.NewFilePath(tbFilePath.Text);
+        public object CommandParameter
+        {
+            get
+            {
+                var languageCode = cbLanguage.SelectedItem as LanguageCode;
+                return languageCode is null ? null : TaskArgumentMember.NewTranscriptionLanguageCode(languageCode.Code);
+            }
+        }
 
         #endregion
 
-        private void TbFilePath_TextChanged(object sender, TextChangedEventArgs e)
+        private void cbLanguage_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (this.Command != null)
             {
@@ -128,38 +142,5 @@ namespace Tustler.UserControls.TaskMemberControls
                 }
             }
         }
-
-        private void OpenFilePicker_CanExecute(object sender, CanExecuteRoutedEventArgs e)
-        {
-            e.CanExecute = true;
-        }
-
-        private void OpenFilePicker_Executed(object sender, ExecutedRoutedEventArgs e)
-        {
-            OpenFileDialog dlg = new OpenFileDialog
-            {
-                Title = "Choose a file to open",
-                Multiselect = false,
-                InitialDirectory = AppSettings.FileCachePath
-            };
-
-            Nullable<bool> result = dlg.ShowDialog();
-            if (result == true)
-            {
-                tbFilePath.Text = dlg.FileName;
-            }
-        }
     }
-
-    public static class FilePathCommands
-    {
-        public static readonly RoutedUICommand OpenFilePicker = new RoutedUICommand
-            (
-                "OpenFilePicker",
-                "OpenFilePicker",
-                typeof(FilePathCommands),
-                null
-            );
-    }
-
 }
