@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
+using Tustler.Models;
 using TustlerFSharpPlatform;
 using TustlerModels;
 using TustlerServicesLib;
@@ -105,7 +106,8 @@ namespace Tustler.UserControls
                         case "mediaRef":
                             var mediaReferenceCtrl = new TaskMemberControls.MediaReference
                             {
-                                Command = TaskCommands.UpdateTaskArguments
+                                Command = TaskCommands.UpdateTaskArguments,
+                                MediaType = BucketItemMediaType.Audio
                             };
                             uc = mediaReferenceCtrl;
                             break;
@@ -117,11 +119,22 @@ namespace Tustler.UserControls
                             uc = filePathCtrl;
                             break;
                         case "transcriptionLanguageCode":
-                            var transcriptionLanguageCodeCtrl = new TaskMemberControls.TranscriptionLanguageCode
+                            var transcriptionLanguageCodesInstance = this.FindResource("transcriptionLanguageCodesInstance") as TranscriptionLanguageCodesViewModel;
+                            var transcriptionLanguageCodeCtrl = new TaskMemberControls.LanguageCode
                             {
-                                Command = TaskCommands.UpdateTaskArguments
+                                Command = TaskCommands.UpdateTaskArguments,
+                                LanguageCodesViewModel = transcriptionLanguageCodesInstance
                             };
                             uc = transcriptionLanguageCodeCtrl;
+                            break;
+                        case "translationLanguageCode":
+                            var translationLanguageCodesInstance = this.FindResource("translationLanguageCodesInstance") as TranslationLanguageCodesViewModel;
+                            var translationLanguageCodeCtrl = new TaskMemberControls.LanguageCode
+                            {
+                                Command = TaskCommands.UpdateTaskArguments,
+                                LanguageCodesViewModel = translationLanguageCodesInstance
+                            };
+                            uc = translationLanguageCodeCtrl;
                             break;
                         case "vocabularyName":
                             var vocabularyNameCtrl = new TaskMemberControls.VocabularyName

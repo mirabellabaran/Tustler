@@ -2,12 +2,12 @@
 
 namespace TustlerModels
 {
-    public class TranslationLanguageCodesViewModel
+    public class TranslationLanguageCodesViewModel : LanguageCodesViewModel
     {
-        public ObservableCollection<LanguageCode> LanguageCodes
+        public override ObservableCollection<LanguageCode> LanguageCodes
         {
             get;
-            private set;
+            set;
         }
 
         public TranslationLanguageCodesViewModel()
@@ -72,6 +72,11 @@ namespace TustlerModels
 
             this.LanguageCodes = new ObservableCollection<LanguageCode>(codes);
         }
+    }
+
+    public abstract class LanguageCodesViewModel
+    {
+        public abstract ObservableCollection<LanguageCode> LanguageCodes { get; set; }
     }
 
     public class LanguageCode

@@ -10,7 +10,10 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Tustler.Models;
 using TustlerFSharpPlatform;
+using TustlerModels;
+using TustlerServicesLib;
 using static TustlerFSharpPlatform.TaskArguments;
 
 namespace Tustler.UserControls.TaskMemberControls
@@ -20,9 +23,47 @@ namespace Tustler.UserControls.TaskMemberControls
     /// </summary>
     public partial class MediaReference : UserControl
     {
+        public static readonly DependencyProperty MediaTypeProperty =
+            DependencyProperty.Register(
+                "MediaType",
+                typeof(BucketItemMediaType),
+                typeof(MediaReference));
+
+        private readonly NotificationsList notifications;
+
         public MediaReference()
         {
             InitializeComponent();
+
+            notifications = this.FindResource("applicationNotifications") as NotificationsList;
+        }
+
+        public BucketItemMediaType MediaType
+        {
+            get
+            {
+                return (BucketItemMediaType)GetValue(MediaTypeProperty);
+            }
+            set
+            {
+                SetValue(MediaTypeProperty, value);
+            }
+        }
+
+        private async void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            BucketViewModel bucketViewModel = this.FindResource("bucketsInstance") as BucketViewModel;
+
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                await bucketViewModel.Refresh(false, notifications).ConfigureAwait(true);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
         }
 
         #region ICommandSource
@@ -121,14 +162,45 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             get
             {
-                var mediaReference = new TaskArguments.MediaReference("tator", "TranscribeAudio1", "audio/wav", "wav");
-                return TaskArgumentMember.NewMediaRef(mediaReference);
+                var bucket = lbBuckets.SelectedItem as Bucket;
+                var bucketItem = lbBucketItems.SelectedItem as BucketItem;
+
+                if (bucket is null || bucketItem is null)
+                {
+                    return null;
+                }
+                else
+                {
+                    var mediaReference = new TaskArguments.MediaReference(bucket.Name, bucketItem.Key, bucketItem.MimeType, bucketItem.Extension);
+                    return TaskArgumentMember.NewMediaRef(mediaReference);
+                }
             }
         }
 
         #endregion
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private async void BucketsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var listBox = (ListBox)e.Source;
+            Bucket selectedBucket = (Bucket)listBox.SelectedItem;
+
+            var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+            var audioBucketItemsInstance = this.FindResource("audioBucketItemsInstance") as MediaFilteredBucketItemViewModel;
+
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                await bucketItemsInstance.Refresh(notifications, selectedBucket.Name).ConfigureAwait(true);
+                audioBucketItemsInstance.Select(bucketItemsInstance, MediaType);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        private void BucketItemsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (this.Command != null)
             {

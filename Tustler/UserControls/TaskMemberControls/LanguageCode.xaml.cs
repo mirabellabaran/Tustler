@@ -18,12 +18,57 @@ namespace Tustler.UserControls.TaskMemberControls
     /// <summary>
     /// Interaction logic for TranscriptionLanguageCode.xaml
     /// </summary>
-    public partial class TranscriptionLanguageCode : UserControl, ICommandSource
+    public partial class LanguageCode : UserControl, ICommandSource
     {
-        public TranscriptionLanguageCode()
+        public LanguageCode()
         {
             InitializeComponent();
         }
+
+        #region LanguageCodesViewModel
+
+        public static readonly DependencyProperty LanguageCodesViewModelProperty =
+            DependencyProperty.Register(
+                "LanguageCodesViewModel",
+                typeof(LanguageCodesViewModel),
+                typeof(LanguageCode),
+                new PropertyMetadata((LanguageCodesViewModel)null,
+                new PropertyChangedCallback(LanguageCodesViewModelChanged)));
+
+        public LanguageCodesViewModel LanguageCodesViewModel
+        {
+            get
+            {
+                return (LanguageCodesViewModel)GetValue(LanguageCodesViewModelProperty);
+            }
+            set
+            {
+                SetValue(LanguageCodesViewModelProperty, value);
+            }
+        }
+
+        private static void LanguageCodesViewModelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            LanguageCode ctrl = (LanguageCode) d;
+            var model = e.NewValue as LanguageCodesViewModel;
+
+            Binding myBinding = new Binding("LanguageCodes")
+            {
+                Source = model
+            };
+
+            ctrl.cbLanguage.SetBinding(ComboBox.ItemsSourceProperty, myBinding);
+
+            // set the default item
+            ctrl.cbLanguage.SelectedValue = model switch
+            {
+                TranscriptionLanguageCodesViewModel _ => "en-US",
+                TranslationLanguageCodesViewModel _ => "en",
+                _ => throw new ArgumentException("Language Code Task Member received an unknown language viewmodel"),
+            };
+        }
+
+        #endregion
 
         #region ICommandSource
 
@@ -107,13 +152,13 @@ namespace Tustler.UserControls.TaskMemberControls
             DependencyProperty.Register(
                 "Command",
                 typeof(ICommand),
-                typeof(TranscriptionLanguageCode),
+                typeof(LanguageCode),
                 new PropertyMetadata((ICommand)null,
                 new PropertyChangedCallback(CommandChanged)));
 
         private static void CommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            TranscriptionLanguageCode ctrl = (TranscriptionLanguageCode) d;
+            LanguageCode ctrl = (LanguageCode) d;
             ctrl.HookUpCommand((ICommand)e.OldValue, (ICommand)e.NewValue);
         }
 
@@ -121,14 +166,26 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             get
             {
-                var languageCode = cbLanguage.SelectedItem as LanguageCode;
-                return languageCode is null ? null : TaskArgumentMember.NewTranscriptionLanguageCode(languageCode.Code);
+                if (cbLanguage.SelectedItem is TustlerModels.LanguageCode languageCode) {
+                    var member = LanguageCodesViewModel switch
+                    {
+                        TranscriptionLanguageCodesViewModel _ => TaskArgumentMember.NewTranscriptionLanguageCode(languageCode.Code),
+                        TranslationLanguageCodesViewModel _ => TaskArgumentMember.NewTranslationLanguageCode(languageCode.Code),
+                        _ => null
+                    };
+
+                    return member;
+                }
+                else
+                {
+                    return null;
+                }
             }
         }
 
         #endregion
 
-        private void cbLanguage_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void LanguageCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (this.Command != null)
             {

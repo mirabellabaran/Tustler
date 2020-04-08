@@ -28,6 +28,7 @@ module public TaskArguments =
         | MediaRef of MediaReference
         | FilePath of string
         | TranscriptionLanguageCode of string
+        | TranslationLanguageCode of string
         | VocabularyName of string
         | Poop of string
 

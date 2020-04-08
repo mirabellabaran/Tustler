@@ -2,12 +2,12 @@
 
 namespace TustlerModels
 {
-    public class TranscriptionLanguageCodesViewModel
+    public class TranscriptionLanguageCodesViewModel : LanguageCodesViewModel
     {
-        public ObservableCollection<LanguageCode> LanguageCodes
+        public override ObservableCollection<LanguageCode> LanguageCodes
         {
             get;
-            private set;
+            set;
         }
 
         public TranscriptionLanguageCodesViewModel()

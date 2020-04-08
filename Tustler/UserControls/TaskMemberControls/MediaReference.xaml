@@ -3,16 +3,43 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:Tustler.UserControls.TaskMemberControls"
+             xmlns:local="clr-namespace:Tustler.Models"
+             xmlns:model="clr-namespace:TustlerModels;assembly=TustlerModels"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
+    <UserControl.Resources>
+        <local:MediaFilteredBucketItemViewModel x:Key="audioBucketItemsInstance"/>
+
+        <DataTemplate DataType="{x:Type model:Bucket}">
+            <TextBlock Text="{Binding Path=Name}" HorizontalAlignment="Stretch" />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type model:BucketItem}">
+            <TextBlock Text="{Binding Path=Key}" HorizontalAlignment="Stretch" />
+        </DataTemplate>
+
+        <Style x:Key="textBlockStyles" TargetType="TextBlock">
+            <Setter Property="TextAlignment" Value="Left" />
+            <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="5, 0, 0, 0" />
+        </Style>
+    </UserControl.Resources>
+    
     <Border BorderThickness="10">
-        <StackPanel Orientation="Vertical">
-            <TextBlock Text="tator" />
-            <TextBlock Text="TranscribeAudio1" />
-            <TextBlock Text="audio/wav" />
-            <TextBlock Text="wav" />
-            <Button Content="Update" Click="Button_Click" />
-        </StackPanel>
+        <DockPanel>
+            <TextBlock Text="Audio file location:" DockPanel.Dock="Top" VerticalAlignment="Bottom" Style="{StaticResource textBlockStyles}" />
+            <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="5" Grid.Row="4" Grid.Column="0" Grid.RowSpan="3" Grid.ColumnSpan="2">
+                <DockPanel LastChildFill="True">
+                    <DockPanel DockPanel.Dock="Left" Width="200" Margin="0,0,5,0">
+                        <TextBlock Text="Bucket:" Margin="0,0,0,2" DockPanel.Dock="Top" Style="{StaticResource TextBlockDark}" />
+                        <ListBox x:Name="lbBuckets" SelectionMode="Single" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" ItemsSource="{Binding Source={StaticResource bucketsInstance}, Path=Buckets}" SelectionChanged="BucketsListBox_SelectionChanged" Style="{StaticResource ListBoxDark}" />
+                    </DockPanel>
+                    <DockPanel>
+                        <TextBlock Text="Media Items:" Margin="0,0,0,2" DockPanel.Dock="Top" Style="{StaticResource TextBlockDark}" />
+                        <ListBox x:Name="lbBucketItems" Height="80" SelectionMode="Single" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" ItemsSource="{Binding Source={StaticResource audioBucketItemsInstance}, Path=BucketItems}" SelectionChanged="BucketItemsListBox_SelectionChanged" Style="{StaticResource ListBoxDark}" />
+                    </DockPanel>
+                </DockPanel>
+            </Border>
+        </DockPanel>
     </Border>
 </UserControl>
