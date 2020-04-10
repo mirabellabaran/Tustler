@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media.Animation;
 using Tustler.Models;
 using TustlerFSharpPlatform;
 using TustlerModels;
@@ -21,6 +22,9 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class TasksManager : UserControl
     {
+        private Storyboard hideGridStoryboard;
+        private double gridActualHeight;
+
         public static readonly DependencyProperty TaskNameProperty = DependencyProperty.Register("TaskName", typeof(string), typeof(TasksManager), new PropertyMetadata("", PropertyChangedCallback));
 
         private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
@@ -73,27 +77,28 @@ namespace Tustler.UserControls
             var notifications = this.FindResource("applicationNotifications") as NotificationsList;
             notifications.ShowMessage("Parameter set", $"Task name set to {TaskName}");
 
-            var requiredMembersOption = this.TaskArguments.GetRequiredMembers();
+            grdMembers.RowDefinitions.Clear();
+            grdMembers.ColumnDefinitions.Clear();
+
+            var requiredMembersOption = TaskArguments.GetRequiredMembers();
             if (requiredMembersOption.IsRequired)
             {
-                // add the required number of rows
-                var numMembers = requiredMembersOption.Members.Length;
-                var numRows = (numMembers / 2) + 1;
-                grdMembers.RowDefinitions.Clear();
-                for (int i = 0; i < numRows; i++)
+                // add the required number of rows and columns
+                for (int i = 0; i < requiredMembersOption.Rows; i++)
                 {
                     grdMembers.RowDefinitions.Add(new RowDefinition());
                 }
-
-                for (var i = 0; i < numMembers; i++)
+                for (int i = 0; i < requiredMembersOption.Columns; i++)
                 {
-                    var requiredMemberControlTag = requiredMembersOption.Members[i];
-                    var rowNum = i / 2;
-                    var colNum = (i % 2) == 0 ? 0 : 1;
+                    grdMembers.ColumnDefinitions.Add(new ColumnDefinition());
+                }
 
+                // instantiate the appropriate user control and set the position in the grid
+                foreach (var requiredMemberGridReference in requiredMembersOption.Members)
+                {
                     // instantiate the user control and add to grid container in read-order
                     UserControl uc;
-                    switch (requiredMemberControlTag)
+                    switch (requiredMemberGridReference.Tag)
                     {
                         case "taskName":
                             var taskNameCtrl = new TaskMemberControls.TaskName
@@ -147,8 +152,11 @@ namespace Tustler.UserControls
                             throw new ArgumentException("Unknown Task Member Control tag.");
                     }
 
-                    Grid.SetRow(uc, rowNum);
-                    Grid.SetColumn(uc, colNum);
+                    Grid.SetRow(uc, requiredMemberGridReference.RowIndex);
+                    Grid.SetColumn(uc, requiredMemberGridReference.ColumnIndex);
+                    Grid.SetRowSpan(uc, requiredMemberGridReference.RowSpan);
+                    Grid.SetColumnSpan(uc, requiredMemberGridReference.ColumnSpan);
+
                     grdMembers.Children.Add(uc);
                 }
             }
@@ -186,12 +194,52 @@ namespace Tustler.UserControls
 
         private void StartTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = !(TaskArguments is null) && TaskArguments.IsComplete();
+            e.CanExecute = true;// !(TaskArguments is null) && TaskArguments.IsComplete();
         }
 
         private async void StartTask_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            await RunTaskAsync().ConfigureAwait(true);
+            if (grdMembers.Visibility == Visibility.Collapsed)
+            {
+                btnStartTask.Content = "Start Task";
+                gridContainer.Height = gridActualHeight;
+                grdMembers.Visibility = Visibility.Visible;
+
+                // update the child layout in preparation for restoration
+                gridContainer.UpdateLayout();
+            }
+            else
+            {
+                btnStartTask.Content = "Stop Task";
+
+                gridActualHeight = gridContainer.ActualHeight;
+
+                var heightDoubleAnimation = new DoubleAnimation
+                {
+                    From = gridActualHeight,
+                    To = 0.0,
+                    Duration = new Duration(TimeSpan.FromSeconds(0.3)),
+                    FillBehavior = FillBehavior.Stop
+                };
+
+                hideGridStoryboard = new Storyboard();
+                hideGridStoryboard.Children.Add(heightDoubleAnimation);
+                Storyboard.SetTargetName(heightDoubleAnimation, gridContainer.Name);
+                Storyboard.SetTargetProperty(heightDoubleAnimation, new PropertyPath(StackPanel.HeightProperty));
+                hideGridStoryboard.Completed += HideGridStoryboard_Completed;
+
+                hideGridStoryboard.Begin(this);
+
+                //var hideGridStoryboard = this.FindResource("hideGridStoryboard") as Storyboard;
+                //hideGridStoryboard.Begin(this);
+
+                //await RunTaskAsync().ConfigureAwait(true);
+            }
+        }
+
+        private void HideGridStoryboard_Completed(object sender, EventArgs e)
+        {
+            grdMembers.Visibility = Visibility.Collapsed;
         }
 
         private void UpdateTaskArguments_CanExecute(object sender, CanExecuteRoutedEventArgs e)

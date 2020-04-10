@@ -8,11 +8,24 @@ open System.Collections.ObjectModel
 
 module public TaskArguments =
 
-    type RequiredMembersOption(members: string[]) =
+    type UIGridReference = {
+        RowIndex: int
+        ColumnIndex: int
+        RowSpan: int
+        ColumnSpan: int
+        Tag: string
+    }
+    
+    type RequiredMembersOption(rows, columns, members: UIGridReference[]) =
 
+        let mutable rows = rows
+        let mutable columns = columns
         let mutable members = members
 
-        new() = RequiredMembersOption([||])
+        new() = RequiredMembersOption(0, 0, [||])
+
+        member this.Rows with get() = rows
+        member this.Columns with get() = columns
         member this.Members with get() = members
         member this.IsRequired with get () = members.Length > 0
 
@@ -73,7 +86,14 @@ module public TaskArguments =
         interface ITaskArgumentCollection with
 
             member this.GetRequiredMembers () =
-                RequiredMembersOption( [| "taskName"; "mediaRef"; "filePath"; "transcriptionLanguageCode"; "vocabularyName" |] )
+                RequiredMembersOption(3, 2,
+                    [|
+                        { RowIndex = 0; ColumnIndex = 0; RowSpan = 1; ColumnSpan = 1; Tag = "taskName" };
+                        { RowIndex = 0; ColumnIndex = 1; RowSpan = 1; ColumnSpan = 1; Tag = "filePath" };
+                        { RowIndex = 1; ColumnIndex = 0; RowSpan = 1; ColumnSpan = 1; Tag = "transcriptionLanguageCode" };
+                        { RowIndex = 1; ColumnIndex = 1; RowSpan = 1; ColumnSpan = 1; Tag = "vocabularyName" };
+                        { RowIndex = 2; ColumnIndex = 0; RowSpan = 1; ColumnSpan = 2; Tag = "mediaRef" };
+                    |] )
 
             member this.SetValue taskMember =
                 match taskMember with

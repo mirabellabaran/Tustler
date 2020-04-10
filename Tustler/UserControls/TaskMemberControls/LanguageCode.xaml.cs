@@ -25,6 +25,17 @@ namespace Tustler.UserControls.TaskMemberControls
             InitializeComponent();
         }
 
+        private void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            // set the default item
+            cbLanguage.SelectedValue = LanguageCodesViewModel switch
+            {
+                TranscriptionLanguageCodesViewModel _ => "en-US",
+                TranslationLanguageCodesViewModel _ => "en",
+                _ => throw new ArgumentException("Language Code Task Member received an unknown language viewmodel"),
+            };
+        }
+
         #region LanguageCodesViewModel
 
         public static readonly DependencyProperty LanguageCodesViewModelProperty =
@@ -58,14 +69,6 @@ namespace Tustler.UserControls.TaskMemberControls
             };
 
             ctrl.cbLanguage.SetBinding(ComboBox.ItemsSourceProperty, myBinding);
-
-            // set the default item
-            ctrl.cbLanguage.SelectedValue = model switch
-            {
-                TranscriptionLanguageCodesViewModel _ => "en-US",
-                TranslationLanguageCodesViewModel _ => "en",
-                _ => throw new ArgumentException("Language Code Task Member received an unknown language viewmodel"),
-            };
         }
 
         #endregion

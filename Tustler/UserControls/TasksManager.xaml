@@ -12,17 +12,33 @@
         <CommandBinding Command="{x:Static uc:TaskCommands.StartTask}" CanExecute="StartTask_CanExecute" Executed="StartTask_Executed" />
         <CommandBinding Command="{x:Static uc:TaskCommands.UpdateTaskArguments}" CanExecute="UpdateTaskArguments_CanExecute" Executed="UpdateTaskArguments_Executed" />
     </UserControl.CommandBindings>
-
-    <DockPanel  Margin="20">
-        <Grid x:Name="grdMembers" DockPanel.Dock="Top" ShowGridLines="True" Margin="10">
-            <Grid.RowDefinitions>
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition />
-                <ColumnDefinition />
-            </Grid.ColumnDefinitions>
-        </Grid>
-        <Button Content="Start Task" DockPanel.Dock="Top" Height="30" Width="100" Margin="0,5,0,0" Command="{x:Static uc:TaskCommands.StartTask}" Style="{StaticResource ButtonDark}" />
+    
+    <UserControl.Resources>
+        <!--<Storyboard x:Name="hideGridStoryboard" x:Key="hideGridStoryboard" Completed="hideGridStoryboard_Completed">
+            <DoubleAnimation
+                Storyboard.TargetName="grdMembers" 
+                Storyboard.TargetProperty="Opacity"
+                From="1.0" To="0.0" Duration="0:0:0.2" />
+            --><!--<BooleanAnimationUsingKeyFrames
+                Storyboard.TargetName="grdMembers"
+                Storyboard.TargetProperty="Opacity"
+                Duration="0:0:5">
+                <DiscreteBooleanKeyFrame Value="True" KeyTime="0:0:0" />
+                <DiscreteBooleanKeyFrame Value="False" KeyTime="0:0:5" />
+            </BooleanAnimationUsingKeyFrames>--><!--
+        </Storyboard>-->
+    </UserControl.Resources>
+    
+    <DockPanel Margin="20">
+        <StackPanel x:Name="gridContainer" DockPanel.Dock="Top">
+            <Grid x:Name="grdMembers" ShowGridLines="False" Margin="10">
+                <Grid.RowDefinitions>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                </Grid.ColumnDefinitions>
+            </Grid>
+        </StackPanel>
+        <Button x:Name="btnStartTask" Content="Start Task" DockPanel.Dock="Top" Height="30" Width="100" Margin="0,5,0,0" Command="{x:Static uc:TaskCommands.StartTask}" Style="{StaticResource ButtonDark}" />
         <ListBox x:Name="lbTaskResponses" Margin="20, 10, 20, 10" Background="{StaticResource ContrastingBackground}"></ListBox>
     </DockPanel>
 </UserControl>
