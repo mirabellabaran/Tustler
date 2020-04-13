@@ -139,6 +139,29 @@ namespace Tustler
             }
         }
 
+        private void CollapseNotifications_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = true;
+        }
+
+        private void CollapseNotifications_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            if (lbNotifications.Visibility == Visibility.Visible)
+            {
+                var data = this.FindResource("chevron_compact_down") as StreamGeometry;
+                collapseButtonPath.Data = data;
+
+                lbNotifications.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                var data = this.FindResource("chevron_compact_up") as StreamGeometry;
+                collapseButtonPath.Data = data;
+
+                lbNotifications.Visibility = Visibility.Visible;
+            }
+        }
+
         private void TreeView_DoubleClick(object sender, MouseButtonEventArgs e)
         {
             var tree = sender as TreeView;
@@ -360,6 +383,13 @@ namespace Tustler
 
     public static class MainWindowCommands
     {
+        public static readonly RoutedUICommand CollapseNotifications = new RoutedUICommand
+            (
+                "CollapseNotifications",
+                "CollapseNotifications",
+                typeof(MainWindowCommands)
+            );
+
         public static readonly RoutedUICommand Exit = new RoutedUICommand
             (
                 "Exit",

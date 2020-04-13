@@ -12,6 +12,7 @@
         Background="{StaticResource NormalBackground}">
 
     <Window.CommandBindings>
+        <CommandBinding Command="{x:Static local:MainWindowCommands.CollapseNotifications}" CanExecute="CollapseNotifications_CanExecute" Executed="CollapseNotifications_Executed" />
         <CommandBinding Command="{x:Static local:MainWindowCommands.Exit}" CanExecute="ExitCommand_CanExecute" Executed="ExitCommand_Executed" />
         <CommandBinding Command="{x:Static local:MainWindowCommands.Switch}" CanExecute="SwitchCommand_CanExecute" Executed="SwitchCommand_Executed" />
         <CommandBinding Command="{x:Static local:MainWindowCommands.ClearNotifications}" CanExecute="ClearNotifications_CanExecute" Executed="ClearNotifications_Executed" />
@@ -79,6 +80,36 @@
             </StackPanel>
         </DataTemplate>
 
+        <Style TargetType="Button" x:Key="collapseButtonStyle" BasedOn="{StaticResource ButtonDark}">
+            <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="DarkGray" BorderThickness="1,0,1,1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!--<StreamGeometry x:Key="chevron_left_knobbly">
+            M 152.29,174.464L 134.314,187.734C 129.978,190.937 127.589,195.29 127.589,199.994C 127.589,204.7 129.978,209.057 134.314,212.26L 152.29,225.531C 150.333,229.378 145.412,229.52 139.678,225.286L 118.935,209.973C 111.506,204.489 111.506,195.512 118.935,190.022L 139.678,174.708C 145.412,170.475 150.333,170.617 152.29,174.464 Z
+        </StreamGeometry>-->
+
+        <StreamGeometry x:Key="chevron_compact_up">
+            M7.776 5.553a.5.5 0 01.448 0l6 3a.5.5 0 11-.448.894L8 6.56 2.224 9.447a.5.5 0 11-.448-.894l6-3z
+        </StreamGeometry>
+
+        <StreamGeometry x:Key="chevron_compact_down">
+            M1.553 6.776a.5.5 0 01.67-.223L8 9.44l5.776-2.888a.5.5 0 11.448.894l-6 3a.5.5 0 01-.448 0l-6-3a.5.5 0 01-.223-.67z
+        </StreamGeometry>
+        
     </Window.Resources>
         
     <DockPanel>
@@ -112,14 +143,23 @@
             </DockPanel>
             <DockPanel>
                 <Border DockPanel.Dock="Top" Padding="20,20,20,0">
-                    <ListBox x:Name="lbNotifications" Height="90" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemsSource="{Binding Source={StaticResource applicationNotifications}, Path=Notifications}" Style="{StaticResource ListBoxDark}">
-                        <ListBox.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="Clear All" Command="{x:Static local:MainWindowCommands.ClearNotifications}" />
-                                <MenuItem Header="Copy Selected" Command="{x:Static local:MainWindowCommands.CopyNotification}" />
-                            </ContextMenu>
-                        </ListBox.ContextMenu>
-                    </ListBox>
+                    <StackPanel>
+                        <ListBox x:Name="lbNotifications" Visibility="Visible" Height="90" DockPanel.Dock="Top" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemsSource="{Binding Source={StaticResource applicationNotifications}, Path=Notifications}" Style="{StaticResource ListBoxDark}">
+                            <ListBox.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Clear All" Command="{x:Static local:MainWindowCommands.ClearNotifications}" />
+                                    <MenuItem Header="Copy Selected" Command="{x:Static local:MainWindowCommands.CopyNotification}" />
+                                </ContextMenu>
+                            </ListBox.ContextMenu>
+                        </ListBox>
+                        <Button DockPanel.Dock="Bottom" Height="10" Command="{x:Static local:MainWindowCommands.CollapseNotifications}" Style="{StaticResource collapseButtonStyle}">
+                            <Viewbox>
+                                <Grid Margin="1">
+                                    <Path x:Name="collapseButtonPath" Stretch="Fill" Fill="{StaticResource ContrastingBackground}" Data="{StaticResource chevron_compact_up}" />
+                                </Grid>
+                            </Viewbox>
+                        </Button>
+                    </StackPanel>
                 </Border>
                 <DockPanel x:Name="panControlsContainer">
                     <!--UserControl here-->
