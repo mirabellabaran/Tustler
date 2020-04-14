@@ -199,47 +199,7 @@ namespace Tustler.UserControls
 
         private async void StartTask_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            if (grdMembers.Visibility == Visibility.Collapsed)
-            {
-                btnStartTask.Content = "Start Task";
-                gridContainer.Height = gridActualHeight;
-                grdMembers.Visibility = Visibility.Visible;
-
-                // update the child layout in preparation for restoration
-                gridContainer.UpdateLayout();
-            }
-            else
-            {
-                btnStartTask.Content = "Stop Task";
-
-                gridActualHeight = gridContainer.ActualHeight;
-
-                var heightDoubleAnimation = new DoubleAnimation
-                {
-                    From = gridActualHeight,
-                    To = 0.0,
-                    Duration = new Duration(TimeSpan.FromSeconds(0.3)),
-                    FillBehavior = FillBehavior.Stop
-                };
-
-                hideGridStoryboard = new Storyboard();
-                hideGridStoryboard.Children.Add(heightDoubleAnimation);
-                Storyboard.SetTargetName(heightDoubleAnimation, gridContainer.Name);
-                Storyboard.SetTargetProperty(heightDoubleAnimation, new PropertyPath(StackPanel.HeightProperty));
-                hideGridStoryboard.Completed += HideGridStoryboard_Completed;
-
-                hideGridStoryboard.Begin(this);
-
-                //var hideGridStoryboard = this.FindResource("hideGridStoryboard") as Storyboard;
-                //hideGridStoryboard.Begin(this);
-
                 //await RunTaskAsync().ConfigureAwait(true);
-            }
-        }
-
-        private void HideGridStoryboard_Completed(object sender, EventArgs e)
-        {
-            grdMembers.Visibility = Visibility.Collapsed;
         }
 
         private void UpdateTaskArguments_CanExecute(object sender, CanExecuteRoutedEventArgs e)

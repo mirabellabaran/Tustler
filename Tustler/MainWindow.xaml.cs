@@ -13,6 +13,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using Tustler.Models;
@@ -28,9 +29,13 @@ namespace Tustler
     /// </summary>
     public partial class MainWindow : Window
     {
+        private bool isCollapsed;  // true if the notifications area is in a collapsed state
+
         public MainWindow()
         {
             InitializeComponent();
+
+            isCollapsed = false;
         }
 
         #region Event Handlers
@@ -93,6 +98,19 @@ namespace Tustler
             Application.Current.Shutdown();
         }
 
+        private void AboutCommand_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = true;
+        }
+
+        private void AboutCommand_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            About aboutDialog = new About();
+            aboutDialog.Owner = this;
+
+            aboutDialog.ShowDialog();
+        }
+
         private void SwitchCommand_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
             e.CanExecute = (tvActions?.SelectedItem != null);
@@ -146,20 +164,38 @@ namespace Tustler
 
         private void CollapseNotifications_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            if (lbNotifications.Visibility == Visibility.Visible)
-            {
-                var data = this.FindResource("chevron_compact_down") as StreamGeometry;
-                collapseButtonPath.Data = data;
+            var notificationsStoryboard = this.FindResource("notificationsStoryboard") as Storyboard;
+            var doubleAnimation = notificationsStoryboard.Children[0] as DoubleAnimation;
 
-                lbNotifications.Visibility = Visibility.Collapsed;
+            if (isCollapsed)
+            {
+                doubleAnimation.From = 0.0;
+                doubleAnimation.To = 90.0;
+                lbNotifications.Visibility = Visibility.Visible;    // make visible for the animation
             }
             else
             {
-                var data = this.FindResource("chevron_compact_up") as StreamGeometry;
-                collapseButtonPath.Data = data;
-
-                lbNotifications.Visibility = Visibility.Visible;
+                // collapsing
+                doubleAnimation.From = 90.0;
+                doubleAnimation.To = 0.0;
             }
+
+            notificationsStoryboard.Begin(this);
+        }
+
+        private void NotificationsStoryboard_Completed(object sender, EventArgs e)
+        {
+            var (vis, chevronTag) = isCollapsed switch
+            {
+                false => (Visibility.Collapsed, "chevron_compact_down"),
+                true => (Visibility.Visible, "chevron_compact_up"),
+            };
+
+            isCollapsed = !isCollapsed;
+
+            var data = this.FindResource(chevronTag) as StreamGeometry;
+            collapseButtonPath.Data = data;
+            lbNotifications.Visibility = vis;
         }
 
         private void TreeView_DoubleClick(object sender, MouseButtonEventArgs e)
@@ -399,6 +435,13 @@ namespace Tustler
                 {
                     new KeyGesture(Key.F4, ModifierKeys.Alt)
                 }
+            );
+
+        public static readonly RoutedUICommand About = new RoutedUICommand
+            (
+                "About",
+                "About",
+                typeof(MainWindowCommands)
             );
 
         public static readonly RoutedCommand Switch = new RoutedCommand

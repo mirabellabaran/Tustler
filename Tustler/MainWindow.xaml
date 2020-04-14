@@ -14,6 +14,7 @@
     <Window.CommandBindings>
         <CommandBinding Command="{x:Static local:MainWindowCommands.CollapseNotifications}" CanExecute="CollapseNotifications_CanExecute" Executed="CollapseNotifications_Executed" />
         <CommandBinding Command="{x:Static local:MainWindowCommands.Exit}" CanExecute="ExitCommand_CanExecute" Executed="ExitCommand_Executed" />
+        <CommandBinding Command="{x:Static local:MainWindowCommands.About}" CanExecute="AboutCommand_CanExecute" Executed="AboutCommand_Executed" />
         <CommandBinding Command="{x:Static local:MainWindowCommands.Switch}" CanExecute="SwitchCommand_CanExecute" Executed="SwitchCommand_Executed" />
         <CommandBinding Command="{x:Static local:MainWindowCommands.ClearNotifications}" CanExecute="ClearNotifications_CanExecute" Executed="ClearNotifications_Executed" />
         <CommandBinding Command="{x:Static local:MainWindowCommands.CopyNotification}" CanExecute="CopyNotification_CanExecute" Executed="CopyNotification_Executed" />
@@ -21,6 +22,36 @@
     
     <Window.Resources>
         <helpers:FractionConverter x:Key="FractionConverter"/>
+
+        <StreamGeometry x:Key="notification_icon_info">
+            M0 2a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H2a2 2 0 01-2-2V2zm8.93 4.588l-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM8 5.5a1 1 0 100-2 1 1 0 000 2z
+        </StreamGeometry>
+
+        <GeometryGroup x:Key="notification_icon_error" FillRule="EvenOdd">
+            <StreamGeometry>
+                M8 15A6 6 0 108 3a6 6 0 000 12zm0 1A7 7 0 108 2a7 7 0 000 14z
+            </StreamGeometry>
+            <StreamGeometry>
+                M8 4.5a.5.5 0 01.5.5v4a.5.5 0 01-.053.224l-1.5 3a.5.5 0 11-.894-.448L7.5 8.882V5a.5.5 0 01.5-.5z
+            </StreamGeometry>
+            <StreamGeometry>
+                M.86 5.387A2.5 2.5 0 114.387 1.86 8.035 8.035 0 00.86 5.387zM11.613 1.86a2.5 2.5 0 113.527 3.527 8.035 8.035 0 00-3.527-3.527z
+            </StreamGeometry>
+            <StreamGeometry>
+                M11.646 14.146a.5.5 0 01.708 0l1 1a.5.5 0 01-.708.708l-1-1a.5.5 0 010-.708zm-7.292 0a.5.5 0 00-.708 0l-1 1a.5.5 0 00.708.708l1-1a.5.5 0 000-.708zM5.5.5A.5.5 0 016 0h4a.5.5 0 010 1H6a.5.5 0 01-.5-.5z
+            </StreamGeometry>
+            <StreamGeometry>
+                M7 1h2v2H7V1z
+            </StreamGeometry>
+        </GeometryGroup>
+
+        <StreamGeometry x:Key="chevron_compact_up">
+            M7.776 5.553a.5.5 0 01.448 0l6 3a.5.5 0 11-.448.894L8 6.56 2.224 9.447a.5.5 0 11-.448-.894l6-3z
+        </StreamGeometry>
+
+        <StreamGeometry x:Key="chevron_compact_down">
+            M1.553 6.776a.5.5 0 01.67-.223L8 9.44l5.776-2.888a.5.5 0 11.448.894l-6 3a.5.5 0 01-.448 0l-6-3a.5.5 0 01-.223-.67z
+        </StreamGeometry>
 
         <DataTemplate DataType="{x:Type services:ApplicationMessageInfo}">
             <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
@@ -35,6 +66,11 @@
                     </Style>
                 </Border.Resources>
                 <StackPanel Orientation="Horizontal">
+                    <Viewbox>
+                        <Grid Margin="1">
+                            <Path Stretch="Fill" Fill="AliceBlue" Data="{StaticResource notification_icon_info}" />
+                        </Grid>
+                    </Viewbox>
                     <TextBlock Text="{Binding Path=Message}" VerticalAlignment="Center" Style="{StaticResource textBlockHeaderStyles}" />
                     <TextBlock Text="{Binding Path=Detail}" VerticalAlignment="Center" Style="{StaticResource textBlockStyles}" />
                     <TextBlock Text="{Binding Path=Timestamp}" VerticalAlignment="Center" Style="{StaticResource textBlockStyles}" />
@@ -69,7 +105,14 @@
 
                 </StackPanel.Resources>
                 <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
-                    <TextBlock Text="{Binding Path=Message}" VerticalAlignment="Center" Style="{StaticResource textBlockHeaderStyles}" />
+                    <StackPanel Orientation="Horizontal">
+                        <Viewbox>
+                            <Grid Margin="1">
+                                <Path Stretch="Fill" Fill="AliceBlue" Data="{StaticResource notification_icon_error}" />
+                            </Grid>
+                        </Viewbox>
+                        <TextBlock Text="{Binding Path=Message}" VerticalAlignment="Center" Style="{StaticResource textBlockHeaderStyles}" />
+                    </StackPanel>
                 </Border>
                 <Border BorderBrush="DarkGray" BorderThickness="2" Width="{Binding Converter={StaticResource FractionConverter}, ConverterParameter=0.4, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type ScrollContentPresenter}}, Path=ActualWidth}" Padding="5" Margin="2" Visibility="{Binding ElementName=showHide, Path=IsChecked, Converter={StaticResource boolConverter}}">
                     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
@@ -98,18 +141,14 @@
             </Style.Triggers>
         </Style>
 
-        <!--<StreamGeometry x:Key="chevron_left_knobbly">
-            M 152.29,174.464L 134.314,187.734C 129.978,190.937 127.589,195.29 127.589,199.994C 127.589,204.7 129.978,209.057 134.314,212.26L 152.29,225.531C 150.333,229.378 145.412,229.52 139.678,225.286L 118.935,209.973C 111.506,204.489 111.506,195.512 118.935,190.022L 139.678,174.708C 145.412,170.475 150.333,170.617 152.29,174.464 Z
-        </StreamGeometry>-->
+        <Storyboard x:Key="notificationsStoryboard" Completed="NotificationsStoryboard_Completed">
+            <DoubleAnimation
+                Storyboard.TargetName="lbNotifications" 
+                Storyboard.TargetProperty="Height"
+                FillBehavior="Stop"
+                From="90.0" To="0.0" Duration="0:0:0.3" />
+        </Storyboard>
 
-        <StreamGeometry x:Key="chevron_compact_up">
-            M7.776 5.553a.5.5 0 01.448 0l6 3a.5.5 0 11-.448.894L8 6.56 2.224 9.447a.5.5 0 11-.448-.894l6-3z
-        </StreamGeometry>
-
-        <StreamGeometry x:Key="chevron_compact_down">
-            M1.553 6.776a.5.5 0 01.67-.223L8 9.44l5.776-2.888a.5.5 0 11.448.894l-6 3a.5.5 0 01-.448 0l-6-3a.5.5 0 01-.223-.67z
-        </StreamGeometry>
-        
     </Window.Resources>
         
     <DockPanel>
@@ -118,17 +157,12 @@
         </StatusBar>
         <DockPanel x:Name="panContent" DockPanel.Dock="Top">
             <DockPanel x:Name="panTree" DockPanel.Dock="Left" Width="200">
-                <DockPanel.Resources>
-                    <!--<HierarchicalDataTemplate DataType = "{x:Type local:TreeViewData}" ItemsSource = "{Binding Path=ChildItemDataCollection}">
-                        <TextBlock Text="{Binding Path=Name}"/>
-                    </HierarchicalDataTemplate>-->
-                    <!--<HierarchicalDataTemplate DataType = "{x:Type local:TreeViewItemData}" ItemsSource = "{Binding Path=ChildItemDataCollection}">
-                        <TreeViewItem Header="{Binding Path=Name}" Tag="{Binding Path=Tag}"/>
-                    </HierarchicalDataTemplate>-->
-                </DockPanel.Resources>
 
                 <Menu x:Name="menuTasks" DockPanel.Dock="Top" Margin="10,10,10,10" MenuItem.Click="MenuItem_Click" MenuItem.SubmenuOpened="MenuItem_SubmenuOpenedAsync">
                     <MenuItem Header="Application">
+                        <MenuItem Header="Help">
+                            <MenuItem Command="{x:Static local:MainWindowCommands.About}" />
+                        </MenuItem>
                         <MenuItem Command="{x:Static local:MainWindowCommands.Exit}" />
                     </MenuItem>
                     <MenuItem Header="Edit" Loaded="Window_Loaded">
@@ -138,7 +172,6 @@
                     </MenuItem>
                 </Menu>
 
-                <!--<Button Content="Select Action" Width="50" Height="20" Command="{x:Static local:MainWindowCommands.Switch}" CommandTarget="{Binding ElementName=tvActions}" />-->
                 <TreeView x:Name="tvActions" DockPanel.Dock="Top" Margin="10" TreeViewItem.Expanded="TreeViewItem_Expanded" MouseDoubleClick="TreeView_DoubleClick" />
             </DockPanel>
             <DockPanel>
@@ -152,7 +185,7 @@
                                 </ContextMenu>
                             </ListBox.ContextMenu>
                         </ListBox>
-                        <Button DockPanel.Dock="Bottom" Height="10" Command="{x:Static local:MainWindowCommands.CollapseNotifications}" Style="{StaticResource collapseButtonStyle}">
+                        <Button DockPanel.Dock="Bottom" Height="10" Focusable="False" Command="{x:Static local:MainWindowCommands.CollapseNotifications}" Style="{StaticResource collapseButtonStyle}">
                             <Viewbox>
                                 <Grid Margin="1">
                                     <Path x:Name="collapseButtonPath" Stretch="Fill" Fill="{StaticResource ContrastingBackground}" Data="{StaticResource chevron_compact_up}" />

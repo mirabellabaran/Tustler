@@ -12,23 +12,7 @@
         <CommandBinding Command="{x:Static uc:TaskCommands.StartTask}" CanExecute="StartTask_CanExecute" Executed="StartTask_Executed" />
         <CommandBinding Command="{x:Static uc:TaskCommands.UpdateTaskArguments}" CanExecute="UpdateTaskArguments_CanExecute" Executed="UpdateTaskArguments_Executed" />
     </UserControl.CommandBindings>
-    
-    <UserControl.Resources>
-        <!--<Storyboard x:Name="hideGridStoryboard" x:Key="hideGridStoryboard" Completed="hideGridStoryboard_Completed">
-            <DoubleAnimation
-                Storyboard.TargetName="grdMembers" 
-                Storyboard.TargetProperty="Opacity"
-                From="1.0" To="0.0" Duration="0:0:0.2" />
-            --><!--<BooleanAnimationUsingKeyFrames
-                Storyboard.TargetName="grdMembers"
-                Storyboard.TargetProperty="Opacity"
-                Duration="0:0:5">
-                <DiscreteBooleanKeyFrame Value="True" KeyTime="0:0:0" />
-                <DiscreteBooleanKeyFrame Value="False" KeyTime="0:0:5" />
-            </BooleanAnimationUsingKeyFrames>--><!--
-        </Storyboard>-->
-    </UserControl.Resources>
-    
+        
     <DockPanel Margin="20">
         <StackPanel x:Name="gridContainer" DockPanel.Dock="Top">
             <Grid x:Name="grdMembers" ShowGridLines="False" Margin="10">

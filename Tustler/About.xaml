@@ -1,0 +1,30 @@
+﻿<Window x:Class="Tustler.About"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Tustler"
+        mc:Ignorable="d"
+        Title="About" Height="300" Width="300" WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
+        AllowsTransparency="True" Background="Transparent" WindowStartupLocation="CenterScreen">
+    <Border BorderBrush="Red"
+              BorderThickness="5"
+              CornerRadius="10"
+              Background="Transparent">
+        <Border BorderBrush="Transparent"
+              CornerRadius="10"
+              BorderThickness="4">
+            <Border BorderBrush="Red"
+                BorderThickness="5"
+                CornerRadius="10" Background="{StaticResource ContrastingBackground}">
+                <StackPanel VerticalAlignment="Bottom" Margin="10">
+                    <TextBlock Text="Acknowledgements"  FontWeight="Bold" FontSize="18" />
+                    <TextBlock />
+                    <TextBlock Text="Icons by Bootstrap (https://icons.getbootstrap.com/)" />
+                    <TextBlock />
+                    <Button Style="{StaticResource ButtonDark}" Width="100" Height="30" IsDefault="True" Click="Button_Click">Close</Button>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Border>
+</Window>
