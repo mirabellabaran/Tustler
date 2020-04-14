@@ -13,6 +13,8 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Tustler.Models;
+using TustlerAWSLib;
+using TustlerInterfaces;
 using TustlerModels;
 using TustlerServicesLib;
 
@@ -23,12 +25,14 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class TranscribeFunctionTranscriptionTasks : UserControl
     {
+        private readonly IAmazonWebInterfaceS3 s3Interface;
         private readonly NotificationsList notifications;
 
         public TranscribeFunctionTranscriptionTasks()
         {
             InitializeComponent();
 
+            s3Interface = new S3();
             notifications = this.FindResource("applicationNotifications") as NotificationsList;
         }
 
@@ -40,7 +44,7 @@ namespace Tustler.UserControls
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                await bucketViewModel.Refresh(false, notifications).ConfigureAwait(true);
+                await bucketViewModel.Refresh(s3Interface, false, notifications).ConfigureAwait(true);
             }
             finally
             {
@@ -165,7 +169,7 @@ namespace Tustler.UserControls
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                await bucketItemsInstance.Refresh(notifications, selectedBucket.Name).ConfigureAwait(true);
+                await bucketItemsInstance.Refresh(s3Interface, notifications, selectedBucket.Name).ConfigureAwait(true);
                 audioBucketItemsInstance.Select(bucketItemsInstance, BucketItemMediaType.Audio);
             }
             finally

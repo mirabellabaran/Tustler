@@ -11,7 +11,9 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Tustler.Models;
+using TustlerAWSLib;
 using TustlerFSharpPlatform;
+using TustlerInterfaces;
 using TustlerModels;
 using TustlerServicesLib;
 using static TustlerFSharpPlatform.TaskArguments;
@@ -29,12 +31,14 @@ namespace Tustler.UserControls.TaskMemberControls
                 typeof(BucketItemMediaType),
                 typeof(MediaReference));
 
+        private readonly IAmazonWebInterfaceS3 s3Interface;
         private readonly NotificationsList notifications;
 
         public MediaReference()
         {
             InitializeComponent();
 
+            s3Interface = new S3();
             notifications = this.FindResource("applicationNotifications") as NotificationsList;
         }
 
@@ -58,7 +62,7 @@ namespace Tustler.UserControls.TaskMemberControls
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                await bucketViewModel.Refresh(false, notifications).ConfigureAwait(true);
+                await bucketViewModel.Refresh(s3Interface, false, notifications).ConfigureAwait(true);
             }
             finally
             {
@@ -162,10 +166,7 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             get
             {
-                var bucket = lbBuckets.SelectedItem as Bucket;
-                var bucketItem = lbBucketItems.SelectedItem as BucketItem;
-
-                if (bucket is null || bucketItem is null)
+                if (!(lbBuckets.SelectedItem is Bucket bucket) || !(lbBucketItems.SelectedItem is BucketItem bucketItem))
                 {
                     return null;
                 }
@@ -191,7 +192,7 @@ namespace Tustler.UserControls.TaskMemberControls
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                await bucketItemsInstance.Refresh(notifications, selectedBucket.Name).ConfigureAwait(true);
+                await bucketItemsInstance.Refresh(s3Interface, notifications, selectedBucket.Name).ConfigureAwait(true);
                 audioBucketItemsInstance.Select(bucketItemsInstance, MediaType);
             }
             finally

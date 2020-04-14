@@ -13,13 +13,13 @@ namespace TustlerAWSLib
 {
     // AmazonS3Exception
 
-    public class S3
+    public class S3 : IAmazonWebInterfaceS3
     {
         /// <summary>
         /// Get a list of all buckets and their creation times
         /// </summary>
         /// <returns></returns>
-        public async static Task<AWSResult<List<S3Bucket>>> ListBuckets()
+        public async Task<AWSResult<List<S3Bucket>>> ListBuckets()
         {
             try
             {
@@ -48,7 +48,7 @@ namespace TustlerAWSLib
         /// </summary>
         /// <param name="bucketName">The name of the bucket to fetch items from</param>
         /// <returns></returns>
-        public async static Task<AWSResult<List<S3Object>>> ListBucketItems(string bucketName)
+        public async Task<AWSResult<List<S3Object>>> ListBucketItems(string bucketName)
         {
             try
             {
@@ -98,7 +98,7 @@ namespace TustlerAWSLib
             }
         }
 
-        public async static Task<AWSResult<MetadataCollection>> GetItemMetadata(string bucketName, string key)
+        public async Task<AWSResult<MetadataCollection>> GetItemMetadata(string bucketName, string key)
         {
             try
             {
@@ -123,7 +123,7 @@ namespace TustlerAWSLib
             }
         }
 
-        public async static Task<AWSResult<bool?>> DeleteBucketItem(string bucketName, string key)
+        public async Task<AWSResult<bool?>> DeleteBucketItem(string bucketName, string key)
         {
             try
             {
@@ -168,7 +168,7 @@ namespace TustlerAWSLib
         /// <param name="mimetype">The mimetype of the file (may be null)</param>
         /// <param name="extension">The file extension of the file (may be null)</param>
         /// <returns></returns>
-        public async static Task<AWSResult<bool?>> UploadItem(string bucketName, string newKey, string filePath, string mimetype, string extension)
+        public async Task<AWSResult<bool?>> UploadItem(string bucketName, string newKey, string filePath, string mimetype, string extension)
         {
             try
             {
@@ -210,7 +210,7 @@ namespace TustlerAWSLib
             }
         }
 
-        public async static Task<AWSResult<bool?>> DownloadItem(string bucketName, string key, string filePath)
+        public async Task<AWSResult<bool?>> DownloadItem(string bucketName, string key, string filePath)
         {
             try
             {

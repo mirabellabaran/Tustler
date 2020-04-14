@@ -20,6 +20,7 @@
                 <StackPanel VerticalAlignment="Bottom" Margin="10">
                     <TextBlock Text="Acknowledgements"  FontWeight="Bold" FontSize="18" />
                     <TextBlock />
+                    <TextBlock Text="Thanks to Helen for inspiring this project." />
                     <TextBlock Text="Icons by Bootstrap (https://icons.getbootstrap.com/)" />
                     <TextBlock />
                     <Button Style="{StaticResource ButtonDark}" Width="100" Height="30" IsDefault="True" Click="Button_Click">Close</Button>

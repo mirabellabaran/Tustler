@@ -9,7 +9,9 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 using Tustler.Models;
+using TustlerAWSLib;
 using TustlerFSharpPlatform;
+using TustlerInterfaces;
 using TustlerModels;
 using TustlerServicesLib;
 using static TustlerFSharpPlatform.TaskArguments;
@@ -22,8 +24,7 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class TasksManager : UserControl
     {
-        private Storyboard hideGridStoryboard;
-        private double gridActualHeight;
+        private readonly IAmazonWebInterfaceS3 s3Interface;
 
         public static readonly DependencyProperty TaskNameProperty = DependencyProperty.Register("TaskName", typeof(string), typeof(TasksManager), new PropertyMetadata("", PropertyChangedCallback));
 
@@ -37,11 +38,11 @@ namespace Tustler.UserControls
                     switch (taskName)
                     {
                         case "S3FetchItems":
-                            ctrl.TaskArguments = new TaskArguments.NotificationsOnlyArguments(new NotificationsList());
+                            ctrl.TaskArguments = new TaskArguments.NotificationsOnlyArguments(ctrl.s3Interface, new NotificationsList());
                             ctrl.TaskFunction = AWSTasks.S3FetchItems;
                             break;
                         case "TranscribeAudio":
-                            ctrl.TaskArguments = new TaskArguments.TranscribeAudioArguments(new NotificationsList());
+                            ctrl.TaskArguments = new TaskArguments.TranscribeAudioArguments(ctrl.s3Interface, new NotificationsList());
                             ctrl.TaskFunction = AWSTasks.TranscribeAudio;
                             break;
                     }
@@ -70,6 +71,8 @@ namespace Tustler.UserControls
         public TasksManager()
         {
             InitializeComponent();
+
+            s3Interface = new S3();
         }
 
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
@@ -209,8 +212,7 @@ namespace Tustler.UserControls
 
         private void UpdateTaskArguments_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var data = e.Parameter as TaskArgumentMember;
-            if (!(data is null))
+            if (e.Parameter is TaskArgumentMember data)
                 this.TaskArguments.SetValue(data);
         }
 

@@ -6,6 +6,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Tustler.Models;
+using TustlerAWSLib;
+using TustlerInterfaces;
 using TustlerModels;
 using TustlerModels.Services;
 using TustlerServicesLib;
@@ -19,12 +21,14 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class S3Management : UserControl
     {
+        private readonly IAmazonWebInterfaceS3 s3Interface;
         private readonly NotificationsList notifications;
 
         public S3Management()
         {
             InitializeComponent();
 
+            s3Interface = new S3();
             notifications = this.FindResource("applicationNotifications") as NotificationsList;
         }
 
@@ -47,7 +51,7 @@ namespace Tustler.UserControls
                 Mouse.OverrideCursor = Cursors.Wait;
 
                 //await Dispatcher.InvokeAsync<Task>(() => bucketViewModel.Refresh(notifications));
-                await bucketViewModel.Refresh(forceRefresh, notifications).ConfigureAwait(true);
+                await bucketViewModel.Refresh(s3Interface, forceRefresh, notifications).ConfigureAwait(true);
             }
             finally
             {
@@ -69,7 +73,7 @@ namespace Tustler.UserControls
                     Mouse.OverrideCursor = Cursors.Wait;
 
                     // refresh and then enable the headers
-                    await bucketItemsInstance.Refresh(notifications, selectedBucket.Name)
+                    await bucketItemsInstance.Refresh(s3Interface, notifications, selectedBucket.Name)
                     .ContinueWith(task => dgBucketItems.HeadersVisibility = DataGridHeadersVisibility.All, TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
                 }
                 finally
@@ -145,12 +149,12 @@ namespace Tustler.UserControls
                         var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewSourceModel;
                         var bucketName = bucketItemsInstance.CurrentBucketName;
 
-                        var deleteResult = await S3Services.DeleteItem(bucketName, key).ConfigureAwait(true);
+                        var deleteResult = await S3Services.DeleteItem(s3Interface, bucketName, key).ConfigureAwait(true);
 
                         var success = S3Services.ProcessDeleteBucketItemResult(notifications, deleteResult, key);
                         if (success)
                         {
-                            await bucketItemsInstance.RefreshAsync(notifications).ConfigureAwait(true);
+                            await bucketItemsInstance.RefreshAsync(s3Interface, notifications).ConfigureAwait(true);
                         }
                     }
                     finally
@@ -231,10 +235,10 @@ namespace Tustler.UserControls
                 {
                     Mouse.OverrideCursor = Cursors.Wait;
                     var newKey = Path.GetFileName(path);    // use the filename as the new S3 key
-                    var uploadResult = await S3Services.UploadItem(bucketName, newKey, path, mimetype, extension).ConfigureAwait(true);
+                    var uploadResult = await S3Services.UploadItem(s3Interface, bucketName, newKey, path, mimetype, extension).ConfigureAwait(true);
                     S3Services.ProcessUploadItemResult(notifications, uploadResult);
 
-                    await bucketItemsInstance.RefreshAsync(notifications).ConfigureAwait(true);
+                    await bucketItemsInstance.RefreshAsync(s3Interface, notifications).ConfigureAwait(true);
                 }
                 finally
                 {
@@ -283,7 +287,7 @@ namespace Tustler.UserControls
                 {
                     Mouse.OverrideCursor = Cursors.Wait;
 
-                    var downloadResult = await S3Services.DownloadItem(bucketName, key, filePath).ConfigureAwait(true);
+                    var downloadResult = await S3Services.DownloadItem(s3Interface, bucketName, key, filePath).ConfigureAwait(true);
                     S3Services.ProcessDownloadItemResult(notifications, downloadResult);
                 }
                 finally
@@ -307,7 +311,7 @@ namespace Tustler.UserControls
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                await bucketItemsInstance.RefreshAsync(notifications).ConfigureAwait(true);
+                await bucketItemsInstance.RefreshAsync(s3Interface, notifications).ConfigureAwait(true);
             }
             finally
             {

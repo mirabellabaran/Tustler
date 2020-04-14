@@ -13,35 +13,35 @@ module public AWSInterface =
 
     module S3 =
 
-        let getBuckets notifications =
+        let getBuckets s3Interface notifications =
             async {
                 let model = BucketViewModel()
-                do! model.Refresh (true, notifications) |> Async.AwaitTask
+                do! model.Refresh (s3Interface, true, notifications) |> Async.AwaitTask
                 return model.Buckets
             }
 
-        let getBucketItems notifications bucketName =
+        let getBucketItems s3Interface notifications bucketName =
             async {
                 let model = BucketItemViewModel()
-                do! model.Refresh(notifications, bucketName) |> Async.AwaitTask
+                do! model.Refresh(s3Interface, notifications, bucketName) |> Async.AwaitTask
                 return model.BucketItems
             }
 
-        let deleteBucketItem notifications bucketName key =
+        let deleteBucketItem s3Interface notifications bucketName key =
             async {
-                let awsResult = S3Services.DeleteItem(bucketName, key) |> Async.AwaitTask |> Async.RunSynchronously
+                let awsResult = S3Services.DeleteItem(s3Interface, bucketName, key) |> Async.AwaitTask |> Async.RunSynchronously
                 return S3Services.ProcessDeleteBucketItemResult(notifications, awsResult, key)
             }
 
-        let uploadBucketItem notifications bucketName newKey filePath mimeType extension =
+        let uploadBucketItem s3Interface notifications bucketName newKey filePath mimeType extension =
             async {
-                let awsResult = S3Services.UploadItem(bucketName, newKey, filePath, mimeType, extension) |> Async.AwaitTask |> Async.RunSynchronously
+                let awsResult = S3Services.UploadItem(s3Interface, bucketName, newKey, filePath, mimeType, extension) |> Async.AwaitTask |> Async.RunSynchronously
                 return S3Services.ProcessUploadItemResult(notifications, awsResult)
             }
 
-        let downloadBucketItem notifications bucketName key filePath =
+        let downloadBucketItem s3Interface notifications bucketName key filePath =
             async {
-                let awsResult = S3Services.DownloadItem(bucketName, key, filePath) |> Async.AwaitTask |> Async.RunSynchronously
+                let awsResult = S3Services.DownloadItem(s3Interface, bucketName, key, filePath) |> Async.AwaitTask |> Async.RunSynchronously
                 return S3Services.ProcessDownloadItemResult(notifications, awsResult)
             }
 

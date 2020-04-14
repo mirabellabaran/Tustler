@@ -53,9 +53,9 @@ namespace Tustler.Models
             }
         }
 
-        public async Task Refresh(NotificationsList notifications, string bucketName)
+        public async Task Refresh(IAmazonWebInterfaceS3 s3Interface, NotificationsList notifications, string bucketName)
         {
-            await base.Refresh(notifications, bucketName).ConfigureAwait(true);
+            await base.Refresh(s3Interface, notifications, bucketName).ConfigureAwait(true);
 
             this.FilteredMediaType = BucketItemMediaType.All;
         }

@@ -6,6 +6,7 @@ open AWSInterface
 open TaskArguments
 open TustlerModels
 open System.Collections.ObjectModel
+open TustlerInterfaces
 
 [<RequireQualifiedAccess>]
 type TaskResponse =
@@ -18,8 +19,8 @@ type TaskResponse =
     
 [<RequireQualifiedAccess>]
 type TaskFunction =
-    | GetBuckets of (NotificationsList -> Async<ObservableCollection<Bucket>>)
-    | GetBucketItems of (NotificationsList -> string -> Async<BucketItemsCollection>)
+    | GetBuckets of (IAmazonWebInterfaceS3 -> NotificationsList -> Async<ObservableCollection<Bucket>>)
+    | GetBucketItems of (IAmazonWebInterfaceS3 -> NotificationsList -> string -> Async<BucketItemsCollection>)
     | StartTranscriptionJob of (TranscribeAudioArguments -> Async<ObservableCollection<TranscriptionJob>>)
 
 module public Tasks =            
@@ -37,37 +38,38 @@ module public Tasks =
         match fn with
         | TaskFunction.GetBuckets _ ->
             let bucket = Bucket(Name="Poop", CreationDate=System.DateTime.Now)
-            (TaskFunction.GetBuckets (fun notifications -> async { return new ObservableCollection<Bucket>( seq { bucket } ) }))
+            (TaskFunction.GetBuckets (fun s3Interface notifications -> async { return new ObservableCollection<Bucket>( seq { bucket } ) }))
         | TaskFunction.GetBucketItems _ ->
             let bucketItems = [|
                 BucketItem(Key="AAA", Size=33L, LastModified=System.DateTime.Now, Owner="Me")
                 BucketItem(Key="BBB", Size=44L, LastModified=System.DateTime.Now, Owner="Me")
             |]
-            (TaskFunction.GetBucketItems (fun notifications string -> async { return new BucketItemsCollection( bucketItems ) }))
+            (TaskFunction.GetBucketItems (fun s3Interface notifications string -> async { return new BucketItemsCollection( bucketItems ) }))
 
     let S3FetchItems (arguments: ITaskArgumentCollection) =
 
-        let getBuckets (notifications: NotificationsList) =
-            S3.getBuckets notifications
+        let getBuckets s3Interface (notifications: NotificationsList) =
+            S3.getBuckets s3Interface notifications
 
-        let getBucketItems (notifications: NotificationsList) bucketName =
-            S3.getBucketItems notifications bucketName
+        let getBucketItems s3Interface (notifications: NotificationsList) bucketName =
+            S3.getBucketItems s3Interface notifications bucketName
 
         // prepare expensive function steps (may be replaced with cached values)
         let (TaskFunction.GetBuckets getBuckets) = ReplaceWithConstant (TaskFunction.GetBuckets (getBuckets))
         let (TaskFunction.GetBucketItems getBucketItems) = ReplaceWithConstant (TaskFunction.GetBucketItems (getBucketItems))
 
+        let s3Interface = (arguments :?> NotificationsOnlyArguments).S3Interface
         let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
 
         seq {
-            let buckets: ObservableCollection<Bucket> = getBuckets notifications |> Async.RunSynchronously
+            let buckets: ObservableCollection<Bucket> = getBuckets s3Interface notifications |> Async.RunSynchronously
             yield! getNotificationResponse notifications
 
             if buckets.Count > 0 then
                 let bucket = Seq.head buckets
                 yield TaskResponse.Bucket bucket
 
-                let items = getBucketItems notifications bucket.Name |> Async.RunSynchronously
+                let items = getBucketItems s3Interface notifications bucket.Name |> Async.RunSynchronously
                 yield! getNotificationResponse notifications
                 yield! Seq.map (fun item -> TaskResponse.BucketItem item) items
         }
@@ -86,12 +88,13 @@ module public Tasks =
             currentJob.TranscriptionJobStatus = "COMPLETED"
 
         let args = arguments :?> TranscribeAudioArguments
+        let s3Interface = args.S3Interface
         let notifications = args.Notifications
         let mediaReference = args.MediaRef
         
         seq {
             // note: the task name may be used as the new S3 key
-            let success = S3.uploadBucketItem notifications mediaReference.BucketName mediaReference.Key args.FilePath mediaReference.MimeType mediaReference.Extension |> Async.RunSynchronously
+            let success = S3.uploadBucketItem s3Interface notifications mediaReference.BucketName mediaReference.Key args.FilePath mediaReference.MimeType mediaReference.Extension |> Async.RunSynchronously
             yield! getNotificationResponse notifications
 
             if success then
