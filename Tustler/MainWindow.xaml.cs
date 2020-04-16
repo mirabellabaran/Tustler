@@ -18,6 +18,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using Tustler.Models;
 using Tustler.UserControls;
+using TustlerAWSLib;
 using TustlerServicesLib;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
 using AppSettingsControl = Tustler.UserControls.ApplicationSettings;
@@ -29,13 +30,15 @@ namespace Tustler
     /// </summary>
     public partial class MainWindow : Window
     {
+        private readonly AmazonWebServiceInterface awsInterface;
         private bool isCollapsed;  // true if the notifications area is in a collapsed state
 
-        public MainWindow()
+        public MainWindow(AmazonWebServiceInterface awsInterface)
         {
             InitializeComponent();
 
-            isCollapsed = false;
+            this.awsInterface = awsInterface;
+            this.isCollapsed = false;
         }
 
         #region Event Handlers
@@ -57,7 +60,7 @@ namespace Tustler
 
             menuTasks.Items.Add(CreateMenuItem(new TreeViewItemData { Name = "Tasks", Tag = "tasks", HasChildren = true }));
 
-            var credentials = TustlerAWSLib.Utilities.GetCredentials();
+            var credentials = TustlerAWSLib.Credentials.GetCredentials();
             if (credentials is null)
             {
                 SwitchTo("credentials");    // show credentials editor
@@ -105,8 +108,10 @@ namespace Tustler
 
         private void AboutCommand_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            About aboutDialog = new About();
-            aboutDialog.Owner = this;
+            About aboutDialog = new About
+            {
+                Owner = this
+            };
 
             aboutDialog.ShowDialog();
         }
@@ -353,10 +358,10 @@ namespace Tustler
                 switch (tag)
                 {
                     case "s3management":
-                        panControlsContainer.Children.Add(new S3Management());
+                        panControlsContainer.Children.Add(new S3Management(awsInterface));
                         break;
                     case "credentials":
-                        panControlsContainer.Children.Add(new Credentials());
+                        panControlsContainer.Children.Add(new UserControls.Credentials());
                         break;
                     case "appSettings":
                         panControlsContainer.Children.Add(new AppSettingsControl());
@@ -371,7 +376,7 @@ namespace Tustler
                         panControlsContainer.Children.Add(new TranscribeFunctions());
                         break;
                     case "task":
-                        var uc = new TasksManager
+                        var uc = new TasksManager(awsInterface)
                         {
                             TaskName = arg
                         };

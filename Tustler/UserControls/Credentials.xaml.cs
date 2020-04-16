@@ -21,11 +21,11 @@ namespace Tustler.UserControls
 
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
-            var credentials = TustlerAWSLib.Utilities.GetCredentials();
+            var credentials = TustlerAWSLib.Credentials.GetCredentials();
             tbAccessKey.Text = credentials?.AccessKey;
             tbSecretKey.Password = credentials?.SecretKey;
 
-            var configuredRegion = TustlerAWSLib.Utilities.GetRegion();
+            var configuredRegion = TustlerAWSLib.Region.GetRegion();
             if (!(configuredRegion is null))
             {
                 var regions = cbRegion.ItemsSource as IEnumerable<Endpoint>;
@@ -53,7 +53,7 @@ namespace Tustler.UserControls
                 var region = RegionEndpoint.GetBySystemName(regionModel.Code);
 
                 // save the credentials and region
-                TustlerAWSLib.Utilities.StoreCredentials(tbAccessKey.Text, tbSecretKey.Password, region);
+                TustlerAWSLib.Credentials.StoreCredentials(tbAccessKey.Text, tbSecretKey.Password, region);
 
                 var notifications = this.FindResource("applicationNotifications") as NotificationsList;
                 notifications.ShowMessage("Credentials saved", $"Credentials were saved to a folder named .aws in your home directory");

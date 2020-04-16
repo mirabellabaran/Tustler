@@ -7,6 +7,7 @@ open TaskArguments
 open TustlerModels
 open System.Collections.ObjectModel
 open TustlerInterfaces
+open TustlerAWSLib
 
 [<RequireQualifiedAccess>]
 type TaskResponse =
@@ -19,8 +20,8 @@ type TaskResponse =
     
 [<RequireQualifiedAccess>]
 type TaskFunction =
-    | GetBuckets of (IAmazonWebInterfaceS3 -> NotificationsList -> Async<ObservableCollection<Bucket>>)
-    | GetBucketItems of (IAmazonWebInterfaceS3 -> NotificationsList -> string -> Async<BucketItemsCollection>)
+    | GetBuckets of (AmazonWebServiceInterface -> NotificationsList -> Async<ObservableCollection<Bucket>>)
+    | GetBucketItems of (AmazonWebServiceInterface -> NotificationsList -> string -> Async<BucketItemsCollection>)
     | StartTranscriptionJob of (TranscribeAudioArguments -> Async<ObservableCollection<TranscriptionJob>>)
 
 module public Tasks =            
@@ -58,18 +59,18 @@ module public Tasks =
         let (TaskFunction.GetBuckets getBuckets) = ReplaceWithConstant (TaskFunction.GetBuckets (getBuckets))
         let (TaskFunction.GetBucketItems getBucketItems) = ReplaceWithConstant (TaskFunction.GetBucketItems (getBucketItems))
 
-        let s3Interface = (arguments :?> NotificationsOnlyArguments).S3Interface
+        let awsInterface = (arguments :?> NotificationsOnlyArguments).AWSInterface
         let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
 
         seq {
-            let buckets: ObservableCollection<Bucket> = getBuckets s3Interface notifications |> Async.RunSynchronously
+            let buckets: ObservableCollection<Bucket> = getBuckets awsInterface notifications |> Async.RunSynchronously
             yield! getNotificationResponse notifications
 
             if buckets.Count > 0 then
                 let bucket = Seq.head buckets
                 yield TaskResponse.Bucket bucket
 
-                let items = getBucketItems s3Interface notifications bucket.Name |> Async.RunSynchronously
+                let items = getBucketItems awsInterface notifications bucket.Name |> Async.RunSynchronously
                 yield! getNotificationResponse notifications
                 yield! Seq.map (fun item -> TaskResponse.BucketItem item) items
         }
@@ -88,13 +89,13 @@ module public Tasks =
             currentJob.TranscriptionJobStatus = "COMPLETED"
 
         let args = arguments :?> TranscribeAudioArguments
-        let s3Interface = args.S3Interface
+        let awsInterface = args.AWSInterface
         let notifications = args.Notifications
         let mediaReference = args.MediaRef
         
         seq {
             // note: the task name may be used as the new S3 key
-            let success = S3.uploadBucketItem s3Interface notifications mediaReference.BucketName mediaReference.Key args.FilePath mediaReference.MimeType mediaReference.Extension |> Async.RunSynchronously
+            let success = S3.uploadBucketItem awsInterface notifications mediaReference.BucketName mediaReference.Key args.FilePath mediaReference.MimeType mediaReference.Extension |> Async.RunSynchronously
             yield! getNotificationResponse notifications
 
             if success then

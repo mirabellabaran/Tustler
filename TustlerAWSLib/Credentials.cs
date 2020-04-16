@@ -5,7 +5,7 @@ using System;
 
 namespace TustlerAWSLib
 {
-    public class Utilities
+    public class Credentials
     {
         public static ImmutableCredentials GetCredentials()
         {
@@ -15,20 +15,6 @@ namespace TustlerAWSLib
             {
                 var creds = awsCredentials.GetCredentials();
                 return creds;
-            }
-            else
-            {
-                return null;
-            }
-        }
-
-        public static RegionEndpoint GetRegion()
-        {
-            var chain = new CredentialProfileStoreChain();
-            CredentialProfile basicProfile;
-            if (chain.TryGetProfile("default", out basicProfile))
-            {
-                return basicProfile.Region;
             }
             else
             {
@@ -49,8 +35,10 @@ namespace TustlerAWSLib
                 AccessKey = accessKey,
                 SecretKey = secretKey
             };
-            var profile = new CredentialProfile("default", options);
-            profile.Region = region;
+            var profile = new CredentialProfile("default", options)
+            {
+                Region = region
+            };
 
             var sharedFile = new SharedCredentialsFile();
             sharedFile.RegisterProfile(profile);

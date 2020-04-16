@@ -24,8 +24,7 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class TasksManager : UserControl
     {
-        private readonly IAmazonWebInterfaceS3 s3Interface;
-
+        private readonly AmazonWebServiceInterface awsInterface;
         public static readonly DependencyProperty TaskNameProperty = DependencyProperty.Register("TaskName", typeof(string), typeof(TasksManager), new PropertyMetadata("", PropertyChangedCallback));
 
         private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
@@ -38,11 +37,11 @@ namespace Tustler.UserControls
                     switch (taskName)
                     {
                         case "S3FetchItems":
-                            ctrl.TaskArguments = new TaskArguments.NotificationsOnlyArguments(ctrl.s3Interface, new NotificationsList());
+                            ctrl.TaskArguments = new TaskArguments.NotificationsOnlyArguments(ctrl.awsInterface, new NotificationsList());
                             ctrl.TaskFunction = AWSTasks.S3FetchItems;
                             break;
                         case "TranscribeAudio":
-                            ctrl.TaskArguments = new TaskArguments.TranscribeAudioArguments(ctrl.s3Interface, new NotificationsList());
+                            ctrl.TaskArguments = new TaskArguments.TranscribeAudioArguments(ctrl.awsInterface, new NotificationsList());
                             ctrl.TaskFunction = AWSTasks.TranscribeAudio;
                             break;
                     }
@@ -68,11 +67,11 @@ namespace Tustler.UserControls
             internal set;
         }
 
-        public TasksManager()
+        public TasksManager(AmazonWebServiceInterface awsInterface)
         {
             InitializeComponent();
 
-            s3Interface = new S3();
+            this.awsInterface = awsInterface;
         }
 
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
@@ -112,7 +111,7 @@ namespace Tustler.UserControls
                             uc = taskNameCtrl;
                             break;
                         case "mediaRef":
-                            var mediaReferenceCtrl = new TaskMemberControls.MediaReference
+                            var mediaReferenceCtrl = new TaskMemberControls.MediaReference(awsInterface)
                             {
                                 Command = TaskCommands.UpdateTaskArguments,
                                 MediaType = BucketItemMediaType.Audio

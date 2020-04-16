@@ -2,6 +2,7 @@
 
 open TustlerServicesLib
 open TustlerInterfaces
+open TustlerAWSLib
 
 module public TaskArguments =
 
@@ -53,9 +54,9 @@ module public TaskArguments =
         // true when all required members are no longer set to None
         abstract member IsComplete : unit -> bool
 
-    type NotificationsOnlyArguments(s3Interface: IAmazonWebInterfaceS3, notifications: NotificationsList) =
+    type NotificationsOnlyArguments(awsInterface: AmazonWebServiceInterface, notifications: NotificationsList) =
 
-        member val S3Interface = s3Interface with get
+        member val AWSInterface = awsInterface with get
         member val Notifications = notifications with get
 
         interface ITaskArgumentCollection with
@@ -65,7 +66,7 @@ module public TaskArguments =
 
             member this.IsComplete () = true
 
-    type TranscribeAudioArguments(s3Interface: IAmazonWebInterfaceS3, notifications: NotificationsList) =
+    type TranscribeAudioArguments(awsInterface: AmazonWebServiceInterface, notifications: NotificationsList) =
        
         let mutable taskName = None
         let mutable mediaRef = None
@@ -73,7 +74,7 @@ module public TaskArguments =
         let mutable transcriptionLanguageCode = None
         let mutable vocabularyName = None
 
-        member val S3Interface = s3Interface with get
+        member val AWSInterface = awsInterface with get
         member val Notifications = notifications with get
         
         member this.TaskName with get () = taskName.Value

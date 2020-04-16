@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using TustlerAWSLib;
 using TustlerInterfaces;
 using TustlerServicesLib;
 
@@ -10,19 +11,19 @@ namespace TustlerModels.Services
     /// </summary>
     public static class S3Services
     {
-        public static async Task<AWSResult<bool?>> UploadItem(IAmazonWebInterfaceS3 s3Interface, string bucketName, string newKey, string filePath, string mimetype, string extension)
+        public static async Task<AWSResult<bool?>> UploadItem(AmazonWebServiceInterface awsInterface, string bucketName, string newKey, string filePath, string mimetype, string extension)
         {
-            return await s3Interface.UploadItem(bucketName, newKey, filePath, mimetype, extension).ConfigureAwait(false);
+            return await awsInterface.S3.UploadItem(bucketName, newKey, filePath, mimetype, extension).ConfigureAwait(false);
         }
 
-        public static async Task<AWSResult<bool?>> DownloadItem(IAmazonWebInterfaceS3 s3Interface, string bucketName, string key, string filePath)
+        public static async Task<AWSResult<bool?>> DownloadItem(AmazonWebServiceInterface awsInterface, string bucketName, string key, string filePath)
         {
-            return await s3Interface.DownloadItem(bucketName, key, filePath).ConfigureAwait(false);
+            return await awsInterface.S3.DownloadItem(bucketName, key, filePath).ConfigureAwait(false);
         }
 
-        public static async Task<AWSResult<bool?>> DeleteItem(IAmazonWebInterfaceS3 s3Interface, string bucketName, string key)
+        public static async Task<AWSResult<bool?>> DeleteItem(AmazonWebServiceInterface awsInterface, string bucketName, string key)
         {
-            return await s3Interface.DeleteBucketItem(bucketName, key).ConfigureAwait(false);
+            return await awsInterface.S3.DeleteBucketItem(bucketName, key).ConfigureAwait(false);
         }
 
         public static bool ProcessUploadItemResult(NotificationsList notifications, AWSResult<bool?> uploadResult)

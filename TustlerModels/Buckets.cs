@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using TustlerAWSLib;
 using TustlerInterfaces;
 using TustlerServicesLib;
 
@@ -28,12 +29,12 @@ namespace TustlerModels
             this.NeedsRefresh = true;
         }
 
-        public async Task Refresh(IAmazonWebInterfaceS3 s3Interface, bool forceRefresh, NotificationsList notifications)
+        public async Task Refresh(AmazonWebServiceInterface awsInterface, bool forceRefresh, NotificationsList notifications)
         {
             if (NeedsRefresh || forceRefresh)
             {
                 // the underlying collection must be refreshed from the Dispatcher thread, not from within the awaited method
-                var bucketsResult = await s3Interface.ListBuckets().ConfigureAwait(true);
+                var bucketsResult = await awsInterface.S3.ListBuckets().ConfigureAwait(true);
                 ProcessS3Buckets(notifications, bucketsResult);
             }
         }

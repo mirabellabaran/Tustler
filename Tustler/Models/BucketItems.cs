@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Data;
+using TustlerAWSLib;
 using TustlerInterfaces;
 using TustlerModels;
 using TustlerServicesLib;
@@ -53,9 +54,9 @@ namespace Tustler.Models
             }
         }
 
-        public async Task Refresh(IAmazonWebInterfaceS3 s3Interface, NotificationsList notifications, string bucketName)
+        public new async Task Refresh(AmazonWebServiceInterface awsInterface, NotificationsList notifications, string bucketName)
         {
-            await base.Refresh(s3Interface, notifications, bucketName).ConfigureAwait(true);
+            await base.Refresh(awsInterface, notifications, bucketName).ConfigureAwait(true);
 
             this.FilteredMediaType = BucketItemMediaType.All;
         }

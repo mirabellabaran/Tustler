@@ -25,15 +25,15 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class TranscribeFunctionTranscriptionTasks : UserControl
     {
-        private readonly IAmazonWebInterfaceS3 s3Interface;
+        private readonly AmazonWebServiceInterface awsInterface;
         private readonly NotificationsList notifications;
 
-        public TranscribeFunctionTranscriptionTasks()
+        public TranscribeFunctionTranscriptionTasks(AmazonWebServiceInterface awsInterface)
         {
             InitializeComponent();
 
-            s3Interface = new S3();
-            notifications = this.FindResource("applicationNotifications") as NotificationsList;
+            this.awsInterface = awsInterface;
+            this.notifications = this.FindResource("applicationNotifications") as NotificationsList;
         }
 
         private async void UserControl_Loaded(object sender, RoutedEventArgs e)
@@ -44,7 +44,7 @@ namespace Tustler.UserControls
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                await bucketViewModel.Refresh(s3Interface, false, notifications).ConfigureAwait(true);
+                await bucketViewModel.Refresh(awsInterface, false, notifications).ConfigureAwait(true);
             }
             finally
             {
@@ -169,7 +169,7 @@ namespace Tustler.UserControls
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                await bucketItemsInstance.Refresh(s3Interface, notifications, selectedBucket.Name).ConfigureAwait(true);
+                await bucketItemsInstance.Refresh(awsInterface, notifications, selectedBucket.Name).ConfigureAwait(true);
                 audioBucketItemsInstance.Select(bucketItemsInstance, BucketItemMediaType.Audio);
             }
             finally

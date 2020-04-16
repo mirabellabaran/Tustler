@@ -1,5 +1,6 @@
 ﻿using log4net;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -9,6 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using Tustler.Models;
+using TustlerAWSLib;
 using TustlerServicesLib;
 using TustlerWinPlatformLib;
 
@@ -19,6 +21,7 @@ namespace Tustler
     /// </summary>
     public partial class App : Application
     {
+        public IServiceProvider ServiceProvider { get; private set; }
         private static readonly ILog log = LogManager.GetLogger(typeof(App));
 
         private void Application_Startup(object sender, StartupEventArgs e)
@@ -44,7 +47,7 @@ namespace Tustler
                 var baseDirectory = Path.GetDirectoryName(appSettingsPath);
                 JsonConfiguration.ParseConfiguration(baseDirectory, ApplicationSettings.AppSettingsFileName);
             }
-            catch (FormatException ex)
+            catch (FormatException)
             {
                 MessageBox.Show($"The configuration file is incorrectly formatted: {appSettingsPath}", "Configuration file error", MessageBoxButton.OK, MessageBoxImage.Error);
                 Application.Current.Shutdown();
@@ -52,6 +55,22 @@ namespace Tustler
 
             // set the path to the FFmpeg directory
             Unosquare.FFME.Library.FFmpegDirectory = ApplicationSettings.FFmpegDirectory;
+
+            // prepare for dependency injection
+            var serviceCollection = new ServiceCollection();
+            ConfigureServices(serviceCollection);
+
+            ServiceProvider = serviceCollection.BuildServiceProvider();
+
+            var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
+            mainWindow.Show();
+        }
+
+        private void ConfigureServices(IServiceCollection services)
+        {
+            // dependent services
+            services.AddSingleton<AmazonWebServiceInterface>();
+            services.AddSingleton<MainWindow>();
         }
 
         private void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)

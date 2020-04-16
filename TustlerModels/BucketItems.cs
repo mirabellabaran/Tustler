@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
+using TustlerAWSLib;
 using TustlerInterfaces;
 using TustlerServicesLib;
 
@@ -85,24 +86,24 @@ namespace TustlerModels
             set;
         }
 
-        public async Task RefreshAsync(IAmazonWebInterfaceS3 s3Interface, NotificationsList notifications)
+        public async Task ForceRefresh(AmazonWebServiceInterface awsInterface, NotificationsList notifications, string bucketName)
         {
             this.NeedsRefresh = true;
-            await Refresh(s3Interface, notifications, CurrentBucketName).ConfigureAwait(true);
+            await Refresh(awsInterface, notifications, bucketName).ConfigureAwait(true);
         }
 
-        public async Task Refresh(IAmazonWebInterfaceS3 s3Interface, NotificationsList notifications, string bucketName)
+        public async Task Refresh(AmazonWebServiceInterface awsInterface, NotificationsList notifications, string bucketName)
         {
             if (NeedsRefresh)
             {
                 this.BucketItems.Clear();
 
-                var bucketItemsResult = await s3Interface.ListBucketItems(bucketName).ConfigureAwait(true);
+                var bucketItemsResult = await awsInterface.S3.ListBucketItems(bucketName).ConfigureAwait(true);
                 ProcessS3BucketItems(notifications, bucketItemsResult);
                 CurrentBucketName = bucketName;
 
                 foreach (var key in this.BucketItems.Keys) {
-                    var metadataResult = await s3Interface.GetItemMetadata(bucketName, key).ConfigureAwait(true);
+                    var metadataResult = await awsInterface.S3.GetItemMetadata(bucketName, key).ConfigureAwait(true);
                     ProcessS3ItemMetadata(notifications, metadataResult, key);
                 }
             }
