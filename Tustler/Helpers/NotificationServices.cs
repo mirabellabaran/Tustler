@@ -23,8 +23,10 @@ namespace Tustler.Helpers
 
     public class NotificationServices
     {
+        private readonly AmazonWebServiceInterface awsInterface;
+
         // key is a messageId or taskId
-        private Dictionary<string, MatchedAction> notificationTasks;
+        private readonly Dictionary<string, MatchedAction> notificationTasks;
         private DispatcherTimer? timer = null;
 
         /// <summary>
@@ -36,8 +38,10 @@ namespace Tustler.Helpers
             public Action<object?>? Action { get; internal set; }
         }
 
-        public NotificationServices()
+        public NotificationServices(AmazonWebServiceInterface awsInterface)
         {
+            this.awsInterface = awsInterface;
+
             notificationTasks = new Dictionary<string, MatchedAction>();
         }
 
@@ -74,13 +78,13 @@ namespace Tustler.Helpers
         /// <returns></returns>
         public async Task TestNotifications(NotificationsList notifications)
         {
-            static async Task<AWSResult<string>> PublishMessage()
+            static async Task<AWSResult<string>> PublishMessage(AmazonWebServiceInterface awsInterface)
             {
                 var arn = ApplicationSettings.NotificationsARN;
-                return await SNS.Publish(arn, "Test message").ConfigureAwait(true);
+                return await awsInterface.SNS.Publish(arn, "Test message").ConfigureAwait(true);
             }
 
-            var result = await PublishMessage().ConfigureAwait(true);
+            var result = await PublishMessage(awsInterface).ConfigureAwait(true);
             if (result.IsError)
             {
                 notifications.HandleError("TestNotifications", "An error occurred when publishing a message.", result.Exception);
@@ -115,7 +119,7 @@ namespace Tustler.Helpers
             var queueUrl = ApplicationSettings.NotificationsQueue;
             NotificationMessage? message;
 
-            var result = await SQS.ReceiveMessage(queueUrl).ConfigureAwait(true);
+            var result = await awsInterface.SQS.ReceiveMessage(queueUrl).ConfigureAwait(true);
             if (result.IsError)
             {
                 notifications.HandleError("WaitOnNotification", "An error occurred when waiting on a notification.", result.Exception);
@@ -155,7 +159,7 @@ namespace Tustler.Helpers
                 // wait one minute then requery the input queue
                 if (timer == null)
                 {
-                    timer = new DispatcherTimer(TimeSpan.FromSeconds(60), DispatcherPriority.ApplicationIdle, dispatcherTimer_Tick, Application.Current.Dispatcher);
+                    timer = new DispatcherTimer(TimeSpan.FromSeconds(60), DispatcherPriority.ApplicationIdle, DispatcherTimer_Tick, Application.Current.Dispatcher);
                 }
                 else
                 {
@@ -164,10 +168,9 @@ namespace Tustler.Helpers
             }
         }
 
-        private async void dispatcherTimer_Tick(object sender, EventArgs e)
+        private async void DispatcherTimer_Tick(object sender, EventArgs e)
         {
-            var dispatcherTimer = sender as DispatcherTimer;
-            if (dispatcherTimer != null)
+            if (sender is DispatcherTimer dispatcherTimer)
             {
                 dispatcherTimer.Stop();
                 var notifications = Application.Current.FindResource("applicationNotifications") as NotificationsList;

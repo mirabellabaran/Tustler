@@ -10,14 +10,14 @@ using TustlerInterfaces;
 
 namespace TustlerAWSLib
 {
-    public class Polly
+    public class Polly : IAmazonWebInterfacePolly
     {
         /// <summary>
         /// List and describe the voices that are available in the configured region
         /// </summary>
         /// <param name="languageCode">A language code such as en-us</param>
         /// <returns></returns>
-        public async static Task<AWSResult<List<Voice>>> DescribeVoices(string languageCode)
+        public async Task<AWSResult<List<Voice>>> DescribeVoices(string languageCode)
         {
             try
             {
@@ -61,7 +61,7 @@ namespace TustlerAWSLib
         /// </summary>
         /// <param name="lexiconName">The name of the user-defined lexicon</param>
         /// <returns></returns>
-        public async static Task<AWSResult<LexiconAttributes>> GetLexicon(string lexiconName)
+        public async Task<AWSResult<LexiconAttributes>> GetLexicon(string lexiconName)
         {
             try
             {
@@ -94,7 +94,7 @@ namespace TustlerAWSLib
         /// List all user-defined lexicons
         /// </summary>
         /// <returns></returns>
-        public async static Task<AWSResult<List<LexiconDescription>>> ListLexicons()
+        public async Task<AWSResult<List<LexiconDescription>>> ListLexicons()
         {
             try
             {
@@ -135,7 +135,7 @@ namespace TustlerAWSLib
         /// <param name="engine">The speech synthesis engine (standard or neural)</param>
         /// <param name="voiceId">The Id of the voice to use for synthesis</param>
         /// <returns></returns>
-        public async static Task<AWSResult<PollyAudioStream>> SynthesizeSpeech(string text, Engine engine, string voiceId)
+        public async Task<AWSResult<PollyAudioStream>> SynthesizeSpeech(string text, Engine engine, string voiceId)
         {
             try
             {
@@ -192,7 +192,7 @@ namespace TustlerAWSLib
         /// <param name="engine">The speech synthesis engine (standard or neural)</param>
         /// <param name="voiceId">The Id of the voice to use for synthesis</param>
         /// <returns>The task state, taskId and other task parameters</returns>
-        public async static Task<AWSResult<SynthesisTask>> StartSpeechSynthesisTask(string bucketName, string key, string arn, string text, Engine engine, string voiceId)
+        public async Task<AWSResult<SynthesisTask>> StartSpeechSynthesisTask(string bucketName, string key, string arn, string text, Engine engine, string voiceId)
         {
             try
             {
@@ -257,7 +257,7 @@ namespace TustlerAWSLib
         /// <param name="engine">The speech synthesis engine (standard or neural)</param>
         /// <param name="voiceId">The Id of the voice to use for synthesis</param>
         /// <returns>The task state, taskId and other task parameters</returns>
-        public async static Task<AWSResult<SynthesisTask>> StartSpeechSynthesisTaskFromFile(string bucketName, string key, string arn, string filePath, Engine engine, string voiceId)
+        public async Task<AWSResult<SynthesisTask>> StartSpeechSynthesisTaskFromFile(string bucketName, string key, string arn, string filePath, Engine engine, string voiceId)
         {
             string text;
 
@@ -288,7 +288,7 @@ namespace TustlerAWSLib
         /// </summary>
         /// <param name="taskId">The ID of the task</param>
         /// <returns></returns>
-        public async static Task<AWSResult<SynthesisTask>> GetSpeechSynthesisTask(string taskId)
+        public async Task<AWSResult<SynthesisTask>> GetSpeechSynthesisTask(string taskId)
         {
             try
             {
@@ -326,7 +326,7 @@ namespace TustlerAWSLib
         /// </summary>
         /// <param name="taskId"></param>
         /// <returns></returns>
-        public async static Task<AWSResult<List<SynthesisTask>>> ListSpeechSynthesisTasks()
+        public async Task<AWSResult<List<SynthesisTask>>> ListSpeechSynthesisTasks()
         {
             try
             {

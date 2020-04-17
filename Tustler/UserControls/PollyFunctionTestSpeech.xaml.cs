@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using TustlerAWSLib;
 using TustlerModels;
 using TustlerModels.Services;
 using TustlerServicesLib;
@@ -17,17 +18,19 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class PollyFunctionTestSpeech : UserControl
     {
+        private readonly AmazonWebServiceInterface awsInterface;
         private readonly NotificationsList notifications;
 
         // fields related to audio streaming
         internal MemoryStream audioStream = null;
         internal string contentType;
 
-        public PollyFunctionTestSpeech()
+        public PollyFunctionTestSpeech(AmazonWebServiceInterface awsInterface)
         {
             InitializeComponent();
 
-            notifications = this.FindResource("applicationNotifications") as NotificationsList;
+            this.awsInterface = awsInterface;
+            this.notifications = this.FindResource("applicationNotifications") as NotificationsList;
         }
 
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
@@ -56,7 +59,7 @@ namespace Tustler.UserControls
                 Mouse.OverrideCursor = Cursors.Wait;
 
                 // refresh and then enable the headers
-                await voicesInstance.Refresh(notifications, languageCode)
+                await voicesInstance.Refresh(awsInterface, notifications, languageCode)
                 .ContinueWith(task => dgVoices.HeadersVisibility = DataGridHeadersVisibility.All, TaskScheduler.FromCurrentSynchronizationContext()).ConfigureAwait(true);
             }
             finally
@@ -80,7 +83,7 @@ namespace Tustler.UserControls
                 var voiceId = (selectedVoice is null) ? null : selectedVoice.Id;
                 var useNeural = (selectedVoice is null) ? true : selectedVoice.SupportedEngines.Contains("neural", StringComparison.InvariantCulture);
 
-                var result = await PollyServices.SynthesizeSpeech(tbSpeechText.Text, useNeural, voiceId).ConfigureAwait(true);
+                var result = await PollyServices.SynthesizeSpeech(awsInterface, tbSpeechText.Text, useNeural, voiceId).ConfigureAwait(true);
 
                 (audioStream, contentType) = PollyServices.ProcessSynthesizeSpeechResult(notifications, result);
                 CommandManager.InvalidateRequerySuggested();
@@ -139,12 +142,10 @@ namespace Tustler.UserControls
                         var extension = TustlerServicesLib.MimeTypeDictionary.GetExtensionFromMimeType(contentType);
                         filePath = Path.ChangeExtension(filePath, extension);
                     }
-                    using (FileStream fileStream = File.Create(filePath, (int)audioStream.Length))
-                    {
-                        audioStream.Seek(0, SeekOrigin.Begin);
-                        await audioStream.CopyToAsync(fileStream).ConfigureAwait(false);
-                        fileStream.Close();
-                    }
+                    using FileStream fileStream = File.Create(filePath, (int)audioStream.Length);
+                    audioStream.Seek(0, SeekOrigin.Begin);
+                    await audioStream.CopyToAsync(fileStream).ConfigureAwait(false);
+                    fileStream.Close();
                 }
                 finally
                 {

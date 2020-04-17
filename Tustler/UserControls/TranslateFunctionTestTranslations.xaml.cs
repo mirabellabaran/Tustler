@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using System.Windows.Controls;
 using System.Windows.Input;
+using TustlerAWSLib;
 using TustlerModels;
 using TustlerModels.Services;
 using TustlerServicesLib;
@@ -15,13 +16,15 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class TranslateFunctionTestTranslations : UserControl
     {
+        private readonly AmazonWebServiceInterface awsInterface;
         private readonly NotificationsList notifications;
 
-        public TranslateFunctionTestTranslations()
+        public TranslateFunctionTestTranslations(AmazonWebServiceInterface awsInterface)
         {
             InitializeComponent();
 
-            notifications = this.FindResource("applicationNotifications") as NotificationsList;
+            this.awsInterface = awsInterface;
+            this.notifications = this.FindResource("applicationNotifications") as NotificationsList;
         }
 
         private void TranslateText_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -37,7 +40,7 @@ namespace Tustler.UserControls
 
                 var sourceLanguageCode = (cbSourceLanguage.SelectedItem as LanguageCode).Code;
                 var targetLanguageCode = (cbTargetLanguage.SelectedItem as LanguageCode).Code;
-                var translatedResult = await TranslateServices.TranslateText(sourceLanguageCode, targetLanguageCode, tbSourceText.Text).ConfigureAwait(true);
+                var translatedResult = await TranslateServices.TranslateText(awsInterface, sourceLanguageCode, targetLanguageCode, tbSourceText.Text).ConfigureAwait(true);
                 tbTranslatedText.Text = TranslateServices.ProcessTranslatedResult(notifications, translatedResult);
 
                 CommandManager.InvalidateRequerySuggested();

@@ -9,7 +9,7 @@ using TustlerInterfaces;
 
 namespace TustlerAWSLib
 {
-    public class Transcribe
+    public class Transcribe : IAmazonWebInterfaceTranscribe
     {
         /// <summary>
         /// Start a new transcription job, an asynchronous speech recognition task that produces a transcript from an audio file
@@ -21,7 +21,7 @@ namespace TustlerAWSLib
         /// <param name="vocabularyName">The name of an optional transcribe vocabulary</param>
         /// <returns></returns>
         /// <remarks>Supported formats: Flac, Mp3, Mp4, Wav</remarks>
-        public async static Task<AWSResult<TranscriptionJob>> StartTranscriptionJob(string jobName, string bucketName, string s3MediaKey, string languageCode, string vocabularyName)
+        public async Task<AWSResult<TranscriptionJob>> StartTranscriptionJob(string jobName, string bucketName, string s3MediaKey, string languageCode, string vocabularyName)
         {
             try
             {
@@ -73,7 +73,7 @@ namespace TustlerAWSLib
             }
         }
 
-        public async static Task<AWSResult<TranscriptionJob>> GetTranscriptionJob(string jobName)
+        public async Task<AWSResult<TranscriptionJob>> GetTranscriptionJob(string jobName)
         {
             try
             {
@@ -106,7 +106,7 @@ namespace TustlerAWSLib
             }
         }
 
-        public async static Task<AWSResult<List<TranscriptionJobSummary>>> ListTranscriptionJobs()
+        public async Task<AWSResult<List<TranscriptionJobSummary>>> ListTranscriptionJobs()
         {
             try
             {
@@ -140,7 +140,7 @@ namespace TustlerAWSLib
             }
         }
 
-        public async static Task<AWSResult<List<VocabularyInfo>>> ListVocabularies()
+        public async Task<AWSResult<List<VocabularyInfo>>> ListVocabularies()
         {
             try
             {

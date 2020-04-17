@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using TustlerAWSLib;
 using TustlerInterfaces;
 using TustlerServicesLib;
 
@@ -30,17 +31,17 @@ namespace TustlerModels
             this.NeedsRefresh = true;
         }
 
-        public async Task AddNewTask(NotificationsList notifications, string jobName, string bucketName, string s3MediaKey, string languageCode, string vocabularyName)
+        public async Task AddNewTask(AmazonWebServiceInterface awsInterface, NotificationsList notifications, string jobName, string bucketName, string s3MediaKey, string languageCode, string vocabularyName)
         {
-            var result = await TustlerAWSLib.Transcribe.StartTranscriptionJob(jobName, bucketName, s3MediaKey, languageCode, vocabularyName).ConfigureAwait(true);
+            var result = await awsInterface.Transcribe.StartTranscriptionJob(jobName, bucketName, s3MediaKey, languageCode, vocabularyName).ConfigureAwait(true);
             ProcessPollyNewTranslationJob(notifications, result);
         }
 
-        public async Task ListTasks(NotificationsList notifications)
+        public async Task ListTasks(AmazonWebServiceInterface awsInterface, NotificationsList notifications)
         {
             if (NeedsRefresh)
             {
-                var translationJobs = await TustlerAWSLib.Transcribe.ListTranscriptionJobs().ConfigureAwait(true);
+                var translationJobs = await awsInterface.Transcribe.ListTranscriptionJobs().ConfigureAwait(true);
                 ProcessTranslationJobs(notifications, translationJobs);
             }
         }

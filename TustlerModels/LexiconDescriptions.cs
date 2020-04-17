@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using TustlerAWSLib;
 using TustlerInterfaces;
 using TustlerServicesLib;
 
@@ -28,11 +29,11 @@ namespace TustlerModels
             this.NeedsRefresh = true;
         }
 
-        public async Task Refresh(NotificationsList notifications)
+        public async Task Refresh(AmazonWebServiceInterface awsInterface, NotificationsList notifications)
         {
             if (NeedsRefresh)
             {
-                var result = await TustlerAWSLib.Polly.ListLexicons().ConfigureAwait(true);
+                var result = await awsInterface.Polly.ListLexicons().ConfigureAwait(true);
                 ProcessLexicons(notifications, result);
             }
         }

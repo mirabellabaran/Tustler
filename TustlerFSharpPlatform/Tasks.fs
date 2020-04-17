@@ -80,7 +80,7 @@ module public Tasks =
         
         let startTranscriptionJob (args: TranscribeAudioArguments) =
             // note: task name used as job name and as S3 media key (from upload)
-            Transcribe.startTranscriptionJob args.Notifications args.TaskName args.MediaRef.BucketName args.MediaRef.Key args.TranscriptionLanguageCode args.VocabularyName
+            Transcribe.startTranscriptionJob args.AWSInterface args.Notifications args.TaskName args.MediaRef.BucketName args.MediaRef.Key args.TranscriptionLanguageCode args.VocabularyName
 
         let (TaskFunction.StartTranscriptionJob startTranscriptionJob) = CheckFileExistsReplaceWithFilePath (TaskFunction.StartTranscriptionJob (startTranscriptionJob))
 
@@ -108,7 +108,7 @@ module public Tasks =
                     0 // try ten times from zero
                     |> Seq.unfold (fun i ->
                         Task.Delay(1000) |> Async.AwaitTask |> Async.RunSynchronously
-                        let jobs = Transcribe.listTranscriptionJobs notifications |> Async.RunSynchronously
+                        let jobs = Transcribe.listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
                         if i > 9 || isTranscriptionComplete args.TaskName jobs then
                             None
                         else

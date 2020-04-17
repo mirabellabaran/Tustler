@@ -12,9 +12,9 @@ namespace TustlerModels.Services
     /// </summary>
     public static class PollyServices
     {
-        public static async Task<AWSResult<PollyAudioStream>> SynthesizeSpeech(string text, bool useNeural, string voiceId)
+        public static async Task<AWSResult<PollyAudioStream>> SynthesizeSpeech(AmazonWebServiceInterface awsInterface, string text, bool useNeural, string voiceId)
         {
-            return await Polly.SynthesizeSpeech(text, useNeural ? Engine.Neural : Engine.Standard, voiceId is null ? "Joanna" : voiceId).ConfigureAwait(true);
+            return await awsInterface.Polly.SynthesizeSpeech(text, useNeural ? Engine.Neural : Engine.Standard, voiceId is null ? "Joanna" : voiceId).ConfigureAwait(true);
         }
 
         public static (MemoryStream AudioStream, string ContentType) ProcessSynthesizeSpeechResult(NotificationsList notifications, AWSResult<PollyAudioStream> result)

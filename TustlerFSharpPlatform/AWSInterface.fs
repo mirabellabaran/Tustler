@@ -42,23 +42,23 @@ module public AWSInterface =
 
     module Transcribe =
 
-        let startTranscriptionJob notifications jobName bucketName s3MediaKey languageCode vocabularyName =
+        let startTranscriptionJob awsInterface notifications jobName bucketName s3MediaKey languageCode vocabularyName =
             async {
                 let model = TranscriptionJobsViewModel()
-                do! model.AddNewTask (notifications, jobName, bucketName, s3MediaKey, languageCode, vocabularyName) |> Async.AwaitTask
+                do! model.AddNewTask (awsInterface, notifications, jobName, bucketName, s3MediaKey, languageCode, vocabularyName) |> Async.AwaitTask
                 return model.TranscriptionJobs
             }
 
-        let listTranscriptionJobs notifications =
+        let listTranscriptionJobs awsInterface notifications =
             async {
                 let model = TranscriptionJobsViewModel()
-                do! model.ListTasks (notifications) |> Async.AwaitTask
+                do! model.ListTasks (awsInterface, notifications) |> Async.AwaitTask
                 return model.TranscriptionJobs
             }
 
-        let listVocabularies notifications =
+        let listVocabularies awsInterface notifications =
             async {
                 let model = TranscriptionVocabulariesViewModel()
-                do! model.Refresh (notifications) |> Async.AwaitTask
+                do! model.Refresh (awsInterface, notifications) |> Async.AwaitTask
                 return model.TranscriptionVocabularies
             }

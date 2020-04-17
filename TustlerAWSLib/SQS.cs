@@ -9,13 +9,13 @@ using TustlerInterfaces;
 
 namespace TustlerAWSLib
 {
-    public class SQS
+    public class SQS : IAmazonWebInterfaceSQS
     {
         /// <summary>
         /// Returns a list of all queues
         /// </summary>
         /// <returns>A list of queue URLs</returns>
-        public async static Task<AWSResult<List<string>>> ListQueues()
+        public async Task<AWSResult<List<string>>> ListQueues()
         {
             try
             {
@@ -37,7 +37,7 @@ namespace TustlerAWSLib
         /// </summary>
         /// <param name="queueUrl">The queue to wait on</param>
         /// <returns>The message body or null</returns>
-        public async static Task<AWSResult<string>> ReceiveMessage(string queueUrl)
+        public async Task<AWSResult<string>> ReceiveMessage(string queueUrl)
         {
             try
             {

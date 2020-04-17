@@ -9,13 +9,13 @@ using TustlerInterfaces;
 
 namespace TustlerAWSLib
 {
-    public class SNS
+    public class SNS : IAmazonWebInterfaceSNS
     {
         /// <summary>
         /// List available SNS topics
         /// </summary>
         /// <returns>A list of topics</returns>
-        public async static Task<AWSResult<List<Topic>>> ListTopics()
+        public async Task<AWSResult<List<Topic>>> ListTopics()
         {
             try
             {
@@ -55,7 +55,7 @@ namespace TustlerAWSLib
         /// <param name="topicARN">The address of the topic</param>
         /// <param name="message">The text message to send</param>
         /// <returns>The message ID</returns>
-        public async static Task<AWSResult<string>> Publish(string topicARN, string message)
+        public async Task<AWSResult<string>> Publish(string topicARN, string message)
         {
             try
             {

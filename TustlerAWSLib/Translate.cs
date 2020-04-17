@@ -10,7 +10,7 @@ using TustlerInterfaces;
 
 namespace TustlerAWSLib
 {
-    public class Translate
+    public class Translate : IAmazonWebInterfaceTranslate
     {
         /// <summary>
         /// Translate the supplied text from the specified source language to the target language
@@ -20,7 +20,7 @@ namespace TustlerAWSLib
         /// <param name="text">The text to be translated</param>
         /// <param name="terminologyNames">A list of names of translation terminlogies (defined previously)</param>
         /// <returns></returns>
-        public async static Task<AWSResult<string>> TranslateText(string sourceLanguageCode, string targetLanguageCode, string text, List<string> terminologyNames)
+        public async Task<AWSResult<string>> TranslateText(string sourceLanguageCode, string targetLanguageCode, string text, List<string> terminologyNames)
         {
             try
             {
@@ -80,7 +80,7 @@ namespace TustlerAWSLib
         /// <param name="s3OutputFolderName">An S3 pseudo folder where output documents will be written</param>
         /// <param name="terminologyNames">The names of any predefined translation terminologies (optional)</param>
         /// <returns></returns>
-        public async static Task<AWSResult<TranslateJobStatus>> StartTextTranslationJob(string jobName, RegionEndpoint region, string dataAccessRoleArn, string sourceLanguageCode, List<string> targetLanguageCodes, string s3InputFolderName, string s3OutputFolderName, List<string> terminologyNames)
+        public async Task<AWSResult<TranslateJobStatus>> StartTextTranslationJob(string jobName, RegionEndpoint region, string dataAccessRoleArn, string sourceLanguageCode, List<string> targetLanguageCodes, string s3InputFolderName, string s3OutputFolderName, List<string> terminologyNames)
         {
             try
             {
@@ -130,7 +130,7 @@ namespace TustlerAWSLib
             }
         }
 
-        public async static Task<AWSResult<TranslateJobStatus>> StopTextTranslationJob(string jobId, RegionEndpoint region)
+        public async Task<AWSResult<TranslateJobStatus>> StopTextTranslationJob(string jobId, RegionEndpoint region)
         {
             try
             {
@@ -159,7 +159,7 @@ namespace TustlerAWSLib
             }
         }
 
-        public async static Task<AWSResult<List<TextTranslationJobProperties>>> ListTextTranslationJobs(RegionEndpoint region)
+        public async Task<AWSResult<List<TextTranslationJobProperties>>> ListTextTranslationJobs(RegionEndpoint region)
         {
             try
             {
@@ -197,7 +197,7 @@ namespace TustlerAWSLib
             }
         }
 
-        public async static Task<AWSResult<List<TerminologyProperties>>> ListTerminologies()
+        public async Task<AWSResult<List<TerminologyProperties>>> ListTerminologies()
         {
             try
             {

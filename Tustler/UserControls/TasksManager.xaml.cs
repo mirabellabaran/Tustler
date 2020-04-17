@@ -144,7 +144,7 @@ namespace Tustler.UserControls
                             uc = translationLanguageCodeCtrl;
                             break;
                         case "vocabularyName":
-                            var vocabularyNameCtrl = new TaskMemberControls.VocabularyName
+                            var vocabularyNameCtrl = new TaskMemberControls.VocabularyName(awsInterface)
                             {
                                 Command = TaskCommands.UpdateTaskArguments
                             };

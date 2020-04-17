@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Input;
+using TustlerAWSLib;
 using TustlerModels;
 using TustlerServicesLib;
 
@@ -11,13 +12,15 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class PollyFunctionLexicons : UserControl
     {
+        private readonly AmazonWebServiceInterface awsInterface;
         private readonly NotificationsList notifications;
 
-        public PollyFunctionLexicons()
+        public PollyFunctionLexicons(AmazonWebServiceInterface awsInterface)
         {
             InitializeComponent();
 
-            notifications = this.FindResource("applicationNotifications") as NotificationsList;
+            this.awsInterface = awsInterface;
+            this.notifications = this.FindResource("applicationNotifications") as NotificationsList;
         }
 
         //private void GetLexicon_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -50,7 +53,7 @@ namespace Tustler.UserControls
 
                 var lexiconsInstance = this.FindResource("lexiconsInstance") as LexiconsViewModel;
 
-                await lexiconsInstance.Refresh(notifications)
+                await lexiconsInstance.Refresh(awsInterface, notifications)
                     .ContinueWith(task => (dgLexicons.Items.Count > 0) ?
                             dgLexicons.HeadersVisibility = DataGridHeadersVisibility.All :
                             dgLexicons.HeadersVisibility = DataGridHeadersVisibility.None,

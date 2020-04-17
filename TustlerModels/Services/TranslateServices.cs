@@ -17,7 +17,7 @@ namespace TustlerModels.Services
         /// Translate a file containing text and output to a new text file
         /// </summary>
         /// <remarks>Newline characters may be introduced at chunk boundaries</remarks>
-        public static async Task TranslateLargeText(NotificationsList notifications, Progress<int> progress, bool useArchivedJob, string jobName, string sourceLanguageCode, string targetLanguageCode, string textFilePath, List<string>? terminologyNames = null)
+        public static async Task TranslateLargeText(AmazonWebServiceInterface awsInterface, NotificationsList notifications, Progress<int> progress, bool useArchivedJob, string jobName, string sourceLanguageCode, string targetLanguageCode, string textFilePath, List<string>? terminologyNames = null)
         {
             if (progress is null)
             {
@@ -34,7 +34,7 @@ namespace TustlerModels.Services
                 chunker = TustlerServicesLib.SentenceChunker.FromFile(textFilePath);
             }
 
-            await ProcessChunks(chunker, notifications, progress, jobName, sourceLanguageCode, targetLanguageCode, terminologyNames).ConfigureAwait(true);
+            await ProcessChunks(awsInterface, chunker, notifications, progress, jobName, sourceLanguageCode, targetLanguageCode, terminologyNames).ConfigureAwait(true);
 
             if (chunker.IsJobComplete)
             {
@@ -49,7 +49,7 @@ namespace TustlerModels.Services
         /// <summary>
         /// Translate a file containing one complete sentence per line and output to a new file containing one complete sentence per line
         /// </summary>
-        public static async Task TranslateSentences(NotificationsList notifications, Progress<int> progress, bool useArchivedJob, string jobName, string sourceLanguageCode, string targetLanguageCode, string textFilePath, List<string>? terminologyNames = null)
+        public static async Task TranslateSentences(AmazonWebServiceInterface awsInterface, NotificationsList notifications, Progress<int> progress, bool useArchivedJob, string jobName, string sourceLanguageCode, string targetLanguageCode, string textFilePath, List<string>? terminologyNames = null)
         {
             if (progress is null)
             {
@@ -68,7 +68,7 @@ namespace TustlerModels.Services
                 chunker = new TustlerServicesLib.SentenceChunker(sentences);
             }
 
-            await ProcessChunks(chunker, notifications, progress, jobName, sourceLanguageCode, targetLanguageCode, terminologyNames).ConfigureAwait(true);
+            await ProcessChunks(awsInterface, chunker, notifications, progress, jobName, sourceLanguageCode, targetLanguageCode, terminologyNames).ConfigureAwait(true);
 
             if (chunker.IsJobComplete)
             {
@@ -80,11 +80,11 @@ namespace TustlerModels.Services
             }
         }
 
-        private static async Task ProcessChunks(SentenceChunker chunker, NotificationsList notifications, Progress<int> progress, string jobName, string sourceLanguageCode, string targetLanguageCode, List<string>? terminologyNames)
+        private static async Task ProcessChunks(AmazonWebServiceInterface awsInterface, SentenceChunker chunker, NotificationsList notifications, Progress<int> progress, string jobName, string sourceLanguageCode, string targetLanguageCode, List<string>? terminologyNames)
         {
             async Task<(bool IsErrorState, bool RecoverableError)> Translator(int index, string text)
             {
-                var translationResult = await TranslateText(sourceLanguageCode, targetLanguageCode, text, terminologyNames).ConfigureAwait(true);
+                var translationResult = await awsInterface.Translate.TranslateText(sourceLanguageCode, targetLanguageCode, text, terminologyNames).ConfigureAwait(true);
                 if (translationResult.IsError)
                 {
                     var ex = translationResult.Exception;
@@ -118,9 +118,9 @@ namespace TustlerModels.Services
             await chunker.ProcessChunks(Translator).ConfigureAwait(true);
         }
 
-        public static async Task<AWSResult<string>> TranslateText(string sourceLanguageCode, string targetLanguageCode, string text, List<string>? terminologyNames = null)
+        public static async Task<AWSResult<string>> TranslateText(AmazonWebServiceInterface awsInterface, string sourceLanguageCode, string targetLanguageCode, string text, List<string>? terminologyNames = null)
         {
-            return await Translate.TranslateText(sourceLanguageCode, targetLanguageCode, text, terminologyNames).ConfigureAwait(true);
+            return await awsInterface.Translate.TranslateText(sourceLanguageCode, targetLanguageCode, text, terminologyNames).ConfigureAwait(true);
         }
 
         public static string ProcessTranslatedResult(NotificationsList notifications, AWSResult<string> result)

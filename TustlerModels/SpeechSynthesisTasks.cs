@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using TustlerAWSLib;
 using TustlerInterfaces;
 using TustlerServicesLib;
 
@@ -40,10 +41,10 @@ namespace TustlerModels
         /// <param name="useNeural">If true then use the neural speech synthesis engine, otherwise use the standard engine</param>
         /// <param name="voiceId">The Id of the voice to use for synthesis</param>
         /// <returns></returns>
-        public async Task<string> AddNewTask(NotificationsList notifications, string bucketName, string key, string arn, string filePath, bool useNeural, string voiceId)
+        public async Task<string> AddNewTask(AmazonWebServiceInterface awsInterface, NotificationsList notifications, string bucketName, string key, string arn, string filePath, bool useNeural, string voiceId)
         {
             var engine = useNeural ? Engine.Neural : Engine.Standard;
-            var result = await TustlerAWSLib.Polly.StartSpeechSynthesisTaskFromFile(bucketName, key, arn, filePath, engine, voiceId).ConfigureAwait(true);
+            var result = await awsInterface.Polly.StartSpeechSynthesisTaskFromFile(bucketName, key, arn, filePath, engine, voiceId).ConfigureAwait(true);
             return ProcessPollyNewSpeechSynthesisTask(notifications, result);
         }
 
@@ -51,9 +52,9 @@ namespace TustlerModels
         /// Fetch a list of all known speech synthesis tasks
         /// </summary>
         /// <returns></returns>
-        public async Task ListTasks(NotificationsList notifications)
+        public async Task ListTasks(AmazonWebServiceInterface awsInterface, NotificationsList notifications)
         {
-            var result = await TustlerAWSLib.Polly.ListSpeechSynthesisTasks().ConfigureAwait(true);
+            var result = await awsInterface.Polly.ListSpeechSynthesisTasks().ConfigureAwait(true);
             ProcessPollySpeechSynthesisTasks(notifications, result);
         }
 

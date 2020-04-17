@@ -72,7 +72,7 @@ namespace Tustler.UserControls
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                await transcriptionJobsInstance.AddNewTask(notifications, jobName, bucketName, s3MediaKey, languageCode, vocabularyName).ConfigureAwait(true);
+                await transcriptionJobsInstance.AddNewTask(awsInterface, notifications, jobName, bucketName, s3MediaKey, languageCode, vocabularyName).ConfigureAwait(true);
                 if (dgTranscriptionTasks.Items.Count > 0)
                 {
                     dgTranscriptionTasks.HeadersVisibility = DataGridHeadersVisibility.All;
@@ -98,7 +98,7 @@ namespace Tustler.UserControls
 
                 var transcriptionJobsInstance = this.FindResource("transcriptionJobsInstance") as TranscriptionJobsViewModel;
 
-                await transcriptionJobsInstance.ListTasks(notifications)
+                await transcriptionJobsInstance.ListTasks(awsInterface, notifications)
                     .ContinueWith(task => (dgTranscriptionTasks.Items.Count > 0) ?
                             dgTranscriptionTasks.HeadersVisibility = DataGridHeadersVisibility.All :
                             dgTranscriptionTasks.HeadersVisibility = DataGridHeadersVisibility.None,
@@ -129,7 +129,7 @@ namespace Tustler.UserControls
                 if (chkIncludeVocabulary.IsChecked.Value)
                 {
                     var vocabulariesInstance = this.FindResource("vocabulariesInstance") as TranscriptionVocabulariesViewModel;
-                    await vocabulariesInstance.Refresh(notifications).ConfigureAwait(true);
+                    await vocabulariesInstance.Refresh(awsInterface, notifications).ConfigureAwait(true);
 
                     if (lbVocabularyNames.Items.Count == 0)
                     {

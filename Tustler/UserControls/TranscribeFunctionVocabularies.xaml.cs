@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Input;
+using TustlerAWSLib;
 using TustlerModels;
 using TustlerServicesLib;
 
@@ -11,13 +12,15 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class TranscribeFunctionVocabularies : UserControl
     {
+        private readonly AmazonWebServiceInterface awsInterface;
         private readonly NotificationsList notifications;
 
-        public TranscribeFunctionVocabularies()
+        public TranscribeFunctionVocabularies(AmazonWebServiceInterface awsInterface)
         {
             InitializeComponent();
 
-            notifications = this.FindResource("applicationNotifications") as NotificationsList;
+            this.awsInterface = awsInterface;
+            this.notifications = this.FindResource("applicationNotifications") as NotificationsList;
         }
 
         private void ListVocabularies_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -33,7 +36,7 @@ namespace Tustler.UserControls
 
                 var vocabulariesInstance = this.FindResource("vocabulariesInstance") as TranscriptionVocabulariesViewModel;
 
-                await vocabulariesInstance.Refresh(notifications)
+                await vocabulariesInstance.Refresh(awsInterface, notifications)
                     .ContinueWith(task => (dgVocabularies.Items.Count > 0) ?
                             dgVocabularies.HeadersVisibility = DataGridHeadersVisibility.All :
                             dgVocabularies.HeadersVisibility = DataGridHeadersVisibility.None,

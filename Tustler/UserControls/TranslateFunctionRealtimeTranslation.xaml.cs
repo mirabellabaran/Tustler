@@ -6,6 +6,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using TustlerAWSLib;
 using TustlerModels;
 using TustlerModels.Services;
 using TustlerServicesLib;
@@ -18,13 +19,15 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class TranslateFunctionRealtimeTranslation : UserControl
     {
+        private readonly AmazonWebServiceInterface awsInterface;
         private readonly NotificationsList notifications;
 
-        public TranslateFunctionRealtimeTranslation()
+        public TranslateFunctionRealtimeTranslation(AmazonWebServiceInterface awsInterface)
         {
             InitializeComponent();
 
-            notifications = this.FindResource("applicationNotifications") as NotificationsList;
+            this.awsInterface = awsInterface;
+            this.notifications = this.FindResource("applicationNotifications") as NotificationsList;
         }
 
         private void RealtimeTranslate_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -70,7 +73,7 @@ namespace Tustler.UserControls
             string sourceLanguageCode = (cbSourceLanguage.SelectedItem as LanguageCode)!.Code;  // combobox must have a selection
             string targetLanguageCode = (cbTargetLanguage.SelectedItem as LanguageCode)!.Code;  // combobox must have a selection
             string textFilePath = tbTranslationSourceDocument.Text;
-            bool fileIsOneSentencePerLine = chkTextFileContainsOneSentencePerLine.IsChecked.HasValue? chkTextFileContainsOneSentencePerLine.IsChecked.Value : false;
+            bool fileIsOneSentencePerLine = chkTextFileContainsOneSentencePerLine.IsChecked ?? false;
             Progress<int> progress = new Progress<int>(value =>
             {
                 pbTranslationJob.Value = value;
@@ -85,9 +88,9 @@ namespace Tustler.UserControls
                 List<string> terminologyNames = Helpers.UIServices.UIHelpers.GetFieldFromListBoxSelectedItems<Terminology>(chkIncludeTerminologyNames, lbTerminologyNames, term => term.Name);
 
                 if (fileIsOneSentencePerLine)
-                    await TranslateServices.TranslateSentences(notifications, progress, useArchivedJob, jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames).ConfigureAwait(true);
+                    await TranslateServices.TranslateSentences(awsInterface, notifications, progress, useArchivedJob, jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames).ConfigureAwait(true);
                 else
-                    await TranslateServices.TranslateLargeText(notifications, progress, useArchivedJob, jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames).ConfigureAwait(true);
+                    await TranslateServices.TranslateLargeText(awsInterface, notifications, progress, useArchivedJob, jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames).ConfigureAwait(true);
             }
             finally
             {
@@ -110,7 +113,7 @@ namespace Tustler.UserControls
                 if (chkIncludeTerminologyNames.IsChecked.HasValue && chkIncludeTerminologyNames.IsChecked.Value)
                 {
                     var terminologiesInstance = this.FindResource("terminologiesInstance") as TranslationTerminologiesViewModel;
-                    await terminologiesInstance.Refresh(notifications).ConfigureAwait(true);
+                    await terminologiesInstance.Refresh(awsInterface, notifications).ConfigureAwait(true);
 
                     if (lbTerminologyNames.Items.Count == 0)
                     {

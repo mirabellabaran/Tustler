@@ -2,6 +2,7 @@
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using TustlerAWSLib;
 using TustlerInterfaces;
 using TustlerServicesLib;
 
@@ -27,11 +28,11 @@ namespace TustlerModels
             this.NeedsRefresh = true;
         }
 
-        public async Task Refresh(NotificationsList notifications, string languageCode)
+        public async Task Refresh(AmazonWebServiceInterface awsInterface, NotificationsList notifications, string languageCode)
         {
             if (NeedsRefresh)
             {
-                var result = await TustlerAWSLib.Polly.DescribeVoices(languageCode).ConfigureAwait(true);
+                var result = await awsInterface.Polly.DescribeVoices(languageCode).ConfigureAwait(true);
                 ProcessPollyVoices(notifications, result);
             }
         }

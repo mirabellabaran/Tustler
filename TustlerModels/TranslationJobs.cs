@@ -31,17 +31,17 @@ namespace TustlerModels
             this.NeedsRefresh = true;
         }
 
-        public async Task AddNewTask(NotificationsList notifications, string jobName, RegionEndpoint region, string dataAccessRoleArn, string sourceLanguageCode, List<string> targetLanguageCodes, string s3InputFolderName, string s3OutputFolderName, List<string> terminologyNames)
+        public async Task AddNewTask(AmazonWebServiceInterface awsInterface, NotificationsList notifications, string jobName, RegionEndpoint region, string dataAccessRoleArn, string sourceLanguageCode, List<string> targetLanguageCodes, string s3InputFolderName, string s3OutputFolderName, List<string> terminologyNames)
         {
-            var result = await TustlerAWSLib.Translate.StartTextTranslationJob(jobName, region, dataAccessRoleArn, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
+            var result = await awsInterface.Translate.StartTextTranslationJob(jobName, region, dataAccessRoleArn, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
             ProcessPollyNewTranslationJob(notifications, result);
         }
 
-        public async Task ListTasks(NotificationsList notifications, RegionEndpoint region)
+        public async Task ListTasks(AmazonWebServiceInterface awsInterface, NotificationsList notifications, RegionEndpoint region)
         {
             if (NeedsRefresh)
             {
-                var translationJobs = await TustlerAWSLib.Translate.ListTextTranslationJobs(region).ConfigureAwait(true);
+                var translationJobs = await awsInterface.Translate.ListTextTranslationJobs(region).ConfigureAwait(true);
                 ProcessTranslationJobs(notifications, translationJobs);
             }
         }

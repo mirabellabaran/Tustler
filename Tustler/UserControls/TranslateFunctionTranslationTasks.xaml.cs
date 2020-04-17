@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Input;
+using TustlerAWSLib;
 using TustlerModels;
 using TustlerServicesLib;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
@@ -16,13 +17,15 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class TranslateFunctionTranslationTasks : UserControl
     {
+        private readonly AmazonWebServiceInterface awsInterface;
         private readonly NotificationsList notifications;
 
-        public TranslateFunctionTranslationTasks()
+        public TranslateFunctionTranslationTasks(AmazonWebServiceInterface awsInterface)
         {
             InitializeComponent();
 
-            notifications = this.FindResource("applicationNotifications") as NotificationsList;
+            this.awsInterface = awsInterface;
+            this.notifications = this.FindResource("applicationNotifications") as NotificationsList;
 
             tbInputFolder.Text = AppSettings.BatchTranslateInputFolder;
             tbOutputFolder.Text = AppSettings.BatchTranslateOutputFolder;
@@ -58,7 +61,7 @@ namespace Tustler.UserControls
                 string s3OutputFolderName = AppSettings.BatchTranslateOutputFolder;
                 List<string> terminologyNames = Helpers.UIServices.UIHelpers.GetFieldFromListBoxSelectedItems<Terminology>(chkIncludeTerminologyNames, lbTerminologyNames, term => term.Name);
 
-                await translationJobsInstance.AddNewTask(notifications, jobName, RegionEndpoint.GetBySystemName(regionSystemName), dataAccessRoleArn, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
+                await translationJobsInstance.AddNewTask(awsInterface, notifications, jobName, RegionEndpoint.GetBySystemName(regionSystemName), dataAccessRoleArn, sourceLanguageCode, targetLanguageCodes, s3InputFolderName, s3OutputFolderName, terminologyNames).ConfigureAwait(true);
                 if (dgTranslationTasks.Items.Count > 0)
                 {
                     dgTranslationTasks.HeadersVisibility = DataGridHeadersVisibility.All;
@@ -90,7 +93,7 @@ namespace Tustler.UserControls
                 var translationJobsInstance = this.FindResource("translationJobsInstance") as TranslationJobsViewModel;
                 string regionSystemName = AppSettings.BatchTranslateRegion;
 
-                await translationJobsInstance.ListTasks(notifications, RegionEndpoint.GetBySystemName(regionSystemName))
+                await translationJobsInstance.ListTasks(awsInterface, notifications, RegionEndpoint.GetBySystemName(regionSystemName))
                     .ContinueWith(task => (dgTranslationTasks.Items.Count > 0) ?
                             dgTranslationTasks.HeadersVisibility = DataGridHeadersVisibility.All :
                             dgTranslationTasks.HeadersVisibility = DataGridHeadersVisibility.None,
@@ -121,7 +124,7 @@ namespace Tustler.UserControls
                 if (chkIncludeTerminologyNames.IsChecked.HasValue && chkIncludeTerminologyNames.IsChecked.Value)
                 {
                     var terminologiesInstance = this.FindResource("terminologiesInstance") as TranslationTerminologiesViewModel;
-                    await terminologiesInstance.Refresh(notifications).ConfigureAwait(true);
+                    await terminologiesInstance.Refresh(awsInterface, notifications).ConfigureAwait(true);
 
                     if (lbTerminologyNames.Items.Count == 0)
                     {

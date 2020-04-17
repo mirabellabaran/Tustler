@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Input;
+using TustlerAWSLib;
 using TustlerModels;
 using TustlerServicesLib;
 
@@ -11,13 +12,15 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class TranslateFunctionTerminologies : UserControl
     {
+        private readonly AmazonWebServiceInterface awsInterface;
         private readonly NotificationsList notifications;
 
-        public TranslateFunctionTerminologies()
+        public TranslateFunctionTerminologies(AmazonWebServiceInterface awsInterface)
         {
             InitializeComponent();
 
-            notifications = this.FindResource("applicationNotifications") as NotificationsList;
+            this.awsInterface = awsInterface;
+            this.notifications = this.FindResource("applicationNotifications") as NotificationsList;
         }
 
         private void ListTerminologies_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -33,7 +36,7 @@ namespace Tustler.UserControls
 
                 var terminologiesInstance = this.FindResource("terminologiesInstance") as TranslationTerminologiesViewModel;
 
-                await terminologiesInstance.Refresh(notifications)
+                await terminologiesInstance.Refresh(awsInterface, notifications)
                     .ContinueWith(task => (dgTerminologies.Items.Count > 0) ?
                             dgTerminologies.HeadersVisibility = DataGridHeadersVisibility.All :
                             dgTerminologies.HeadersVisibility = DataGridHeadersVisibility.None,

@@ -10,6 +10,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using TustlerAWSLib;
 using TustlerModels;
 using TustlerServicesLib;
 using static TustlerFSharpPlatform.TaskArguments;
@@ -21,9 +22,13 @@ namespace Tustler.UserControls.TaskMemberControls
     /// </summary>
     public partial class VocabularyName : UserControl
     {
-        public VocabularyName()
+        private readonly AmazonWebServiceInterface awsInterface;
+
+        public VocabularyName(AmazonWebServiceInterface awsInterface)
         {
             InitializeComponent();
+
+            this.awsInterface = awsInterface;
         }
 
         private async void UserControl_Loaded(object sender, RoutedEventArgs e)
@@ -31,7 +36,7 @@ namespace Tustler.UserControls.TaskMemberControls
             var notifications = this.FindResource("applicationNotifications") as NotificationsList;
 
             var vocabulariesInstance = this.FindResource("vocabulariesInstance") as TranscriptionVocabulariesViewModel;
-            await vocabulariesInstance.Refresh(notifications).ConfigureAwait(true);
+            await vocabulariesInstance.Refresh(awsInterface, notifications).ConfigureAwait(true);
         }
 
         #region ICommandSource
@@ -130,8 +135,7 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             get
             {
-                var vocabulary = cbVocabularyName.SelectedItem as Vocabulary;
-                return vocabulary is null ? null : TaskArgumentMember.NewVocabularyName(vocabulary.VocabularyName);
+                return (cbVocabularyName.SelectedItem is Vocabulary vocabulary) ? TaskArgumentMember.NewVocabularyName(vocabulary.VocabularyName) : null;
             }
         }
 

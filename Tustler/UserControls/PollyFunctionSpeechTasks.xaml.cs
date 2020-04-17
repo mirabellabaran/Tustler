@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Tustler.Helpers;
+using TustlerAWSLib;
 using TustlerModels;
 using TustlerServicesLib;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
@@ -16,13 +17,15 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class PollyFunctionSpeechTasks : UserControl
     {
+        private readonly AmazonWebServiceInterface awsInterface;
         private readonly NotificationsList notifications;
 
-        public PollyFunctionSpeechTasks()
+        public PollyFunctionSpeechTasks(AmazonWebServiceInterface awsInterface)
         {
             InitializeComponent();
 
-            notifications = this.FindResource("applicationNotifications") as NotificationsList;
+            this.awsInterface = awsInterface;
+            this.notifications = this.FindResource("applicationNotifications") as NotificationsList;
         }
 
         private async void UserControl_Loaded(object sender, System.Windows.RoutedEventArgs e)
@@ -36,7 +39,7 @@ namespace Tustler.UserControls
                 Mouse.OverrideCursor = Cursors.Wait;
 
                 // refresh and then enable the headers
-                await voicesInstance.Refresh(notifications, languageCode).ConfigureAwait(true);
+                await voicesInstance.Refresh(awsInterface, notifications, languageCode).ConfigureAwait(true);
             }
             finally
             {
@@ -65,7 +68,7 @@ namespace Tustler.UserControls
                 bool useNeural = (string)(cbEngine.SelectedItem as ComboBoxItem).Tag == "neural";
                 string voiceId = (cbVoice.SelectedItem as ComboBoxItem).Content as string;
 
-                var taskId = await speechTasksInstance.AddNewTask(notifications, bucketName, key, arn, filePath, useNeural, voiceId).ConfigureAwait(true);
+                var taskId = await speechTasksInstance.AddNewTask(awsInterface, notifications, bucketName, key, arn, filePath, useNeural, voiceId).ConfigureAwait(true);
 
                 // enable the headers
                 if (dgSpeechSynthesisTasks.Items.Count > 0)
@@ -103,7 +106,7 @@ namespace Tustler.UserControls
 
                 var speechTasksInstance = this.FindResource("speechTasksInstance") as SpeechSynthesisTasksViewModel;
 
-                await speechTasksInstance.ListTasks(notifications)
+                await speechTasksInstance.ListTasks(awsInterface, notifications)
                     .ContinueWith(task => (dgSpeechSynthesisTasks.Items.Count > 0) ?
                             dgSpeechSynthesisTasks.HeadersVisibility = DataGridHeadersVisibility.All :
                             dgSpeechSynthesisTasks.HeadersVisibility = DataGridHeadersVisibility.None,
