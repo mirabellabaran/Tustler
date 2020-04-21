@@ -8,15 +8,31 @@ namespace TustlerAWSLib
 {
     public class AmazonWebServiceInterface
     {
-        public AmazonWebServiceInterface()
+        public AmazonWebServiceInterface(RuntimeOptions options)
         {
-            S3 = new MockS3();
+            if (options.IsMocked)
+            {
+                EnableMocking();
+            }
+            else
+            {
+                DisableMocking();
+            }
+        }
 
-            Polly = new Polly();
-            SNS = new SNS();
-            SQS = new SQS();
-            Transcribe = new Transcribe();
-            Translate = new Translate();
+        public bool IsMocked
+        {
+            set
+            {
+                if (value)
+                {
+                    EnableMocking();
+                }
+                else
+                {
+                    DisableMocking();
+                }
+            }
         }
 
         public IAmazonWebInterfaceS3 S3
@@ -53,6 +69,27 @@ namespace TustlerAWSLib
         {
             get;
             internal set;
+        }
+
+        private void EnableMocking()
+        {
+            S3 = new MockS3();
+
+            Polly = new Polly();
+            SNS = new SNS();
+            SQS = new SQS();
+            Transcribe = new Transcribe();
+            Translate = new Translate();
+        }
+
+        private void DisableMocking()
+        {
+            S3 = new S3();
+            Polly = new Polly();
+            SNS = new SNS();
+            SQS = new SQS();
+            Transcribe = new Transcribe();
+            Translate = new Translate();
         }
     }
 }

@@ -23,11 +23,8 @@ namespace Tustler.Helpers
 
     public class NotificationServices
     {
-        private readonly AmazonWebServiceInterface awsInterface;
-
         // key is a messageId or taskId
         private readonly Dictionary<string, MatchedAction> notificationTasks;
-        private DispatcherTimer? timer = null;
 
         /// <summary>
         /// Wraps a matching function and a related action
@@ -38,37 +35,37 @@ namespace Tustler.Helpers
             public Action<object?>? Action { get; internal set; }
         }
 
-        public NotificationServices(AmazonWebServiceInterface awsInterface)
+        public NotificationServices()
         {
-            this.awsInterface = awsInterface;
-
             notificationTasks = new Dictionary<string, MatchedAction>();
         }
 
         /// <summary>
         /// Wait on a notification message on the input queue that contains a message body that references the supplied task Id
+        /// The expected message is added to an internal dictionary
         /// </summary>
         /// <param name="notifications">A reference to the global notifications list</param>
         /// <param name="taskId">The task Id to match</param>
         /// <param name="continuation">An action to perform if a matching message is found</param>
         /// <returns></returns>
-        public async Task WaitOnTaskStateChanged(NotificationsList notifications, string taskId, Action<object?> continuation)
+        public async Task<bool> WaitOnTaskStateChanged(AmazonWebServiceInterface awsInterface, NotificationsList notifications, string taskId, Action<object?> continuation)
         {
             notificationTasks.Add(taskId, new MatchedAction { Match = MatchTaskChangedState, Action = continuation });
-            await WaitOnMessage(notifications).ConfigureAwait(true);
+            return await WaitOnMessage(awsInterface, notifications).ConfigureAwait(true);
         }
 
         /// <summary>
         /// Wait on a notification message on the input queue that matches the supplied message Id
+        /// The expected message is added to an internal dictionary
         /// </summary>
         /// <param name="notifications">A reference to the global notifications list</param>
         /// <param name="messageId">The message Id to match</param>
         /// <param name="continuation">An action to perform if a matching message is found</param>
         /// <returns></returns>
-        public async Task WaitOnReceivedMessage(NotificationsList notifications, string messageId, Action<object?> continuation)
+        public async Task<bool> WaitOnReceivedMessage(AmazonWebServiceInterface awsInterface, NotificationsList notifications, string messageId, Action<object?> continuation)
         {
             notificationTasks.Add(messageId, new MatchedAction { Match = MatchReceivedMessage, Action = continuation });
-            await WaitOnMessage(notifications).ConfigureAwait(true);
+            return await WaitOnMessage(awsInterface, notifications).ConfigureAwait(true);
         }
 
         /// <summary>
@@ -76,7 +73,7 @@ namespace Tustler.Helpers
         /// </summary>
         /// <param name="notifications">A reference to the global notifications list</param>
         /// <returns></returns>
-        public async Task TestNotifications(NotificationsList notifications)
+        public async Task<bool> TestNotifications(AmazonWebServiceInterface awsInterface, NotificationsList notifications)
         {
             static async Task<AWSResult<string>> PublishMessage(AmazonWebServiceInterface awsInterface)
             {
@@ -88,6 +85,7 @@ namespace Tustler.Helpers
             if (result.IsError)
             {
                 notifications.HandleError("TestNotifications", "An error occurred when publishing a message.", result.Exception);
+                return false;
             }
             else
             {
@@ -98,23 +96,11 @@ namespace Tustler.Helpers
                     var message = msg as NotificationMessage;
                     notifications.ShowMessage("Test succeeded", $"Received a message with content \"{message!.Message}\" on the input queue.");
                 }
-                await WaitOnReceivedMessage(notifications, messageId, ContinuationTask).ConfigureAwait(true);
+                return await WaitOnReceivedMessage(awsInterface, notifications, messageId, ContinuationTask).ConfigureAwait(true);
             }
         }
 
-        private bool MatchTaskChangedState(string taskId, NotificationMessage message)
-        {
-            // return true if a notification message is received that contains a reference to the given task Id in the message body
-            return (message.Type == "Notification" && message.Message.Contains(taskId, StringComparison.InvariantCulture));
-        }
-
-        private bool MatchReceivedMessage(string messageId, NotificationMessage message)
-        {
-            // return true if a notification message is received with the given message Id
-            return (message.Type == "Notification" && message.MessageId == messageId);
-        }
-
-        private async Task WaitOnMessage(NotificationsList notifications)
+        public async Task<bool> WaitOnMessage(AmazonWebServiceInterface awsInterface, NotificationsList notifications)
         {
             var queueUrl = ApplicationSettings.NotificationsQueue;
             NotificationMessage? message;
@@ -154,29 +140,19 @@ namespace Tustler.Helpers
                 }
             }
 
-            if (notificationTasks.Count > 0)
-            {
-                // wait one minute then requery the input queue
-                if (timer == null)
-                {
-                    timer = new DispatcherTimer(TimeSpan.FromSeconds(60), DispatcherPriority.ApplicationIdle, DispatcherTimer_Tick, Application.Current.Dispatcher);
-                }
-                else
-                {
-                    timer.Start();
-                }
-            }
+            return (notificationTasks.Count > 0);
         }
 
-        private async void DispatcherTimer_Tick(object sender, EventArgs e)
+        private bool MatchTaskChangedState(string taskId, NotificationMessage message)
         {
-            if (sender is DispatcherTimer dispatcherTimer)
-            {
-                dispatcherTimer.Stop();
-                var notifications = Application.Current.FindResource("applicationNotifications") as NotificationsList;
+            // return true if a notification message is received that contains a reference to the given task Id in the message body
+            return (message.Type == "Notification" && message.Message.Contains(taskId, StringComparison.InvariantCulture));
+        }
 
-                await WaitOnMessage(notifications).ConfigureAwait(true);
-            }
+        private bool MatchReceivedMessage(string messageId, NotificationMessage message)
+        {
+            // return true if a notification message is received with the given message Id
+            return (message.Type == "Notification" && message.MessageId == messageId);
         }
     }
 }

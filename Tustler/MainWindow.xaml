@@ -8,6 +8,7 @@
         xmlns:services="clr-namespace:TustlerServicesLib;assembly=TustlerServicesLib"
         xmlns:helpers="clr-namespace:Tustler.Helpers"
         mc:Ignorable="d"
+        x:Name="Main"
         Title="Tustler" Height="962" Width="1681"
         Background="{StaticResource NormalBackground}">
 
@@ -18,6 +19,8 @@
         <CommandBinding Command="{x:Static local:MainWindowCommands.Switch}" CanExecute="SwitchCommand_CanExecute" Executed="SwitchCommand_Executed" />
         <CommandBinding Command="{x:Static local:MainWindowCommands.ClearNotifications}" CanExecute="ClearNotifications_CanExecute" Executed="ClearNotifications_Executed" />
         <CommandBinding Command="{x:Static local:MainWindowCommands.CopyNotification}" CanExecute="CopyNotification_CanExecute" Executed="CopyNotification_Executed" />
+        <CommandBinding Command="{x:Static local:MainWindowCommands.EnableMocking}" CanExecute="EnableMocking_CanExecute" Executed="EnableMocking_Executed" />
+        <CommandBinding Command="{x:Static local:MainWindowCommands.DisableMocking}" CanExecute="DisableMocking_CanExecute" Executed="DisableMocking_Executed" />
     </Window.CommandBindings>
     
     <Window.Resources>
@@ -152,8 +155,22 @@
     </Window.Resources>
         
     <DockPanel>
-        <StatusBar DockPanel.Dock="Bottom" Height="30">
-            <Label Content="Connected"/>
+        <StatusBar DockPanel.Dock="Bottom" Height="40">
+            <StatusBarItem>
+                <StatusBarItem.ContextMenu>
+                    <ContextMenu Opened="ContextMenu_Opened">
+                        <!-- CommandTarget added for known bug: see https://social.msdn.microsoft.com/Forums/vstudio/en-US/7bd75a7c-eab4-4f3a-967b-94a9534a7455/why-is-my-contextmenu-item-disabled -->
+                        <MenuItem Command="{x:Static local:MainWindowCommands.EnableMocking}" CommandTarget="{Binding Path=PlacementTarget,RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                        <MenuItem Command="{x:Static local:MainWindowCommands.DisableMocking}" CommandTarget="{Binding Path=PlacementTarget,RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                    </ContextMenu>
+                </StatusBarItem.ContextMenu>
+                <Label Background="DarkSlateGray">
+                    <Border x:Name="bdrStatusBarIsMocked" Padding="2" BorderThickness="2" BorderBrush="{StaticResource ContrastingBackground}">
+                        <TextBlock x:Name="tbStatusBarIsMocked" FontSize="10" Text="Standard Mode" />
+                    </Border>
+                </Label>
+            </StatusBarItem>
+            <Separator />
         </StatusBar>
         <DockPanel x:Name="panContent" DockPanel.Dock="Top">
             <DockPanel x:Name="panTree" DockPanel.Dock="Left" Width="200">
@@ -161,6 +178,7 @@
                 <Menu x:Name="menuTasks" DockPanel.Dock="Top" Margin="10,10,10,10" MenuItem.Click="MenuItem_Click" MenuItem.SubmenuOpened="MenuItem_SubmenuOpenedAsync">
                     <MenuItem Header="Application">
                         <MenuItem Header="Help">
+                            <Separator />
                             <MenuItem Command="{x:Static local:MainWindowCommands.About}" />
                         </MenuItem>
                         <MenuItem Command="{x:Static local:MainWindowCommands.Exit}" />

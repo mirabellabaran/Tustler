@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using Tustler.Models;
 using TustlerAWSLib;
+using TustlerInterfaces;
 using TustlerServicesLib;
 using TustlerWinPlatformLib;
 
@@ -69,6 +70,7 @@ namespace Tustler
         private void ConfigureServices(IServiceCollection services)
         {
             // dependent services
+            services.AddSingleton<RuntimeOptions>();
             services.AddSingleton<AmazonWebServiceInterface>();
             services.AddSingleton<MainWindow>();
         }

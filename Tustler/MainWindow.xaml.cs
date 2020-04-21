@@ -19,6 +19,7 @@ using System.Windows.Navigation;
 using Tustler.Models;
 using Tustler.UserControls;
 using TustlerAWSLib;
+using TustlerInterfaces;
 using TustlerServicesLib;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
 using AppSettingsControl = Tustler.UserControls.ApplicationSettings;
@@ -33,12 +34,35 @@ namespace Tustler
         private readonly AmazonWebServiceInterface awsInterface;
         private bool isCollapsed;  // true if the notifications area is in a collapsed state
 
-        public MainWindow(AmazonWebServiceInterface awsInterface)
+        public static readonly DependencyProperty IsMockedProperty = DependencyProperty.Register("IsMocked", typeof(bool), typeof(MainWindow), new PropertyMetadata(false, PropertyChangedCallback));
+
+        private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
+        {
+            if (dependencyObject is MainWindow ctrl)
+            {
+                if (dependencyPropertyChangedEventArgs.NewValue != null)
+                {
+                    var isMocked = (bool)dependencyPropertyChangedEventArgs.NewValue;
+                    ctrl.bdrStatusBarIsMocked.Background = isMocked ? Brushes.Red : Brushes.Transparent;
+                    ctrl.tbStatusBarIsMocked.Text = isMocked ? $"Mocking mode enabled" : "Standard Mode";
+                }
+            }
+        }
+
+        public MainWindow(AmazonWebServiceInterface awsInterface, RuntimeOptions options)
         {
             InitializeComponent();
 
             this.awsInterface = awsInterface;
+            this.IsMocked = options.IsMocked;
+
             this.isCollapsed = false;
+        }
+
+        public bool IsMocked
+        {
+            get { return (bool)GetValue(IsMockedProperty); }
+            set { SetValue(IsMockedProperty, value); }
         }
 
         #region Event Handlers
@@ -186,6 +210,35 @@ namespace Tustler
             }
 
             notificationsStoryboard.Begin(this);
+        }
+
+        private void EnableMocking_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = !IsMocked;
+        }
+
+        private void EnableMocking_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            ToggleMockingMode(true);
+        }
+
+        private void DisableMocking_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = IsMocked;
+        }
+
+        private void DisableMocking_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            ToggleMockingMode(false);
+        }
+
+        private void ToggleMockingMode(bool isMocked)
+        {
+            var app = App.Current as App;
+            var awsInterface = app.ServiceProvider.GetService(typeof(AmazonWebServiceInterface)) as AmazonWebServiceInterface;
+            awsInterface.IsMocked = isMocked;
+
+            this.IsMocked = isMocked;
         }
 
         private void NotificationsStoryboard_Completed(object sender, EventArgs e)
@@ -420,6 +473,12 @@ namespace Tustler
                 MainWindowCommands.Switch.Execute(null, tvActions);
             }
         }
+
+        private void ContextMenu_Opened(object sender, RoutedEventArgs e)
+        {
+            // status bar mode menu has been opened
+            CommandManager.InvalidateRequerySuggested();
+        }
     }
 
     public static class MainWindowCommands
@@ -447,6 +506,22 @@ namespace Tustler
                 "About",
                 "About",
                 typeof(MainWindowCommands)
+            );
+
+        public static readonly RoutedUICommand EnableMocking = new RoutedUICommand
+            (
+                "Enable Mocking",
+                "EnableMocking",
+                typeof(MainWindowCommands),
+                null
+            );
+
+        public static readonly RoutedUICommand DisableMocking = new RoutedUICommand
+            (
+                "Disable Mocking",
+                "DisableMocking",
+                typeof(MainWindowCommands),
+                null
             );
 
         public static readonly RoutedCommand Switch = new RoutedCommand

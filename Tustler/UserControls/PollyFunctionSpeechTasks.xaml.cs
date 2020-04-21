@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Tustler.Helpers;
 using TustlerAWSLib;
 using TustlerModels;
@@ -19,6 +20,7 @@ namespace Tustler.UserControls
     {
         private readonly AmazonWebServiceInterface awsInterface;
         private readonly NotificationsList notifications;
+        private DispatcherTimer timer = null;
 
         public PollyFunctionSpeechTasks(AmazonWebServiceInterface awsInterface)
         {
@@ -85,7 +87,9 @@ namespace Tustler.UserControls
                     PollyCommands.RefreshTaskList.Execute(null, this);
                 }
                 var notificationsServicesInstance = this.FindResource("notificationsServicesInstance") as NotificationServices;
-                await notificationsServicesInstance.WaitOnTaskStateChanged(notifications, taskId, ContinuationTask).ConfigureAwait(true);
+                var waitingOnNotifications = await notificationsServicesInstance.WaitOnTaskStateChanged(awsInterface, notifications, taskId, ContinuationTask).ConfigureAwait(true);
+                if (waitingOnNotifications)
+                    BeginRegularNotificationRequery();
             }
             finally
             {
@@ -131,11 +135,39 @@ namespace Tustler.UserControls
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                await notificationsServicesInstance.TestNotifications(notifications).ConfigureAwait(true);
+                var waitingOnNotifications = await notificationsServicesInstance.TestNotifications(awsInterface, notifications).ConfigureAwait(true);
+                if (waitingOnNotifications)
+                    BeginRegularNotificationRequery();
             }
             finally
             {
                 Mouse.OverrideCursor = null;
+            }
+        }
+
+        private void BeginRegularNotificationRequery()
+        {
+            // wait one minute then requery the input queue
+            if (timer == null)
+            {
+                timer = new DispatcherTimer(TimeSpan.FromSeconds(60), DispatcherPriority.ApplicationIdle, DispatcherTimer_Tick, Dispatcher.CurrentDispatcher);
+            }
+
+            timer.Start();
+        }
+
+        private async void DispatcherTimer_Tick(object sender, EventArgs e)
+        {
+            if (sender is DispatcherTimer dispatcherTimer)
+            {
+                dispatcherTimer.Stop();
+
+                var notificationsServicesInstance = this.FindResource("notificationsServicesInstance") as NotificationServices;
+                var notifications = this.FindResource("applicationNotifications") as NotificationsList;
+
+                var waitingOnNotifications = await notificationsServicesInstance.WaitOnMessage(awsInterface, notifications).ConfigureAwait(true);
+                if (waitingOnNotifications)
+                    dispatcherTimer.Start();
             }
         }
 
