@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using Tustler.Helpers;
 using TustlerAWSLib;
+using TustlerInterfaces;
 using TustlerModels;
 using TustlerServicesLib;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
@@ -68,7 +69,7 @@ namespace Tustler.UserControls
                 string arn = AppSettings.NotificationsARN;
                 string filePath = tbTextFilePath.Text;
                 bool useNeural = (string)(cbEngine.SelectedItem as ComboBoxItem).Tag == "neural";
-                string voiceId = (cbVoice.SelectedItem as ComboBoxItem).Content as string;
+                string voiceId = (cbVoice.SelectedItem as Voice).Id;
 
                 var taskId = await speechTasksInstance.AddNewTask(awsInterface, notifications, bucketName, key, arn, filePath, useNeural, voiceId).ConfigureAwait(true);
 
@@ -81,7 +82,7 @@ namespace Tustler.UserControls
                 // wait on a notificaton and then continue with the following task
                 void ContinuationTask(object? msg)
                 {
-                    var message = (NotificationMessage)msg;
+                    var message = (SNSNotificationMessage)msg;
                     var detail = $"Message content: {message.Message}";
                     notifications.ShowMessage("Task state changed", detail);
                     PollyCommands.RefreshTaskList.Execute(null, this);
@@ -150,7 +151,8 @@ namespace Tustler.UserControls
             // wait one minute then requery the input queue
             if (timer == null)
             {
-                timer = new DispatcherTimer(TimeSpan.FromSeconds(60), DispatcherPriority.ApplicationIdle, DispatcherTimer_Tick, Dispatcher.CurrentDispatcher);
+                var seconds = awsInterface.IsMocked ? 10 : 60;
+                timer = new DispatcherTimer(TimeSpan.FromSeconds(seconds), DispatcherPriority.ApplicationIdle, DispatcherTimer_Tick, Dispatcher.CurrentDispatcher);
             }
 
             timer.Start();

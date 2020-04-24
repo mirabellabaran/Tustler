@@ -63,6 +63,11 @@ namespace Tustler
 
             ServiceProvider = serviceCollection.BuildServiceProvider();
 
+            // set runtime options
+            var options = ServiceProvider.GetService<RuntimeOptions>();
+            options.NotificationsARN = ApplicationSettings.NotificationsARN;
+            options.NotificationsQueueURL = ApplicationSettings.NotificationsQueue;
+
             var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
             mainWindow.Show();
         }

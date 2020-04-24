@@ -5,18 +5,9 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:uc="clr-namespace:Tustler.UserControls"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
     <DockPanel>
-        <TabControl Margin="20">
-            <TabItem Header="Manage Speech Tasks" Width="150">
-                <uc:PollyFunctionSpeechTasks />
-            </TabItem>
-            <TabItem Header="Test Voices" Width="150">
-                <uc:PollyFunctionTestSpeech />
-            </TabItem>
-            <TabItem Header="Manage Lexicons" Width="150">
-                <uc:PollyFunctionLexicons />
-            </TabItem>
+        <TabControl x:Name="tabPollyFunctions" Margin="20">
         </TabControl>
     </DockPanel>
 </UserControl>

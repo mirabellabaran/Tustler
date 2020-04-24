@@ -420,13 +420,13 @@ namespace Tustler
                         panControlsContainer.Children.Add(new AppSettingsControl());
                         break;
                     case "polly":
-                        panControlsContainer.Children.Add(new PollyFunctions());
+                        panControlsContainer.Children.Add(new PollyFunctions(awsInterface));
                         break;
                     case "translate":
-                        panControlsContainer.Children.Add(new TranslateFunctions());
+                        panControlsContainer.Children.Add(new TranslateFunctions(awsInterface));
                         break;
                     case "transcribe":
-                        panControlsContainer.Children.Add(new TranscribeFunctions());
+                        panControlsContainer.Children.Add(new TranscribeFunctions(awsInterface));
                         break;
                     case "task":
                         var uc = new TasksManager(awsInterface)

@@ -13,14 +13,6 @@ using TustlerServicesLib;
 
 namespace Tustler.Helpers
 {
-    public class NotificationMessage
-    {
-        public string Type { get; set; }
-        public string MessageId { get; set; }
-        public string Message { get; set; }
-        public string Timestamp { get; set; }
-    }
-
     public class NotificationServices
     {
         // key is a messageId or taskId
@@ -31,7 +23,7 @@ namespace Tustler.Helpers
         /// </summary>
         private class MatchedAction
         {
-            public Func<string, NotificationMessage, bool>? Match { get; internal set; }
+            public Func<string, SNSNotificationMessage, bool>? Match { get; internal set; }
             public Action<object?>? Action { get; internal set; }
         }
 
@@ -93,7 +85,7 @@ namespace Tustler.Helpers
 
                 void ContinuationTask(object? msg)
                 {
-                    var message = msg as NotificationMessage;
+                    var message = msg as SNSNotificationMessage;
                     notifications.ShowMessage("Test succeeded", $"Received a message with content \"{message!.Message}\" on the input queue.");
                 }
                 return await WaitOnReceivedMessage(awsInterface, notifications, messageId, ContinuationTask).ConfigureAwait(true);
@@ -103,7 +95,7 @@ namespace Tustler.Helpers
         public async Task<bool> WaitOnMessage(AmazonWebServiceInterface awsInterface, NotificationsList notifications)
         {
             var queueUrl = ApplicationSettings.NotificationsQueue;
-            NotificationMessage? message;
+            SNSNotificationMessage? message;
 
             var result = await awsInterface.SQS.ReceiveMessage(queueUrl).ConfigureAwait(true);
             if (result.IsError)
@@ -114,7 +106,7 @@ namespace Tustler.Helpers
             else
             {
                 // result is null if the operation timed out
-                message = (result.Result is null) ? null : JsonSerializer.Deserialize<NotificationMessage>(result.Result);
+                message = (result.Result is null) ? null : JsonSerializer.Deserialize<SNSNotificationMessage>(result.Result);
             }
 
             if (message != null)
@@ -143,13 +135,13 @@ namespace Tustler.Helpers
             return (notificationTasks.Count > 0);
         }
 
-        private bool MatchTaskChangedState(string taskId, NotificationMessage message)
+        private bool MatchTaskChangedState(string taskId, SNSNotificationMessage message)
         {
             // return true if a notification message is received that contains a reference to the given task Id in the message body
             return (message.Type == "Notification" && message.Message.Contains(taskId, StringComparison.InvariantCulture));
         }
 
-        private bool MatchReceivedMessage(string messageId, NotificationMessage message)
+        private bool MatchReceivedMessage(string messageId, SNSNotificationMessage message)
         {
             // return true if a notification message is received with the given message Id
             return (message.Type == "Notification" && message.MessageId == messageId);

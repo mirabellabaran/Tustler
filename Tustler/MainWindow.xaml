@@ -155,8 +155,8 @@
     </Window.Resources>
         
     <DockPanel>
-        <StatusBar DockPanel.Dock="Bottom" Height="40">
-            <StatusBarItem>
+        <StatusBar DockPanel.Dock="Bottom" Height="30">
+            <StatusBarItem Padding="0">
                 <StatusBarItem.ContextMenu>
                     <ContextMenu Opened="ContextMenu_Opened">
                         <!-- CommandTarget added for known bug: see https://social.msdn.microsoft.com/Forums/vstudio/en-US/7bd75a7c-eab4-4f3a-967b-94a9534a7455/why-is-my-contextmenu-item-disabled -->
@@ -164,8 +164,8 @@
                         <MenuItem Command="{x:Static local:MainWindowCommands.DisableMocking}" CommandTarget="{Binding Path=PlacementTarget,RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
                     </ContextMenu>
                 </StatusBarItem.ContextMenu>
-                <Label Background="DarkSlateGray">
-                    <Border x:Name="bdrStatusBarIsMocked" Padding="2" BorderThickness="2" BorderBrush="{StaticResource ContrastingBackground}">
+                <Label Background="DarkSlateGray" Padding="0">
+                    <Border x:Name="bdrStatusBarIsMocked" Padding="2" BorderThickness="1" BorderBrush="{StaticResource ContrastingBackground}">
                         <TextBlock x:Name="tbStatusBarIsMocked" FontSize="10" Text="Standard Mode" />
                     </Border>
                 </Label>

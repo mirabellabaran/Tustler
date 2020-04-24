@@ -13,6 +13,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Tustler.Models;
+using TustlerAWSLib;
 
 namespace Tustler.UserControls
 {
@@ -21,11 +22,48 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class PollyFunctions : UserControl
     {
-        public PollyFunctions()
+        private readonly AmazonWebServiceInterface awsInterface;
+
+        public PollyFunctions(AmazonWebServiceInterface awsInterface)
         {
             InitializeComponent();
+
+            this.awsInterface = awsInterface;
         }
 
+        private void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            //<TabItem Header="Manage Speech Tasks" Width="150">
+            //    <uc:PollyFunctionSpeechTasks />
+            //</TabItem>
+            //<TabItem Header="Test Voices" Width="150">
+            //    <uc:PollyFunctionTestSpeech />
+            //</TabItem>
+            //<TabItem Header="Manage Lexicons" Width="150">
+            //    <uc:PollyFunctionLexicons />
+            //</TabItem>
+
+            tabPollyFunctions.Items.Add(new TabItem
+            {
+                Header = "Manage Speech Tasks",
+                Width = 150.0,
+                Content = new PollyFunctionSpeechTasks(awsInterface)
+            });
+
+            tabPollyFunctions.Items.Add(new TabItem
+            {
+                Header = "Test Voices",
+                Width = 150.0,
+                Content = new PollyFunctionTestSpeech(awsInterface)
+            });
+
+            tabPollyFunctions.Items.Add(new TabItem
+            {
+                Header = "Manage Lexicons",
+                Width = 150.0,
+                Content = new PollyFunctionLexicons(awsInterface)
+            });
+        }
     }
 
     public static class PollyCommands

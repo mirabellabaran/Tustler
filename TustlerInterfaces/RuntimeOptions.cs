@@ -16,5 +16,17 @@ namespace TustlerInterfaces
             get;
             set;
         }
+
+        public string NotificationsARN
+        {
+            get;
+            set;
+        }
+
+        public string NotificationsQueueURL
+        {
+            get;
+            set;
+        }
     }
 }

@@ -10,6 +10,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using TustlerAWSLib;
 
 namespace Tustler.UserControls
 {
@@ -18,9 +19,37 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class TranscribeFunctions : UserControl
     {
-        public TranscribeFunctions()
+        private readonly AmazonWebServiceInterface awsInterface;
+
+        public TranscribeFunctions(AmazonWebServiceInterface awsInterface)
         {
             InitializeComponent();
+
+            this.awsInterface = awsInterface;
+        }
+
+        private void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            //<TabItem Header="Manage Transcription Jobs" Width="180">
+            //    <uc:TranscribeFunctionTranscriptionTasks />
+            //</TabItem>
+            //<TabItem Header="Manage Vocabularies" Width="180">
+            //    <uc:TranscribeFunctionVocabularies />
+            //</TabItem>
+
+            tabTranscribeFunctions.Items.Add(new TabItem
+            {
+                Header = "Manage Transcription Jobs",
+                Width = 180.0,
+                Content = new TranscribeFunctionTranscriptionTasks(awsInterface)
+            });
+
+            tabTranscribeFunctions.Items.Add(new TabItem
+            {
+                Header = "Manage Vocabularies",
+                Width = 180.0,
+                Content = new TranscribeFunctionVocabularies(awsInterface)
+            });
         }
     }
 

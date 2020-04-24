@@ -10,6 +10,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using TustlerAWSLib;
 
 namespace Tustler.UserControls
 {
@@ -18,9 +19,57 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class TranslateFunctions : UserControl
     {
-        public TranslateFunctions()
+        private readonly AmazonWebServiceInterface awsInterface;
+
+        public TranslateFunctions(AmazonWebServiceInterface awsInterface)
         {
             InitializeComponent();
+
+            this.awsInterface = awsInterface;
+        }
+
+        private void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            //<TabItem Header="Realtime Translation" Width="150">
+            //    <uc:TranslateFunctionRealtimeTranslation />
+            //</TabItem>
+            //<TabItem Header="Manage Batch Translation" Width="150">
+            //    <uc:TranslateFunctionTranslationTasks />
+            //</TabItem>
+            //<TabItem Header="Test Translations" Width="150">
+            //    <uc:TranslateFunctionTestTranslations />
+            //</TabItem>
+            //<TabItem Header="Manage Terminologies" Width="150">
+            //    <uc:TranslateFunctionTerminologies/>
+            //</TabItem>
+
+            tabTranslateFunctions.Items.Add(new TabItem
+            {
+                Header = "Realtime Translation",
+                Width = 150.0,
+                Content = new TranslateFunctionRealtimeTranslation(awsInterface)
+            });
+
+            tabTranslateFunctions.Items.Add(new TabItem
+            {
+                Header = "Manage Batch Translation",
+                Width = 150.0,
+                Content = new TranslateFunctionTranslationTasks(awsInterface)
+            });
+
+            tabTranslateFunctions.Items.Add(new TabItem
+            {
+                Header = "Test Translations",
+                Width = 150.0,
+                Content = new TranslateFunctionTestTranslations(awsInterface)
+            });
+
+            tabTranslateFunctions.Items.Add(new TabItem
+            {
+                Header = "Manage Terminologies",
+                Width = 150.0,
+                Content = new TranslateFunctionTerminologies(awsInterface)
+            });
         }
     }
 

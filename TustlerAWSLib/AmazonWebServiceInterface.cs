@@ -8,11 +8,15 @@ namespace TustlerAWSLib
 {
     public class AmazonWebServiceInterface
     {
+        public readonly RuntimeOptions options;
+
         public AmazonWebServiceInterface(RuntimeOptions options)
         {
+            this.options = options;
+
             if (options.IsMocked)
             {
-                EnableMocking();
+                EnableMocking(options);
             }
             else
             {
@@ -22,11 +26,15 @@ namespace TustlerAWSLib
 
         public bool IsMocked
         {
+            get
+            {
+                return S3 is MockS3;
+            }
             set
             {
                 if (value)
                 {
-                    EnableMocking();
+                    EnableMocking(options);
                 }
                 else
                 {
@@ -71,13 +79,13 @@ namespace TustlerAWSLib
             internal set;
         }
 
-        private void EnableMocking()
+        private void EnableMocking(RuntimeOptions options)
         {
             S3 = new MockS3();
+            Polly = new MockPolly(this, options.NotificationsARN);      // needs to publish an SNS notification
+            SNS = new MockSNS(this, options.NotificationsARN);          // needs to pass notifications to the SQS queue
+            SQS = new MockSQS(options.NotificationsQueueURL);
 
-            Polly = new Polly();
-            SNS = new SNS();
-            SQS = new SQS();
             Transcribe = new Transcribe();
             Translate = new Translate();
         }

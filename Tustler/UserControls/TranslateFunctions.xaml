@@ -6,21 +6,9 @@
              xmlns:local="clr-namespace:Tustler.Models"
              xmlns:uc="clr-namespace:Tustler.UserControls"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
     <DockPanel>
-        <TabControl Margin="20">
-            <TabItem Header="Realtime Translation" Width="150">
-                <uc:TranslateFunctionRealtimeTranslation />
-            </TabItem>
-            <TabItem Header="Manage Batch Translation" Width="150">
-                <uc:TranslateFunctionTranslationTasks />
-            </TabItem>
-            <TabItem Header="Test Translations" Width="150">
-                <uc:TranslateFunctionTestTranslations />
-            </TabItem>
-            <TabItem Header="Manage Terminologies" Width="150">
-                <uc:TranslateFunctionTerminologies/>
-            </TabItem>
+        <TabControl x:Name="tabTranslateFunctions" Margin="20">
         </TabControl>
     </DockPanel>
 
