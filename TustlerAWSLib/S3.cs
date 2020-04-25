@@ -123,7 +123,13 @@ namespace TustlerAWSLib
             }
         }
 
-        public async Task<AWSResult<bool?>> DeleteBucketItem(string bucketName, string key)
+        /// <summary>
+        /// Delete the specified S3 bucket item
+        /// </summary>
+        /// <param name="bucketName"></param>
+        /// <param name="key"></param>
+        /// <returns>A pair consisting of a success flag and the S3 key</returns>
+        public async Task<AWSResult<(bool?, string)>> DeleteBucketItem(string bucketName, string key)
         {
             try
             {
@@ -138,25 +144,25 @@ namespace TustlerAWSLib
                     var response = await client.DeleteObjectAsync(deleteObjectRequest);
                     if (response.HttpStatusCode != System.Net.HttpStatusCode.NoContent) // default return code
                     {
-                        return new AWSResult<bool?>(null, new AWSException("DeleteBucketItem", $"Request returned status code: {response.HttpStatusCode}", null));
+                        return new AWSResult<(bool?, string)>((null, key), new AWSException("DeleteBucketItem", $"Request returned status code: {response.HttpStatusCode}", null));
                     }
                     else
                     {
-                        return new AWSResult<bool?>(true, null);
+                        return new AWSResult<(bool?, string)>((true, key), null);
                     }
                 }
             }
             catch (HttpRequestException ex)
             {
-                return new AWSResult<bool?>(null, new AWSException("DeleteBucketItem", "Not connected.", ex));
+                return new AWSResult<(bool?, string)>((null, key), new AWSException("DeleteBucketItem", "Not connected.", ex));
             }
             catch (AmazonS3Exception ex)
             {
-                return new AWSResult<bool?>(null, new AWSException("DeleteBucketItem", "S3 Exception.", ex));
+                return new AWSResult<(bool?, string)>((null, key), new AWSException("DeleteBucketItem", "S3 Exception.", ex));
             }
             catch (HttpErrorResponseException ex)
             {
-                return new AWSResult<bool?>(null, new AWSException("DeleteBucketItem", "Error Response Exception.", ex));
+                return new AWSResult<(bool?, string)>((null, key), new AWSException("DeleteBucketItem", "Error Response Exception.", ex));
             }
         }
 
@@ -167,8 +173,8 @@ namespace TustlerAWSLib
         /// <param name="filePath">The path of the file to upload</param>
         /// <param name="mimetype">The mimetype of the file (may be null)</param>
         /// <param name="extension">The file extension of the file (may be null)</param>
-        /// <returns></returns>
-        public async Task<AWSResult<bool?>> UploadItem(string bucketName, string newKey, string filePath, string mimetype, string extension)
+        /// <returns>A pair consisting of a success flag and the filepath</returns>
+        public async Task<AWSResult<(bool?, string)>> UploadItem(string bucketName, string newKey, string filePath, string mimetype, string extension)
         {
             try
             {
@@ -193,24 +199,31 @@ namespace TustlerAWSLib
                     var fileTransferUtility = new TransferUtility(client);
 
                     await fileTransferUtility.UploadAsync(fileTransferUtilityRequest);
-                    return new AWSResult<bool?>(true, null);
+                    return new AWSResult<(bool?, string)>((true, filePath), null);
                 }
             }
             catch (HttpRequestException ex)
             {
-                return new AWSResult<bool?>(null, new AWSException("UploadItem", "Not connected.", ex));
+                return new AWSResult<(bool?, string)>((null, filePath), new AWSException("UploadItem", "Not connected.", ex));
             }
             catch (AmazonS3Exception ex)
             {
-                return new AWSResult<bool?>(null, new AWSException("UploadItem", "S3 Exception.", ex));
+                return new AWSResult<(bool?, string)>((null, filePath), new AWSException("UploadItem", "S3 Exception.", ex));
             }
             catch (HttpErrorResponseException ex)
             {
-                return new AWSResult<bool?>(null, new AWSException("UploadItem", "Error Response Exception.", ex));
+                return new AWSResult<(bool?, string)>((null, filePath), new AWSException("UploadItem", "Error Response Exception.", ex));
             }
         }
 
-        public async Task<AWSResult<bool?>> DownloadItem(string bucketName, string key, string filePath)
+        /// <summary>
+        /// Download an S3 bucket item
+        /// </summary>
+        /// <param name="bucketName"></param>
+        /// <param name="key"></param>
+        /// <param name="filePath"></param>
+        /// <returns>A pair consisting of a success flag and the filepath</returns>
+        public async Task<AWSResult<(bool?, string)>> DownloadItem(string bucketName, string key, string filePath)
         {
             try
             {
@@ -226,20 +239,20 @@ namespace TustlerAWSLib
                     var fileTransferUtility = new TransferUtility(client);
 
                     await fileTransferUtility.DownloadAsync(fileTransferUtilityRequest);
-                    return new AWSResult<bool?>(true, null);
+                    return new AWSResult<(bool?, string)>((true, filePath), null);
                 }
             }
             catch (HttpRequestException ex)
             {
-                return new AWSResult<bool?>(null, new AWSException("DownloadItem", "Not connected.", ex));
+                return new AWSResult<(bool?, string)>((null, filePath), new AWSException("DownloadItem", "Not connected.", ex));
             }
             catch (AmazonS3Exception ex)
             {
-                return new AWSResult<bool?>(null, new AWSException("DownloadItem", "S3 Exception.", ex));
+                return new AWSResult<(bool?, string)>((null, filePath), new AWSException("DownloadItem", "S3 Exception.", ex));
             }
             catch (HttpErrorResponseException ex)
             {
-                return new AWSResult<bool?>(null, new AWSException("DownloadItem", "Error Response Exception.", ex));
+                return new AWSResult<(bool?, string)>((null, filePath), new AWSException("DownloadItem", "Error Response Exception.", ex));
             }
         }
 

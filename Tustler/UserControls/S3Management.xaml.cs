@@ -151,7 +151,7 @@ namespace Tustler.UserControls
 
                         var deleteResult = await S3Services.DeleteItem(awsInterface, bucketName, key).ConfigureAwait(true);
 
-                        var success = S3Services.ProcessDeleteBucketItemResult(notifications, deleteResult, key);
+                        var success = S3Services.ProcessDeleteBucketItemResult(notifications, deleteResult);
                         if (success)
                         {
                             await bucketItemsInstance.ForceRefresh(awsInterface, notifications, bucketName).ConfigureAwait(true);

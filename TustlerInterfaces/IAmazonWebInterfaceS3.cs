@@ -11,8 +11,8 @@ namespace TustlerInterfaces
         public abstract Task<AWSResult<List<S3Bucket>>> ListBuckets();
         public abstract Task<AWSResult<List<S3Object>>> ListBucketItems(string bucketName);
         public abstract Task<AWSResult<MetadataCollection>> GetItemMetadata(string bucketName, string key);
-        public abstract Task<AWSResult<bool?>> DeleteBucketItem(string bucketName, string key);
-        public abstract Task<AWSResult<bool?>> UploadItem(string bucketName, string newKey, string filePath, string mimetype, string extension);
-        public abstract Task<AWSResult<bool?>> DownloadItem(string bucketName, string key, string filePath);
+        public abstract Task<AWSResult<(bool?, string)>> DeleteBucketItem(string bucketName, string key);
+        public abstract Task<AWSResult<(bool?, string)>> UploadItem(string bucketName, string newKey, string filePath, string mimetype, string extension);
+        public abstract Task<AWSResult<(bool?, string)>> DownloadItem(string bucketName, string key, string filePath);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using TustlerAWSLib;
 using TustlerInterfaces;
@@ -11,22 +12,22 @@ namespace TustlerModels.Services
     /// </summary>
     public static class S3Services
     {
-        public static async Task<AWSResult<bool?>> UploadItem(AmazonWebServiceInterface awsInterface, string bucketName, string newKey, string filePath, string mimetype, string extension)
+        public static async Task<AWSResult<(bool?, string)>> UploadItem(AmazonWebServiceInterface awsInterface, string bucketName, string newKey, string filePath, string mimetype, string extension)
         {
             return await awsInterface.S3.UploadItem(bucketName, newKey, filePath, mimetype, extension).ConfigureAwait(false);
         }
 
-        public static async Task<AWSResult<bool?>> DownloadItem(AmazonWebServiceInterface awsInterface, string bucketName, string key, string filePath)
+        public static async Task<AWSResult<(bool?, string)>> DownloadItem(AmazonWebServiceInterface awsInterface, string bucketName, string key, string filePath)
         {
             return await awsInterface.S3.DownloadItem(bucketName, key, filePath).ConfigureAwait(false);
         }
 
-        public static async Task<AWSResult<bool?>> DeleteItem(AmazonWebServiceInterface awsInterface, string bucketName, string key)
+        public static async Task<AWSResult<(bool?, string)>> DeleteItem(AmazonWebServiceInterface awsInterface, string bucketName, string key)
         {
             return await awsInterface.S3.DeleteBucketItem(bucketName, key).ConfigureAwait(false);
         }
 
-        public static bool ProcessUploadItemResult(NotificationsList notifications, AWSResult<bool?> uploadResult)
+        public static bool ProcessUploadItemResult(NotificationsList notifications, AWSResult<(bool?, string)> uploadResult)
         {
             bool success = false;
 
@@ -36,16 +37,17 @@ namespace TustlerModels.Services
             }
             else
             {
-                success = (uploadResult.Result.HasValue && uploadResult.Result.Value);
+                var (flag, filePath) = uploadResult.Result;
+                success = (flag.HasValue && flag.Value);
                 var successStr = success ? "succeeded" : "failed";
                 var message = $"Upload {successStr}";
-                notifications.ShowMessage(message, $"Task: Upload item to S3 completed @ {DateTime.Now.ToShortTimeString()}");
+                notifications.ShowMessage(message, $"Task: Upload item '{Path.GetFileName(filePath)}' to S3 completed @ {DateTime.Now.ToShortTimeString()}");
             }
 
             return success;
         }
 
-        public static bool ProcessDownloadItemResult(NotificationsList notifications, AWSResult<bool?> downloadResult)
+        public static bool ProcessDownloadItemResult(NotificationsList notifications, AWSResult<(bool?, string)> downloadResult)
         {
             bool success = false;
 
@@ -55,16 +57,17 @@ namespace TustlerModels.Services
             }
             else
             {
-                success = (downloadResult.Result.HasValue && downloadResult.Result.Value);
+                var (flag, filePath) = downloadResult.Result;
+                success = (flag.HasValue && flag.Value);
                 var successStr = success ? "succeeded" : "failed";
                 var message = $"Download {successStr}";
-                notifications.ShowMessage(message, $"Task: Download item from S3 completed @ {DateTime.Now.ToShortTimeString()}");
+                notifications.ShowMessage(message, $"Task: Download item from S3 to '{Path.GetFileName(filePath)}' completed @ {DateTime.Now.ToShortTimeString()}");
             }
 
             return success;
         }
 
-        public static bool ProcessDeleteBucketItemResult(NotificationsList notifications, AWSResult<bool?> deleteResult, string key)
+        public static bool ProcessDeleteBucketItemResult(NotificationsList notifications, AWSResult<(bool?, string)> deleteResult)
         {
             bool success = false;
 
@@ -74,7 +77,8 @@ namespace TustlerModels.Services
             }
             else
             {
-                success = (deleteResult.Result.HasValue && deleteResult.Result.Value);
+                var (flag, key) = deleteResult.Result;
+                success = (flag.HasValue && flag.Value);
                 var successStr = success ? "succeeded" : "failed";
                 var message = $"Delete operation {successStr}";
                 notifications.ShowMessage(message, $"Task: Delete item '{key}' completed @ {DateTime.Now.ToShortTimeString()}");

@@ -65,7 +65,7 @@ namespace Tustler.UserControls
                 var speechTasksInstance = this.FindResource("speechTasksInstance") as SpeechSynthesisTasksViewModel;
 
                 string bucketName = AppSettings.DefaultBucketName;
-                string key = $"SpeechTaskOutput-{DateTime.Now.Ticks}";
+                string key = $"PollyTaskOutput-{Guid.NewGuid()}.mp3";       // real Polly mutates this somehow
                 string arn = AppSettings.NotificationsARN;
                 string filePath = tbTextFilePath.Text;
                 bool useNeural = (string)(cbEngine.SelectedItem as ComboBoxItem).Tag == "neural";

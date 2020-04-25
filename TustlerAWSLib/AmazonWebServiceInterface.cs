@@ -85,8 +85,8 @@ namespace TustlerAWSLib
             Polly = new MockPolly(this, options.NotificationsARN);      // needs to publish an SNS notification
             SNS = new MockSNS(this, options.NotificationsARN);          // needs to pass notifications to the SQS queue
             SQS = new MockSQS(options.NotificationsQueueURL);
+            Transcribe = new MockTranscribe(this);
 
-            Transcribe = new Transcribe();
             Translate = new Translate();
         }
 

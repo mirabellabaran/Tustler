@@ -3,6 +3,7 @@ using Amazon.S3.Model;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -52,18 +53,49 @@ namespace TustlerAWSLib.Mocks
                 return KeyValuePair.Create(s3key, pair);
             }));
 
-            var bucketItems = keysAndBuckets.Select(pair => new S3Object()
+            var bucketItems = keysAndBuckets.Select(pair => CreateS3Object(pair.itemB, pair.itemA))
+                .GroupBy(item => item.BucketName, (dictkey, items) => KeyValuePair.Create(dictkey, new List<S3Object>(items)));
+
+            bucketItemDictionary = new ConcurrentDictionary<string, List<S3Object>>(bucketItems);
+        }
+
+        private S3Object CreateS3Object(string bucketName, string key)
+        {
+            return new S3Object()
             {
-                BucketName = pair.itemB,
+                BucketName = bucketName,
                 ETag = "ETag",
-                Key = pair.itemA,
+                Key = key,
                 LastModified = DateTime.Now - TimeSpan.FromDays(1.0),
                 Owner = new Owner() { DisplayName = "TustlerOwner", Id = "TustlerId" },
                 Size = 100,
                 StorageClass = S3StorageClass.Standard
-            }).GroupBy(item => item.BucketName, (key, items) => KeyValuePair.Create(key, new List<S3Object>(items)));
+            };
+        }
 
-            bucketItemDictionary = new ConcurrentDictionary<string, List<S3Object>>(bucketItems);
+        /// <summary>
+        /// Add a new bucket item
+        /// </summary>
+        /// <param name="bucketName"></param>
+        /// <param name="key"></param>
+        /// <param name="mimetype"></param>
+        /// <param name="extension"></param>
+        /// <returns>The specified key, or a modified key if the key already exists in this bucket</returns>
+        public string AddBucketItem(string bucketName, string key, string mimetype, string extension)
+        {
+            var keyExists = bucketItemDictionary[bucketName].Exists(obj => obj.Key == key);
+            var newKey = keyExists ? $"{key}-{Guid.NewGuid()}" : key;
+
+            var obj = CreateS3Object(bucketName, newKey);
+
+            bucketItemDictionary.AddOrUpdate(bucketName,
+                dictkey => new List<S3Object>() { obj },
+                (dictkey, items) => { items.Add(obj); return items;  }
+            );
+
+            metaDataDictionary.AddOrUpdate(newKey, (mimetype, extension), (outerKey, existingList) => existingList);
+
+            return newKey;
         }
 
         public async Task<AWSResult<List<S3Bucket>>> ListBuckets()
@@ -101,7 +133,7 @@ namespace TustlerAWSLib.Mocks
             }
         }
 
-        public async Task<AWSResult<bool?>> DeleteBucketItem(string bucketName, string key)
+        public async Task<AWSResult<(bool?, string)>> DeleteBucketItem(string bucketName, string key)
         {
             var itemExists = bucketItemDictionary.ContainsKey(bucketName) && bucketItemDictionary[bucketName].Exists(item => item.Key == key);
             await Task.Delay(1000);
@@ -113,15 +145,15 @@ namespace TustlerAWSLib.Mocks
                    return new List<S3Object>(existingList.Where(item => item.Key != key));
                });
 
-                return await Task.FromResult(new AWSResult<bool?>(true, null));
+                return await Task.FromResult(new AWSResult<(bool?, string)>((true, key), null));
             }
             else
             {
-                return await Task.FromResult(new AWSResult<bool?>(false, null));
+                return await Task.FromResult(new AWSResult<(bool?, string)>((false, key), null));
             }
         }
 
-        public async Task<AWSResult<bool?>> UploadItem(string bucketName, string newKey, string filePath, string mimetype, string extension)
+        public async Task<AWSResult<(bool?, string)>> UploadItem(string bucketName, string newKey, string filePath, string mimetype, string extension)
         {
             // add an item to the pretend S3 bucket
             var itemExists = bucketItemDictionary.ContainsKey(bucketName) && bucketItemDictionary[bucketName].Exists(item => item.Key == newKey);
@@ -130,7 +162,7 @@ namespace TustlerAWSLib.Mocks
             if (itemExists)
             {
                 var ex = new AWSException("Mock S3 UploadItem", "Upload error", new AmazonS3Exception("An item with that key already exists"));
-                return await Task.FromResult(new AWSResult<bool?>(false, ex));
+                return await Task.FromResult(new AWSResult<(bool?, string)>((false, filePath), ex));
             }
             else
             {
@@ -154,11 +186,11 @@ namespace TustlerAWSLib.Mocks
 
                 metaDataDictionary.AddOrUpdate(newKey, (mimetype, extension), (outerKey, existingList) => existingList);
 
-                return await Task.FromResult(new AWSResult<bool?>(true, null));
+                return await Task.FromResult(new AWSResult<(bool?, string)>((true, filePath), null));
             }
         }
 
-        public async Task<AWSResult<bool?>> DownloadItem(string bucketName, string key, string filePath)
+        public async Task<AWSResult<(bool?, string)>> DownloadItem(string bucketName, string key, string filePath)
         {
             // pretend to retrieve an item from the pretend S3 bucket
             var itemExists = bucketItemDictionary.ContainsKey(bucketName) && bucketItemDictionary[bucketName].Exists(item => item.Key == key);
@@ -166,12 +198,15 @@ namespace TustlerAWSLib.Mocks
 
             if (itemExists)
             {
-                return await Task.FromResult(new AWSResult<bool?>(true, null));
+                // create an empty 'placeholder' file at the specified file path
+                File.Create(filePath);
+
+                return await Task.FromResult(new AWSResult<(bool?, string)>((true, filePath), null));
             }
             else
             {
                 var ex = new AWSException("Mock S3 DownloadItem", "Download error", new AmazonS3Exception("The item key does not exist"));
-                return await Task.FromResult(new AWSResult<bool?>(false, ex));
+                return await Task.FromResult(new AWSResult<(bool?, string)>((null, filePath), ex));
             }
         }
     }

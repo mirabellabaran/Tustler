@@ -25,7 +25,7 @@ module public AWSInterface =
         let deleteBucketItem awsInterface notifications bucketName key =
             async {
                 let awsResult = S3Services.DeleteItem(awsInterface, bucketName, key) |> Async.AwaitTask |> Async.RunSynchronously
-                return S3Services.ProcessDeleteBucketItemResult(notifications, awsResult, key)
+                return S3Services.ProcessDeleteBucketItemResult(notifications, awsResult)
             }
 
         let uploadBucketItem awsInterface notifications bucketName newKey filePath mimeType extension =
@@ -45,7 +45,7 @@ module public AWSInterface =
         let startTranscriptionJob awsInterface notifications jobName bucketName s3MediaKey languageCode vocabularyName =
             async {
                 let model = TranscriptionJobsViewModel()
-                do! model.AddNewTask (awsInterface, notifications, jobName, bucketName, s3MediaKey, languageCode, vocabularyName) |> Async.AwaitTask
+                let _s3OutputKey = model.AddNewTask (awsInterface, notifications, jobName, bucketName, s3MediaKey, languageCode, vocabularyName) |> Async.AwaitTask
                 return model.TranscriptionJobs
             }
 
