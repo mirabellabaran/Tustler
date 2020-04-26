@@ -65,13 +65,13 @@ namespace Tustler.UserControls
                 var speechTasksInstance = this.FindResource("speechTasksInstance") as SpeechSynthesisTasksViewModel;
 
                 string bucketName = AppSettings.DefaultBucketName;
-                string key = $"PollyTaskOutput-{Guid.NewGuid()}.mp3";       // real Polly mutates this somehow
+                string baseKey = "PollyTaskOutput";         // Polly appends the task Id (a GUID) and the file extension
                 string arn = AppSettings.NotificationsARN;
                 string filePath = tbTextFilePath.Text;
                 bool useNeural = (string)(cbEngine.SelectedItem as ComboBoxItem).Tag == "neural";
                 string voiceId = (cbVoice.SelectedItem as Voice).Id;
 
-                var taskId = await speechTasksInstance.AddNewTask(awsInterface, notifications, bucketName, key, arn, filePath, useNeural, voiceId).ConfigureAwait(true);
+                var taskId = await speechTasksInstance.AddNewTask(awsInterface, notifications, bucketName, baseKey, arn, filePath, useNeural, voiceId).ConfigureAwait(true);
 
                 // enable the headers
                 if (dgSpeechSynthesisTasks.Items.Count > 0)

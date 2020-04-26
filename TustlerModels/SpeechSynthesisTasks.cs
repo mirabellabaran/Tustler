@@ -41,10 +41,10 @@ namespace TustlerModels
         /// <param name="useNeural">If true then use the neural speech synthesis engine, otherwise use the standard engine</param>
         /// <param name="voiceId">The Id of the voice to use for synthesis</param>
         /// <returns></returns>
-        public async Task<string> AddNewTask(AmazonWebServiceInterface awsInterface, NotificationsList notifications, string bucketName, string key, string arn, string filePath, bool useNeural, string voiceId)
+        public async Task<string> AddNewTask(AmazonWebServiceInterface awsInterface, NotificationsList notifications, string bucketName, string baseKey, string arn, string filePath, bool useNeural, string voiceId)
         {
             var engine = useNeural ? Engine.Neural : Engine.Standard;
-            var result = await awsInterface.Polly.StartSpeechSynthesisTaskFromFile(bucketName, key, arn, filePath, engine, voiceId).ConfigureAwait(true);
+            var result = await awsInterface.Polly.StartSpeechSynthesisTaskFromFile(bucketName, baseKey, arn, filePath, engine, voiceId).ConfigureAwait(true);
             return ProcessPollyNewSpeechSynthesisTask(notifications, result);
         }
 
@@ -123,7 +123,6 @@ namespace TustlerModels
                     VoiceId = task.VoiceId
                 });
 
-                //NeedsRefresh = false;
                 return task.TaskId;
             }
         }

@@ -166,11 +166,14 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
             return await Task.FromResult(new AWSResult<PollyAudioStream>(new PollyAudioStream(audioStream, contentType), null));
         }
 
-        public async Task<AWSResult<SynthesisTask>> StartSpeechSynthesisTask(string bucketName, string key, string arn, string text, Engine engine, string voiceId)
+        public async Task<AWSResult<SynthesisTask>> StartSpeechSynthesisTask(string bucketName, string baseKey, string arn, string text, Engine engine, string voiceId)
         {
             await Task.Delay(1000);
 
-            var taskId = $"SpeechTask-{DateTime.Now.Ticks}";    // task IDs should be time-based whilst S3 keys should use Guids
+            var taskId = Guid.NewGuid().ToString();    // should task IDs be time-based?
+            var (mimetype, extension) = ("audio/mpeg", "mp3");
+            var key = $"{baseKey}.{taskId}.{extension}";        // Polly appends the task Id (a GUID) and the file extension to the base key (the OutputS3KeyPrefix)
+
             var languageCode = voiceDictionary?[voiceId]?.LanguageCode;
             var lexiconNames = new List<string>(lexiconDictionary.Keys);
 
@@ -181,7 +184,7 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
                 LanguageCode = languageCode,            // can be null
                 LexiconNames = lexiconNames,
                 OutputFormat = "mp3",
-                OutputUri = "",
+                OutputUri = $"https://s3.ap-southeast-2.amazonaws.com/{bucketName}/{key}",
                 RequestCharacters = 45,
                 SampleRate = "24000",                   // can be null
                 SnsTopicArn = arn,                      // should be: "arn:aws:sns:ap-southeast-2:261914005867:TatorNotifications"
@@ -202,12 +205,12 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
                 // add a new 'file' to MockS3, set the task as complete, and publish a notification
                 var mockS3 = awsInterface.S3 as MockS3;
-                var newKey = mockS3.AddBucketItem(bucketName, key, "audio/mpeg", "mp3");    // key may be modified if it already exists (set to $"PollyTaskOutput-{Guid.NewGuid()}" in PollyFunctionSpeechTasks)
+                var newKey = mockS3.AddBucketItem(bucketName, key, mimetype, extension);    // key should not collide with an existing key (will be modified if it does)
 
 
                 var task = speechSynthesisTaskDictionary[taskId];
                 task.TaskStatus = Amazon.Polly.TaskStatus.Completed;
-                task.OutputUri = $"https://s3.ap-southeast-2.amazonaws.com/{bucketName}/{newKey}";    // 'key' is the OutputS3KeyPrefix
+                task.OutputUri = $"https://s3.ap-southeast-2.amazonaws.com/{bucketName}/{newKey}";
 
                 _ = await awsInterface.SNS.Publish(notificationsARN, $"The message body contains the taskId {taskId}").ConfigureAwait(true);
             });

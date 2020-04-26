@@ -192,7 +192,7 @@ namespace TustlerAWSLib
         /// <param name="engine">The speech synthesis engine (standard or neural)</param>
         /// <param name="voiceId">The Id of the voice to use for synthesis</param>
         /// <returns>The task state, taskId and other task parameters</returns>
-        public async Task<AWSResult<SynthesisTask>> StartSpeechSynthesisTask(string bucketName, string key, string arn, string text, Engine engine, string voiceId)
+        public async Task<AWSResult<SynthesisTask>> StartSpeechSynthesisTask(string bucketName, string baseKey, string arn, string text, Engine engine, string voiceId)
         {
             try
             {
@@ -201,7 +201,7 @@ namespace TustlerAWSLib
                     var request = new StartSpeechSynthesisTaskRequest
                     {
                         OutputS3BucketName = bucketName,
-                        OutputS3KeyPrefix = key,
+                        OutputS3KeyPrefix = baseKey,        // Polly appends the task Id (a GUID) and the file extension
                         SnsTopicArn = arn,
                         OutputFormat = "mp3",
                         VoiceId = voiceId,
