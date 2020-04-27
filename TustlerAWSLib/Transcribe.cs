@@ -106,6 +106,39 @@ namespace TustlerAWSLib
             }
         }
 
+        public async Task<AWSResult<bool?>> DeleteTranscriptionJob(string jobName)
+        {
+            try
+            {
+                using (var client = new AmazonTranscribeServiceClient())
+                {
+                    var request = new DeleteTranscriptionJobRequest
+                    {
+                        TranscriptionJobName = jobName,
+                    };
+                    var response = await client.DeleteTranscriptionJobAsync(request);
+
+                    return new AWSResult<bool?>(true, null);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                return new AWSResult<bool?>(null, new AWSException(nameof(DeleteTranscriptionJob), "Not connected.", ex));
+            }
+            catch (BadRequestException ex)
+            {
+                return new AWSResult<bool?>(null, new AWSException(nameof(DeleteTranscriptionJob), "The request didn't pass one or more validation tests.", ex));
+            }
+            catch (InternalFailureException ex)
+            {
+                return new AWSResult<bool?>(null, new AWSException(nameof(DeleteTranscriptionJob), "There was an internal error. Check the error message and try your request again.", ex));
+            }
+            catch (LimitExceededException ex)
+            {
+                return new AWSResult<bool?>(null, new AWSException(nameof(DeleteTranscriptionJob), "Either you have sent too many requests or your input file is too long.", ex));
+            }
+        }
+
         public async Task<AWSResult<List<TranscriptionJobSummary>>> ListTranscriptionJobs()
         {
             try
