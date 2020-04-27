@@ -44,7 +44,7 @@ namespace TustlerAWSLib.Mocks
             transcriptionTaskDictionary = new ConcurrentDictionary<string, TranscriptionJob>();
         }
 
-        private TranscriptionJob CreateTranscriptionJob(string jobName, string bucketName, string s3MediaKey, string languageCode, string vocabularyName, string outputKey)
+        private TranscriptionJob CreateTranscriptionJob(string jobName, string bucketName, string s3MediaKey, string languageCode, string vocabularyName)
         {
             var medias3Location = $"https://s3.ap-southeast-2.amazonaws.com/{bucketName}/{s3MediaKey}.mp3";
 
@@ -67,10 +67,7 @@ namespace TustlerAWSLib.Mocks
                     ShowAlternatives = false
                 },
                 StartTime = DateTime.Now,
-                Transcript = new Transcript()
-                {
-                    TranscriptFileUri = $"https://s3.ap-southeast-2.amazonaws.com/{bucketName}/{outputKey}"
-                },
+                Transcript = null,
                 TranscriptionJobName = jobName,
                 TranscriptionJobStatus = TranscriptionJobStatus.IN_PROGRESS
             };
@@ -80,8 +77,18 @@ namespace TustlerAWSLib.Mocks
         {
             await Task.Delay(1000);
 
-            var key = $"TranscribeTaskOutput-{Guid.NewGuid()}.json";
-            var job = CreateTranscriptionJob(jobName, bucketName, s3MediaKey, languageCode, vocabularyName, key);
+            if (transcriptionTaskDictionary.ContainsKey(jobName))
+            {
+                return await Task.FromResult(new AWSResult<TranscriptionJob>(null,
+                    new AWSException(
+                        nameof(StartTranscriptionJob),
+                        "Conflicting parameters e.g. a jobname is already in use.",
+                        new ConflictException("Try again with a different job name.")
+                    )
+                ));
+            }
+
+            var job = CreateTranscriptionJob(jobName, bucketName, s3MediaKey, languageCode, vocabularyName);
             transcriptionTaskDictionary.AddOrUpdate(jobName, job, (_, job) => job);     // asserting that the key will never be reused/updated
 
             // after a delay, set the job to complete
@@ -91,11 +98,13 @@ namespace TustlerAWSLib.Mocks
 
                 // add a new 'file' to MockS3, and set the task as complete
                 var mockS3 = awsInterface.S3 as MockS3;
+                var key = $"TranscribeTaskOutput-{Guid.NewGuid()}.json";        // actually the output file is just the $"{jobName}.json"
                 var newKey = mockS3.AddBucketItem(bucketName, key, "application/json", "json");    // key may be modified if it already exists
 
                 var job = transcriptionTaskDictionary[jobName];
                 job.TranscriptionJobStatus = TranscriptionJobStatus.COMPLETED;
                 job.CompletionTime = DateTime.Now;
+                job.Transcript = new Transcript() { TranscriptFileUri = $"https://s3.ap-southeast-2.amazonaws.com/{bucketName}/{key}" };
             });
 
             return await Task.FromResult(new AWSResult<TranscriptionJob>(job, null));
@@ -108,7 +117,7 @@ namespace TustlerAWSLib.Mocks
             var result = transcriptionTaskDictionary.ContainsKey(jobName) switch
             {
                 true => new AWSResult<TranscriptionJob>(transcriptionTaskDictionary[jobName], null),
-                false => new AWSResult<TranscriptionJob>(null, new AWSException("Mock GetSpeechSynthesisTask", $"The job {jobName} does not exist", new KeyNotFoundException("Key not found")))
+                false => new AWSResult<TranscriptionJob>(null, new AWSException("Mock GetTranscriptionJob", $"The job {jobName} does not exist", new KeyNotFoundException("Key not found")))
             };
 
             return await Task.FromResult(result);

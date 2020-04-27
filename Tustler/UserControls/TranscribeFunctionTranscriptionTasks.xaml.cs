@@ -72,12 +72,14 @@ namespace Tustler.UserControls
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                var s3OutputKey = await transcriptionJobsInstance.AddNewTask(awsInterface, notifications, jobName, bucketName, s3MediaKey, languageCode, vocabularyName).ConfigureAwait(true);
+                var success = await transcriptionJobsInstance.AddNewTask(awsInterface, notifications, jobName, bucketName, s3MediaKey, languageCode, vocabularyName).ConfigureAwait(true);
+                if (success)
+                {
+                    notifications.ShowMessage($"Transcription job {jobName} started", "Manual polling is required to check for completion");
+                }
                 if (dgTranscriptionTasks.Items.Count > 0)
                 {
                     dgTranscriptionTasks.HeadersVisibility = DataGridHeadersVisibility.All;
-                    var jobOutput = s3OutputKey is null ? "???.json" : s3OutputKey;
-                    notifications.ShowMessage("The output file will be saved to your S3 bucket", $"The output transcript will be named {jobOutput}");
                 }
             }
             finally

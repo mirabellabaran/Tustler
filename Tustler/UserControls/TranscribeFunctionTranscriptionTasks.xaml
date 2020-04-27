@@ -118,7 +118,7 @@
                 </StackPanel>
             </Grid>
 
-            <DataGrid x:Name="dgTranscriptionTasks"  Height="130" Margin="5" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource transcriptionJobsInstance}, Path=TranscriptionJobs}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
+            <DataGrid x:Name="dgTranscriptionTasks"  Height="120" Margin="5" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource transcriptionJobsInstance}, Path=TranscriptionJobs}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
 
             </DataGrid>
 
