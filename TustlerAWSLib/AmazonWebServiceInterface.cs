@@ -86,8 +86,7 @@ namespace TustlerAWSLib
             SNS = new MockSNS(this, options.NotificationsARN);          // needs to pass notifications to the SQS queue
             SQS = new MockSQS(options.NotificationsQueueURL);
             Transcribe = new MockTranscribe(this);
-
-            Translate = new Translate();
+            Translate = new MockTranslate(this);
         }
 
         private void DisableMocking()

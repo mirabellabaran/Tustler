@@ -102,7 +102,7 @@
                 <ListBox x:Name="lbTargetLanguages" Grid.Row="1" Grid.Column="5" Grid.RowSpan="3" Margin="10" SelectionMode="Multiple" Style="{StaticResource ListBoxDark}" ItemsSource="{Binding Source={StaticResource translationLanguageCodesInstance}, Path=LanguageCodes}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValue="en" SelectedValuePath="Code" SelectionChanged="lbTargetLanguages_SelectionChanged" />
             </Grid>
 
-            <DataGrid x:Name="dgTranslationTasks"  Height="130" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource translationJobsInstance}, Path=TranslationJobs}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
+            <DataGrid x:Name="dgTranslationTasks"  Height="120" Margin="10" AutoGenerateColumns="True" HeadersVisibility="None" CanUserResizeRows="False" IsReadOnly="True" ItemsSource="{Binding Source={StaticResource translationJobsInstance}, Path=TranslationJobs}" FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}" AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
                 
             </DataGrid>
 

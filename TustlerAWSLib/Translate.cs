@@ -10,6 +10,10 @@ using TustlerInterfaces;
 
 namespace TustlerAWSLib
 {
+    /// <summary>
+    /// Wraps the Tustler AWS Translate API
+    /// </summary>
+    /// <remarks>Note that all functions taking RegionEndpoint as a parameter are untested as they currently require access to S3 buckets in only selected regions</remarks>
     public class Translate : IAmazonWebInterfaceTranslate
     {
         /// <summary>
