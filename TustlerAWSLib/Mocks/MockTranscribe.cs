@@ -123,14 +123,14 @@ namespace TustlerAWSLib.Mocks
             return await Task.FromResult(result);
         }
 
-        public async Task<AWSResult<bool?>> DeleteTranscriptionJob(string jobName)
+        public async Task<AWSResult<bool>> DeleteTranscriptionJob(string jobName)
         {
             await Task.Delay(1000);
 
             var result = transcriptionTaskDictionary.ContainsKey(jobName) switch
             {
-                true => new AWSResult<bool?>(transcriptionTaskDictionary.TryRemove(jobName, out TranscriptionJob _), null),
-                false => new AWSResult<bool?>(null, new AWSException("Mock DeleteTranscriptionJob", $"The job {jobName} does not exist", new KeyNotFoundException("Key not found")))
+                true => new AWSResult<bool>(transcriptionTaskDictionary.TryRemove(jobName, out TranscriptionJob _), null),
+                false => new AWSResult<bool>(false, new AWSException("Mock DeleteTranscriptionJob", $"The job {jobName} does not exist", new KeyNotFoundException("Key not found")))
             };
 
             return await Task.FromResult(result);

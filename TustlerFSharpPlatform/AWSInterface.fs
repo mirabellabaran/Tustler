@@ -56,6 +56,20 @@ module public AWSInterface =
                 return model.TranscriptionJobs
             }
 
+        /// returns the specified job after first forcing an update of the job details
+        let getTranscriptionJobByName awsInterface notifications jobName =
+            async {
+                let model = TranscriptionJobsViewModel()
+                let success = model.GetTaskByName (awsInterface, notifications, jobName) |> Async.AwaitTask |> Async.RunSynchronously
+                return if success then Some(model.[jobName]) else None
+            }
+
+        let deleteTranscriptionJobByName awsInterface notifications jobName =
+            async {
+                let model = TranscriptionJobsViewModel()
+                return model.DeleteTaskByName (awsInterface, notifications, jobName) |> Async.AwaitTask |> Async.RunSynchronously
+            }
+
         let listVocabularies awsInterface notifications =
             async {
                 let model = TranscriptionVocabulariesViewModel()

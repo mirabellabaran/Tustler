@@ -154,7 +154,7 @@ namespace Tustler.UserControls
             }
         }
 
-        private void lbVocabularyNames_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void VocabularyNames_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var selectedVocabularies = lbVocabularyNames.FindResource("selectedVocabularies") as SelectedItemsViewModel;
             selectedVocabularies.Update(lbVocabularyNames.SelectedItems as IEnumerable<object>);

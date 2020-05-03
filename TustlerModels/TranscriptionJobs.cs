@@ -13,32 +13,69 @@ using TustlerServicesLib;
 
 namespace TustlerModels
 {
+    /// <summary>
+    /// Represents the current state of all Transcription jobs (running or completed)
+    /// </summary>
+    /// <remarks>
+    /// Data from Amazon is either Amazon.TranscribeService.Model.TranscriptionJob or Amazon.TranscribeService.Model.TranscriptionJobSummary
+    /// The local model (TustlerModels.TranscriptionJob) pulls attributes from both of these Amazon models where they have been set
+    /// </remarks>
     public class TranscriptionJobsViewModel
     {
+        private readonly Dictionary<string, TranscriptionJob> jobLookup;            // the definitive source of knowledge
+
         public ObservableCollection<TranscriptionJob> TranscriptionJobs
         {
             get;
-            private set;
+        }
+
+        public TranscriptionJob this[string jobName]
+        {
+            get
+            {
+                return jobLookup[jobName];
+            }
         }
 
         public TranscriptionJobsViewModel()
         {
+            this.jobLookup = new Dictionary<string, TranscriptionJob>();
             this.TranscriptionJobs = new ObservableCollection<TranscriptionJob>();
         }
 
         public async Task<bool> AddNewTask(AmazonWebServiceInterface awsInterface, NotificationsList notifications, string jobName, string bucketName, string s3MediaKey, string languageCode, string vocabularyName)
         {
-            var result = await awsInterface.Transcribe.StartTranscriptionJob(jobName, bucketName, s3MediaKey, languageCode, vocabularyName).ConfigureAwait(true);
-            return ProcessNewTranslationJob(notifications, result);
+            var transcriptionJob = await awsInterface.Transcribe.StartTranscriptionJob(jobName, bucketName, s3MediaKey, languageCode, vocabularyName).ConfigureAwait(true);
+            return ProcessTranscriptionJobDetails(notifications, transcriptionJob);
         }
 
         public async Task ListTasks(AmazonWebServiceInterface awsInterface, NotificationsList notifications)
         {
-            var translationJobs = await awsInterface.Transcribe.ListTranscriptionJobs().ConfigureAwait(true);
-            await ProcessExistingTranslationJobsAsync(awsInterface, notifications, translationJobs);
+            var transcriptionJobs = await awsInterface.Transcribe.ListTranscriptionJobs().ConfigureAwait(true);
+            await ProcessTranscriptionJobSummaries(awsInterface, notifications, transcriptionJobs);
         }
 
-        private bool ProcessNewTranslationJob(NotificationsList notifications, AWSResult<Amazon.TranscribeService.Model.TranscriptionJob> result)
+        public async Task<bool> GetTaskByName(AmazonWebServiceInterface awsInterface, NotificationsList notifications, string jobName)
+        {
+            var transcriptionJob = await awsInterface.Transcribe.GetTranscriptionJob(jobName).ConfigureAwait(true);
+            return ProcessTranscriptionJobDetails(notifications, transcriptionJob);
+        }
+
+        public async Task<bool> DeleteTaskByName(AmazonWebServiceInterface awsInterface, NotificationsList notifications, string jobName)
+        {
+            var result = await awsInterface.Transcribe.DeleteTranscriptionJob(jobName).ConfigureAwait(true);
+            if (result.IsError)
+            {
+                notifications.HandleError(result);
+                return false;
+            }
+            else
+            {
+                return result.Result;
+            }
+        }
+
+        private bool ProcessTranscriptionJobDetails(NotificationsList notifications, AWSResult<Amazon.TranscribeService.Model.TranscriptionJob> result)
         {
             if (result.IsError)
             {
@@ -47,26 +84,44 @@ namespace TustlerModels
             }
             else
             {
-                var job = result.Result;
-                this.TranscriptionJobs.Add(new TranscriptionJob
+                var jobUpdate = result.Result;
+                var job = new TranscriptionJob
                 {
-                    TranscriptionJobName = job.TranscriptionJobName,
-                    TranscriptionJobStatus = job.TranscriptionJobStatus,
-                    CreationTime = job.CreationTime,
-                    StartTime = job.StartTime,
-                    CompletionTime = job.CompletionTime,
-                    LanguageCode = job.LanguageCode,
-                    FailureReason = job.FailureReason,
-                    MediaFormat = job.MediaFormat,
-                    MediaSampleRateHertz = job.MediaSampleRateHertz,
-                    OutputURI = job.Transcript?.TranscriptFileUri       // Always null: Transcribe sets the Transcript property to null when job starts. Use GetTranscriptionJob().
-                });
+                    TranscriptionJobName = jobUpdate.TranscriptionJobName,
+                    TranscriptionJobStatus = jobUpdate.TranscriptionJobStatus,
+                    CreationTime = jobUpdate.CreationTime,
+                    StartTime = jobUpdate.StartTime,
+                    CompletionTime = jobUpdate.CompletionTime,
+                    LanguageCode = jobUpdate.LanguageCode,
+                    FailureReason = jobUpdate.FailureReason,
+                    MediaFormat = jobUpdate.MediaFormat,
+                    MediaSampleRateHertz = jobUpdate.MediaSampleRateHertz,
+                    OutputURI = jobUpdate.Transcript?.TranscriptFileUri       // Note that Transcribe sets the Transcript property to null when the job first starts
+                };
+
+                if (jobLookup.ContainsKey(job.TranscriptionJobName))
+                {
+                    // processing GetTaskByName: update the existing task
+                    this.jobLookup[job.TranscriptionJobName] = job;
+                }
+                else
+                {
+                    // processing AddNewTask: add a new task
+                    this.jobLookup.Add(job.TranscriptionJobName, job);
+                }
+
+                // re-add all items to the consumed collection
+                this.TranscriptionJobs.Clear();
+                foreach (var kvp in jobLookup)
+                {
+                    this.TranscriptionJobs.Add(kvp.Value);
+                }
 
                 return true;
             }
         }
 
-        private async Task ProcessExistingTranslationJobsAsync(AmazonWebServiceInterface awsInterface, NotificationsList notifications, AWSResult<List<TranscriptionJobSummary>> transcriptionJobs)
+        private async Task ProcessTranscriptionJobSummaries(AmazonWebServiceInterface awsInterface, NotificationsList notifications, AWSResult<List<TranscriptionJobSummary>> transcriptionJobs)
         {
             if (transcriptionJobs.IsError)
             {
@@ -74,8 +129,6 @@ namespace TustlerModels
             }
             else
             {
-                var jobLookup = new Dictionary<string, TranscriptionJob>(this.TranscriptionJobs.Select(job => KeyValuePair.Create(job.TranscriptionJobName, job)));
-
                 var jobs = transcriptionJobs.Result;
                 if (jobs.Count > 0)
                 {
@@ -90,7 +143,7 @@ namespace TustlerModels
                             if ((string.Compare(job.TranscriptionJobStatus, TranscriptionJobStatus.COMPLETED, StringComparison.InvariantCulture) == 0)
                             && (string.Compare(existingJob.TranscriptionJobStatus, TranscriptionJobStatus.COMPLETED, StringComparison.InvariantCulture) != 0))
                             {
-                                // Transcribe require an explicit lookup to retrieve the OutputURI
+                                // Transcribe requires an explicit lookup to retrieve the OutputURI
                                 var result = await awsInterface.Transcribe.GetTranscriptionJob(job.TranscriptionJobName).ConfigureAwait(true);
                                 if (result.IsError)
                                 {
@@ -130,13 +183,13 @@ namespace TustlerModels
                             jobLookup.Add(job.TranscriptionJobName, newJob);
                         }
                     }
-                }
 
-                // re-add all items (if any)
-                this.TranscriptionJobs.Clear();
-                foreach (var kvp in jobLookup)
-                {
-                    this.TranscriptionJobs.Add(kvp.Value);
+                    // re-add all items (if any)
+                    this.TranscriptionJobs.Clear();
+                    foreach (var kvp in jobLookup)
+                    {
+                        this.TranscriptionJobs.Add(kvp.Value);
+                    }
                 }
             }
         }

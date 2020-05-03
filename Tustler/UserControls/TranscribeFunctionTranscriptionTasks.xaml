@@ -114,7 +114,7 @@
                         <CheckBox x:Name="chkIncludeVocabulary" IsChecked="False" Margin="10" Command="{x:Static uc:TranscribeCommands.AddVocabulary}">Add Vocabulary</CheckBox>
                         <ListBox Background="{StaticResource ContrastingBackground}" BorderThickness="0" ItemsSource="{Binding Source={StaticResource selectedVocabularies}, Path=Items}" ScrollViewer.VerticalScrollBarVisibility="Auto" />
                     </StackPanel>
-                    <ListBox x:Name="lbVocabularyNames" SelectionMode="Single" Style="{StaticResource listBoxStyles}" ItemsSource="{Binding Source={StaticResource vocabulariesInstance}, Path=TranscriptionVocabularies}" ItemTemplate="{StaticResource VocabulariesListItemTempate}" SelectedValuePath="Name" SelectionChanged="lbVocabularyNames_SelectionChanged"/>
+                    <ListBox x:Name="lbVocabularyNames" SelectionMode="Single" Style="{StaticResource listBoxStyles}" ItemsSource="{Binding Source={StaticResource vocabulariesInstance}, Path=TranscriptionVocabularies}" ItemTemplate="{StaticResource VocabulariesListItemTempate}" SelectedValuePath="Name" SelectionChanged="VocabularyNames_SelectionChanged"/>
                 </StackPanel>
             </Grid>
 

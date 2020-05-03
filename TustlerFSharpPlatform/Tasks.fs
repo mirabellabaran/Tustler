@@ -8,21 +8,47 @@ open TustlerModels
 open System.Collections.ObjectModel
 open TustlerInterfaces
 open TustlerAWSLib
+open System.Collections.Generic
+open System
 
 [<RequireQualifiedAccess>]
 type TaskResponse =
+    | TaskInfo of string
+    | TaskComplete of string
     | Notification of Notification
     | DelaySequence of int
-    | TaskComplete of string
     | Bucket of Bucket
     | BucketItem of BucketItem
     | TranscriptionJob of TranscriptionJob
-    
+
+[<RequireQualifiedAccess>]
+type TaskUpdate =
+    | DeleteBucketItem of bool * NotificationsList
+
+[<RequireQualifiedAccess>]
+type MiniTaskParameter =
+    | Bool of bool
+    | String of string
+    | Int of int
+
 [<RequireQualifiedAccess>]
 type TaskFunction =
     | GetBuckets of (AmazonWebServiceInterface -> NotificationsList -> Async<ObservableCollection<Bucket>>)
     | GetBucketItems of (AmazonWebServiceInterface -> NotificationsList -> string -> Async<BucketItemsCollection>)
     | StartTranscriptionJob of (TranscribeAudioArguments -> Async<ObservableCollection<TranscriptionJob>>)
+
+module public MiniTasks =
+
+    let Delete awsInterface (notifications: NotificationsList) (args:MiniTaskParameter[]) =
+        if args.Length >= 2 then
+            let (bucketName, key) =
+                match (args.[0], args.[1]) with
+                | (MiniTaskParameter.String a, MiniTaskParameter.String b) -> (a, b)
+                | _ -> invalidArg "args" "MiniTasks.Delete: Expecting two string arguments"
+            let success = S3.deleteBucketItem awsInterface notifications bucketName key |> Async.RunSynchronously
+            TaskUpdate.DeleteBucketItem (success, notifications)
+        else invalidArg "args" "Expecting two arguments"
+
 
 module public Tasks =            
 
@@ -47,22 +73,37 @@ module public Tasks =
             |]
             (TaskFunction.GetBucketItems (fun s3Interface notifications string -> async { return new BucketItemsCollection( bucketItems ) }))
 
-    let S3FetchItems (arguments: ITaskArgumentCollection) =
+    let TranscribeCleanup (arguments: ITaskArgumentCollection) =
 
-        let getBuckets s3Interface (notifications: NotificationsList) =
-            S3.getBuckets s3Interface notifications
-
-        let getBucketItems s3Interface (notifications: NotificationsList) bucketName =
-            S3.getBucketItems s3Interface notifications bucketName
-
-        // prepare expensive function steps (may be replaced with cached values)
-        let (TaskFunction.GetBuckets getBuckets) = ReplaceWithConstant (TaskFunction.GetBuckets (getBuckets))
-        let (TaskFunction.GetBucketItems getBucketItems) = ReplaceWithConstant (TaskFunction.GetBucketItems (getBucketItems))
+        let listTranscriptionJobs awsInterface (notifications: NotificationsList) =
+            Transcribe.listTranscriptionJobs awsInterface notifications
 
         let awsInterface = (arguments :?> NotificationsOnlyArguments).AWSInterface
         let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
 
         seq {
+            let jobs = listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
+            yield! getNotificationResponse notifications
+            yield! Seq.map (fun job -> TaskResponse.TranscriptionJob job) jobs
+        }
+
+    let S3FetchItems (arguments: ITaskArgumentCollection) =
+
+        let getBuckets awsInterface (notifications: NotificationsList) =
+            S3.getBuckets awsInterface notifications
+
+        let getBucketItems awsInterface (notifications: NotificationsList) bucketName =
+            S3.getBucketItems awsInterface notifications bucketName
+
+        // prepare expensive function steps (may be replaced with cached values)
+        //let (TaskFunction.GetBuckets getBuckets) = ReplaceWithConstant (TaskFunction.GetBuckets (getBuckets))
+        //let (TaskFunction.GetBucketItems getBucketItems) = ReplaceWithConstant (TaskFunction.GetBucketItems (getBucketItems))
+
+        let awsInterface = (arguments :?> NotificationsOnlyArguments).AWSInterface
+        let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
+
+        seq {
+            yield TaskResponse.TaskInfo "Retrieving buckets..."
             let buckets: ObservableCollection<Bucket> = getBuckets awsInterface notifications |> Async.RunSynchronously
             yield! getNotificationResponse notifications
 
@@ -70,6 +111,7 @@ module public Tasks =
                 let bucket = Seq.head buckets
                 yield TaskResponse.Bucket bucket
 
+                yield TaskResponse.TaskInfo "Retrieving bucket items..."
                 let items = getBucketItems awsInterface notifications bucket.Name |> Async.RunSynchronously
                 yield! getNotificationResponse notifications
                 yield! Seq.map (fun item -> TaskResponse.BucketItem item) items

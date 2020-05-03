@@ -16,6 +16,8 @@ using TustlerModels;
 using TustlerServicesLib;
 using static TustlerFSharpPlatform.TaskArguments;
 using AWSTasks = TustlerFSharpPlatform.Tasks;
+using AWSMiniTasks = TustlerFSharpPlatform.MiniTasks;
+using Tustler.Helpers;
 
 namespace Tustler.UserControls
 {
@@ -25,6 +27,8 @@ namespace Tustler.UserControls
     public partial class TasksManager : UserControl
     {
         private readonly AmazonWebServiceInterface awsInterface;
+        private readonly ObservableCollection<TaskResponse> taskResponses;
+
         public static readonly DependencyProperty TaskNameProperty = DependencyProperty.Register("TaskName", typeof(string), typeof(TasksManager), new PropertyMetadata("", PropertyChangedCallback));
 
         private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
@@ -36,6 +40,10 @@ namespace Tustler.UserControls
                     var taskName = dependencyPropertyChangedEventArgs.NewValue as string;
                     switch (taskName)
                     {
+                        case "TranscribeCleanup":
+                            ctrl.TaskArguments = new TaskArguments.NotificationsOnlyArguments(ctrl.awsInterface, new NotificationsList());
+                            ctrl.TaskFunction = AWSTasks.TranscribeCleanup;
+                            break;
                         case "S3FetchItems":
                             ctrl.TaskArguments = new TaskArguments.NotificationsOnlyArguments(ctrl.awsInterface, new NotificationsList());
                             ctrl.TaskFunction = AWSTasks.S3FetchItems;
@@ -72,6 +80,7 @@ namespace Tustler.UserControls
             InitializeComponent();
 
             this.awsInterface = awsInterface;
+            this.taskResponses = new ObservableCollection<TaskResponse>();
         }
 
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
@@ -167,31 +176,44 @@ namespace Tustler.UserControls
         private async void Collection_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             var newItems = e.NewItems as System.Collections.IEnumerable;
-            foreach (var response in newItems.Cast<TaskResponse>())
+
+            // add to the bound observable collection (can only add on the Dispatcher thread)
+            foreach (var item in newItems.Cast<TaskResponse>())
             {
-                switch (response)
+                await Dispatcher.InvokeAsync(() =>
                 {
-                    case TaskResponse.Notification note:
-                        switch (note.Item)
-                        {
-                            case ApplicationErrorInfo error:
-                                var errorMsg = $"{error.Context}: {error.Message}";
-                                await AddResponseAsync(errorMsg, true).ConfigureAwait(false);
-                                break;
-                            case ApplicationMessageInfo msg:
-                                var infoMsg = $"{msg.Message}: {msg.Detail}";
-                                await AddResponseAsync(infoMsg, true).ConfigureAwait(false);
-                                break;
-                        }
-                        break;
-                    case TaskResponse.Bucket taskBucket:
-                        await AddResponseAsync(taskBucket.Item.Name, false).ConfigureAwait(false);
-                        break;
-                    case TaskResponse.BucketItem taskBucketItem:
-                        await AddResponseAsync(taskBucketItem.Item.Key, false).ConfigureAwait(false);
-                        break;
-                }
+                    taskResponses.Add(item);
+                });
             }
+
+            //foreach (var response in newItems.Cast<TaskResponse>())
+            //{
+            //    switch (response)
+            //    {
+            //        case TaskResponse.Notification note:
+            //            switch (note.Item)
+            //            {
+            //                case ApplicationErrorInfo error:
+            //                    var errorMsg = $"{error.Context}: {error.Message}";
+            //                    await AddResponseAsync(errorMsg, true).ConfigureAwait(false);
+            //                    break;
+            //                case ApplicationMessageInfo msg:
+            //                    var infoMsg = $"{msg.Message}: {msg.Detail}";
+            //                    await AddResponseAsync(infoMsg, true).ConfigureAwait(false);
+            //                    break;
+            //            }
+            //            break;
+            //        case TaskResponse.Bucket taskBucket:
+            //            await AddResponseAsync(taskBucket.Item.Name, false).ConfigureAwait(false);
+            //            break;
+            //        case TaskResponse.BucketItem taskBucketItem:
+            //            await AddResponseAsync(taskBucketItem.Item.Key, false).ConfigureAwait(false);
+            //            break;
+            //        case TaskResponse.TranscriptionJob taskTranscriptionJob:
+            //            await AddResponseAsync(taskTranscriptionJob.Item.TranscriptionJobName, false).ConfigureAwait(false);
+            //            break;
+            //    }
+            //}
         }
 
         private void StartTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -201,7 +223,85 @@ namespace Tustler.UserControls
 
         private async void StartTask_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-                //await RunTaskAsync().ConfigureAwait(true);
+            if (TaskArguments.IsComplete())
+            {
+                var responseStream = TaskFunction(TaskArguments);
+                lbTaskResponses.ItemsSource = taskResponses;
+
+                var collection = new ObservableCollection<TaskResponse>();
+                collection.CollectionChanged += Collection_CollectionChanged;
+
+                await TaskQueue.Run(responseStream, collection).ConfigureAwait(true);
+            }
+        }
+
+        private void StartMiniTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = true;
+        }
+
+        private void StartMiniTask_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+#nullable enable
+            static MiniTaskParameter? GenerateParameter(object? model, string typeName, string itemName)
+            {
+                var modelType = model?.GetType();
+                var itemType = Type.GetType(typeName);
+
+                MiniTaskParameter? result = null;
+
+                if (modelType is object && itemType is object)
+                {
+                    var propertyInfo = modelType.GetProperty(itemName, itemType);
+                    var value = propertyInfo?.GetValue(model);
+
+                    if (value is object)
+                    {
+                        result = itemType?.FullName switch
+                        {
+                            "System.Boolean" => MiniTaskParameter.NewBool((bool)value),
+                            "System.Int" => MiniTaskParameter.NewInt((int)value),
+                            "System.String" => MiniTaskParameter.NewString((string)value),
+                            _ => null
+                        };
+                    }
+                }
+
+                return result;
+            }
+#nullable disable
+
+            // transform each TaskManagerCommandParameterArgument into a MiniTaskArgument
+            MiniTaskParameter[] GenerateParameterList(TaskManagerCommandParameterValue parameterValue)
+            {
+                var boundResponse = (e.OriginalSource as Button).DataContext as TaskResponse;
+                var model = boundResponse switch
+                {
+                    TaskResponse.BucketItem taskBucketItem => taskBucketItem.Item as object,
+                    _ => null
+                };
+
+                return parameterValue.Items.Cast<TaskManagerCommandParameterArgument>()
+                    .Select(arg => GenerateParameter(model, arg.ItemType, arg.ItemKey))
+                    .ToArray();
+            }
+
+            var taskUpdate = (e.Parameter as TaskManagerCommandParameterValue) switch
+            {
+                TaskManagerCommandParameterValue parameterValue when parameterValue.ParameterType == "Delete" => AWSMiniTasks.Delete(awsInterface, new NotificationsList(), GenerateParameterList(parameterValue)),
+                _ => null
+            };
+
+            var success = taskUpdate?.Item1;
+            var notificationData = taskUpdate.Item2;
+            if (notificationData is object && notificationData.Notifications.Count > 0)
+            {
+                var notifications = this.FindResource("applicationNotifications") as NotificationsList;
+                foreach (var notification in notificationData.Notifications)
+                {
+                    notifications.Add(notification);
+                }
+            }
         }
 
         private void UpdateTaskArguments_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -215,31 +315,22 @@ namespace Tustler.UserControls
                 this.TaskArguments.SetValue(data);
         }
 
-        private async Task RunTaskAsync()
-        {
-            //"TranscribeAudio1",
-            //new MediaReference("tator", "TranscribeAudio1", "audio/wav", "wav"),
-            //@"C:\Users\Zev\Projects\C#\Tustler\Tustler\bin\Debug\netcoreapp3.1\FileCache\SallyRide2.wav",
-            //"en-US", "Test")
+        //private async Task RunTaskAsync()
+        //{
+        //    //"TranscribeAudio1",
+        //    //new MediaReference("tator", "TranscribeAudio1", "audio/wav", "wav"),
+        //    //@"C:\Users\Zev\Projects\C#\Tustler\Tustler\bin\Debug\netcoreapp3.1\FileCache\SallyRide2.wav",
+        //    //"en-US", "Test")
+        //}
 
-            if (TaskArguments.IsComplete())
-            {
-                var responseStream = TaskFunction(TaskArguments);
-                var collection = new ObservableCollection<TaskResponse>();
-                collection.CollectionChanged += Collection_CollectionChanged;
-
-                await TaskQueue.Run(responseStream, collection).ConfigureAwait(true);
-            }
-        }
-
-        private async Task AddResponseAsync(string content, bool showBold)
-        {
-            await Dispatcher.InvokeAsync(() =>
-            {
-                var tb = new TextBlock(new Run(content) { FontWeight = showBold ? FontWeights.Bold : FontWeights.Normal });
-                lbTaskResponses.Items.Add(tb);
-            });
-        }
+        //private async Task AddResponseAsync(string content, bool showBold)
+        //{
+        //    await Dispatcher.InvokeAsync(() =>
+        //    {
+        //        var tb = new TextBlock(new Run(content) { FontWeight = showBold ? FontWeights.Bold : FontWeights.Normal });
+        //        lbTaskResponses.Items.Add(tb);
+        //    });
+        //}
     }
 
     public static class TaskCommands
@@ -248,6 +339,14 @@ namespace Tustler.UserControls
             (
                 "StartTask",
                 "StartTask",
+                typeof(TaskCommands),
+                null
+            );
+
+        public static readonly RoutedUICommand StartMiniTask = new RoutedUICommand
+            (
+                "StartMiniTask",
+                "StartMiniTask",
                 typeof(TaskCommands),
                 null
             );

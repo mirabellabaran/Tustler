@@ -99,7 +99,7 @@ namespace TustlerModels
                 this.BucketItems.Clear();
 
                 var bucketItemsResult = await awsInterface.S3.ListBucketItems(bucketName).ConfigureAwait(true);
-                ProcessS3BucketItems(notifications, bucketItemsResult);
+                ProcessS3BucketItems(notifications, bucketItemsResult, bucketName);
                 CurrentBucketName = bucketName;
 
                 foreach (var key in this.BucketItems.Keys) {
@@ -109,7 +109,7 @@ namespace TustlerModels
             }
         }
 
-        private void ProcessS3BucketItems(NotificationsList notifications, AWSResult<List<S3Object>> bucketItemsResult)
+        private void ProcessS3BucketItems(NotificationsList notifications, AWSResult<List<S3Object>> bucketItemsResult, string bucketName)
         {
             if (bucketItemsResult.IsError)
             {
@@ -120,7 +120,7 @@ namespace TustlerModels
                 var bucketItems = bucketItemsResult.Result;
                 if (bucketItems.Count > 0)
                 {
-                    var items = from item in bucketItems select new BucketItem { Key = item.Key, Size = item.Size, LastModified = item.LastModified, Owner = item.Owner?.DisplayName };
+                    var items = from item in bucketItems select new BucketItem { Key = item.Key, BucketName = bucketName, Size = item.Size, LastModified = item.LastModified, Owner = item.Owner?.DisplayName };
 
                     ObservableCollection<BucketItem> data = new ObservableCollection<BucketItem>(items);
                     for (var i = 0; i < data.Count; i++)
@@ -156,6 +156,12 @@ namespace TustlerModels
     public class BucketItem
     {
         public string Key
+        {
+            get;
+            set;
+        }
+
+        public string BucketName
         {
             get;
             set;
