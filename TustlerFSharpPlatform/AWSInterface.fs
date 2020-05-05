@@ -12,14 +12,14 @@ module public AWSInterface =
             async {
                 let model = BucketViewModel()
                 do! model.Refresh (awsInterface, true, notifications) |> Async.AwaitTask
-                return model.Buckets
+                return model
             }
 
         let getBucketItems awsInterface notifications bucketName =
             async {
                 let model = BucketItemViewModel()
                 do! model.Refresh(awsInterface, notifications, bucketName) |> Async.AwaitTask
-                return model.BucketItems
+                return model
             }
 
         let deleteBucketItem awsInterface notifications bucketName key =

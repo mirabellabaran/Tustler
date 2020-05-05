@@ -18,6 +18,7 @@
     <UserControl.Resources>
 
         <helpers:TaskManagerDataTemplateSelector x:Key="taskManagerDataTemplateSelector"/>
+        <helpers:TaskManagerChildDataTemplateSelector x:Key="taskManagerChildDataTemplateSelector"/>
 
         <DataTemplate x:Key="TaskInfoTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <TextBlock Foreground="Green" Text="{Binding Path=Item}" />
@@ -27,24 +28,33 @@
             <TextBlock Foreground="Green" Text="{Binding Path=Item}" />
         </DataTemplate>
 
-        <DataTemplate x:Key="BucketTemplate" DataType="{x:Type fsharp:TaskResponse}">
-            <Border Name="border" BorderBrush="BlanchedAlmond" CornerRadius="10" BorderThickness="5" Padding="5" Margin="5">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition/>
-                        <RowDefinition/>
-                        <RowDefinition/>
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="100"/>
-                        <ColumnDefinition />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Name:"/>
-                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Path=Item.Name}" />
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Creation Date:"/>
-                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path=Item.CreationDate}"/>
-                </Grid>
-            </Border>
+        <DataTemplate x:Key="BucketTemplate" DataType="{x:Type local:Bucket}">
+            <Button Command="{x:Static uc:TaskCommands.StartMiniTask}" Background="{StaticResource ContrastingBackground}" Margin="10">
+                <Button.CommandParameter>
+                    <helpers:TaskManagerCommandParameterValue ParameterType="Select">
+                        <helpers:TaskManagerCommandParameterArgument ItemType="System.String" ItemKey="Name" />
+                    </helpers:TaskManagerCommandParameterValue>
+                </Button.CommandParameter>
+                <Button.Content>
+                    <Border Name="border" BorderBrush="BlanchedAlmond" CornerRadius="10" BorderThickness="5" Padding="5" Margin="5">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Name:"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Path=Name}" />
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Creation Date:"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path=CreationDate}"/>
+                        </Grid>
+                    </Border>
+                </Button.Content>
+            </Button>
         </DataTemplate>
 
         <DataTemplate x:Key="BucketItemTemplate" DataType="{x:Type fsharp:TaskResponse}">
@@ -84,6 +94,69 @@
                         </Button.CommandParameter>
                     </Button>
                 </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="BucketsModelTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <ItemsControl ItemTemplateSelector="{StaticResource taskManagerChildDataTemplateSelector}" ItemsSource="{Binding Item.Buckets}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+        </DataTemplate>
+        
+        <DataTemplate x:Key="BucketItemsModelTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <Border Name="border" BorderBrush="DarkGray" BorderThickness="10" Padding="5" Margin="5">
+                <StackPanel Orientation="Horizontal">
+                    <DataGrid AutoGenerateColumns="False" ItemsSource="{Binding Item.BucketItems}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Item Name" Binding="{Binding Path=Key}" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="20"/>
+                            <RowDefinition Height="20"/>
+                            <RowDefinition Height="20"/>
+                            <RowDefinition Height="20"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="200"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Size:"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Path=Item.Size}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="LastModified:"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path=Item.LastModified}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Owner:"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Path=Item.Owner}"/>
+                        <TextBlock Grid.Row="0" Grid.Column="2" Text="MimeType:"/>
+                        <TextBlock Grid.Row="0" Grid.Column="3" Text="{Binding Path=Item.MimeType}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="Extension:"/>
+                        <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding Path=Item.Extension}"/>
+                        <Button Grid.Row="3" Grid.Column="0" Content="Download" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource ButtonDark}">
+                            <Button.CommandParameter>
+                                <helpers:TaskManagerCommandParameterValue ParameterType="Download">
+                                    <helpers:TaskManagerCommandParameterArgument ItemType="System.String" ItemKey="BucketName" />
+                                    <helpers:TaskManagerCommandParameterArgument ItemType="System.String" ItemKey="Key" />
+                                </helpers:TaskManagerCommandParameterValue>
+                            </Button.CommandParameter>
+                        </Button>
+
+                        <Button Grid.Row="3" Grid.Column="3" Content="Delete" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource ButtonDark}">
+                            <Button.CommandParameter>
+                                <helpers:TaskManagerCommandParameterValue ParameterType="Delete">
+                                    <helpers:TaskManagerCommandParameterArgument ItemType="System.String" ItemKey="BucketName" />
+                                    <helpers:TaskManagerCommandParameterArgument ItemType="System.String" ItemKey="Key" />
+                                </helpers:TaskManagerCommandParameterValue>
+                            </Button.CommandParameter>
+                        </Button>
+                    </Grid>
+                </StackPanel>
             </Border>
         </DataTemplate>
 

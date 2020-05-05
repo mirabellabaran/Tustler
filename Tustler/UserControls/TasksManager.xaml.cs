@@ -27,7 +27,9 @@ namespace Tustler.UserControls
     public partial class TasksManager : UserControl
     {
         private readonly AmazonWebServiceInterface awsInterface;
-        private readonly ObservableCollection<TaskResponse> taskResponses;
+
+        private readonly Stack<TaskEvent> events;    // ground truth for the events generated in a given session (start task to TaskResponse.TaskComplete)
+        private readonly ObservableCollection<TaskResponse> taskResponses;      // bound to UI
 
         public static readonly DependencyProperty TaskNameProperty = DependencyProperty.Register("TaskName", typeof(string), typeof(TasksManager), new PropertyMetadata("", PropertyChangedCallback));
 
@@ -69,7 +71,7 @@ namespace Tustler.UserControls
             internal set;
         }
 
-        public Func<ITaskArgumentCollection, IEnumerable<TaskResponse>> TaskFunction
+        public Func<ITaskArgumentCollection, Stack<MaybeResponse>, IEnumerable<TaskResponse>> TaskFunction
         {
             get;
             internal set;
@@ -80,6 +82,8 @@ namespace Tustler.UserControls
             InitializeComponent();
 
             this.awsInterface = awsInterface;
+
+            this.events = new Stack<TaskEvent>();
             this.taskResponses = new ObservableCollection<TaskResponse>();
         }
 
@@ -178,11 +182,23 @@ namespace Tustler.UserControls
             var newItems = e.NewItems as System.Collections.IEnumerable;
 
             // add to the bound observable collection (can only add on the Dispatcher thread)
-            foreach (var item in newItems.Cast<TaskResponse>())
+            foreach (var response in newItems.Cast<TaskResponse>())
             {
+                switch (response)
+                {
+                    // argument responses are responses that return actual values
+                    case TaskResponse.Bucket _:
+                    case TaskResponse.BucketItem _:
+                    case TaskResponse.BucketItemsModel _:
+                    case TaskResponse.BucketsModel _:
+                    case TaskResponse.TranscriptionJob _:
+                        events.Push(TaskEvent.NewSetArgument(response));
+                        break;
+                }
+
                 await Dispatcher.InvokeAsync(() =>
                 {
-                    taskResponses.Add(item);
+                    taskResponses.Add(response);
                 });
             }
 
@@ -225,7 +241,49 @@ namespace Tustler.UserControls
         {
             if (TaskArguments.IsComplete())
             {
-                var responseStream = TaskFunction(TaskArguments);
+                //var eventDict = new Dictionary<int, TaskEvent>(events.Where(evt => evt switch
+                //{
+                //    TaskEvent.SetArgument _ => true,
+                //    _ => false
+                //})
+                //.Select((evt, i) => KeyValuePair.Create(i, evt)));
+
+                // TODO generate correct number of arguments
+                //var count = 3;
+                //var argDict = new Dictionary<int, MaybeResponse>(Enumerable.Range(0, count).Select(i => KeyValuePair.Create(i, MaybeResponse.Nothing)));
+
+                //foreach (var setArgumentEvent in eventDict)
+                //{
+                //    if (setArgumentEvent.Value is TaskEvent.SetArgument arg)
+                //    {
+                //        argDict[setArgumentEvent.Key] = MaybeResponse.NewJust(arg.Item);
+                //    }
+                //}
+
+                // generate an arguments stack based on the observed events
+                var argCount = 3;
+                var setArgumentCount = events.Count(evt => evt switch
+                {
+                    TaskEvent.SetArgument _ => true,
+                    _ => false
+                });
+
+                // create arguments stack and add unset arguments
+                var args = new Stack<MaybeResponse>();
+                for (int i = 0; i < argCount - setArgumentCount; i++)
+                {
+                    args.Push(MaybeResponse.Nothing);
+                }
+
+                foreach (var evt in events)
+                {
+                    if (evt is TaskEvent.SetArgument arg)
+                    {
+                        args.Push(MaybeResponse.NewJust(arg.Item));
+                    }
+                }
+
+                var responseStream = TaskFunction(TaskArguments, args);
                 lbTaskResponses.ItemsSource = taskResponses;
 
                 var collection = new ObservableCollection<TaskResponse>();
@@ -243,28 +301,36 @@ namespace Tustler.UserControls
         private void StartMiniTask_Executed(object sender, ExecutedRoutedEventArgs e)
         {
 #nullable enable
-            static MiniTaskParameter? GenerateParameter(object? model, string typeName, string itemName)
+            static object? GetValueFromModel(object? model, Type? itemType, string itemName)
             {
                 var modelType = model?.GetType();
-                var itemType = Type.GetType(typeName);
-
-                MiniTaskParameter? result = null;
 
                 if (modelType is object && itemType is object)
                 {
                     var propertyInfo = modelType.GetProperty(itemName, itemType);
-                    var value = propertyInfo?.GetValue(model);
+                    return propertyInfo?.GetValue(model);
+                }
+                else
+                {
+                    return null;
+                }
+            }
 
-                    if (value is object)
+            static MiniTaskArgument? GenerateArgument(object? model, string typeName, string itemName)
+            {
+                MiniTaskArgument? result = null;
+                var itemType = Type.GetType(typeName);
+                var value = GetValueFromModel(model, itemType, itemName);
+
+                if (value is object)
+                {
+                    result = itemType?.FullName switch
                     {
-                        result = itemType?.FullName switch
-                        {
-                            "System.Boolean" => MiniTaskParameter.NewBool((bool)value),
-                            "System.Int" => MiniTaskParameter.NewInt((int)value),
-                            "System.String" => MiniTaskParameter.NewString((string)value),
-                            _ => null
-                        };
-                    }
+                        "System.Boolean" => MiniTaskArgument.NewBool((bool)value),
+                        "System.Int" => MiniTaskArgument.NewInt((int)value),
+                        "System.String" => MiniTaskArgument.NewString((string)value),
+                        _ => null
+                    };
                 }
 
                 return result;
@@ -272,7 +338,7 @@ namespace Tustler.UserControls
 #nullable disable
 
             // transform each TaskManagerCommandParameterArgument into a MiniTaskArgument
-            MiniTaskParameter[] GenerateParameterList(TaskManagerCommandParameterValue parameterValue)
+            MiniTaskArgument[] GenerateArgumentList(TaskManagerCommandParameterValue parameterValue)
             {
                 var boundResponse = (e.OriginalSource as Button).DataContext as TaskResponse;
                 var model = boundResponse switch
@@ -282,25 +348,42 @@ namespace Tustler.UserControls
                 };
 
                 return parameterValue.Items.Cast<TaskManagerCommandParameterArgument>()
-                    .Select(arg => GenerateParameter(model, arg.ItemType, arg.ItemKey))
+                    .Select(arg => GenerateArgument(model, arg.ItemType, arg.ItemKey))
                     .ToArray();
             }
 
-            var taskUpdate = (e.Parameter as TaskManagerCommandParameterValue) switch
+            switch (e.Parameter as TaskManagerCommandParameterValue)
             {
-                TaskManagerCommandParameterValue parameterValue when parameterValue.ParameterType == "Delete" => AWSMiniTasks.Delete(awsInterface, new NotificationsList(), GenerateParameterList(parameterValue)),
-                _ => null
-            };
+                case TaskManagerCommandParameterValue parameterValue when parameterValue.ParameterType == "Delete":
+                    var taskUpdate = AWSMiniTasks.Delete(awsInterface, new NotificationsList(), GenerateArgumentList(parameterValue));
+                    var success = taskUpdate?.Item1;
+                    var notificationData = taskUpdate.Item2;
+                    if (notificationData is object && notificationData.Notifications.Count > 0)
+                    {
+                        var notifications = this.FindResource("applicationNotifications") as NotificationsList;
+                        foreach (var notification in notificationData.Notifications)
+                        {
+                            notifications.Add(notification);
+                        }
+                    }
+                    break;
+                case TaskManagerCommandParameterValue parameterValue when parameterValue.ParameterType == "Select":
 
-            var success = taskUpdate?.Item1;
-            var notificationData = taskUpdate.Item2;
-            if (notificationData is object && notificationData.Notifications.Count > 0)
-            {
-                var notifications = this.FindResource("applicationNotifications") as NotificationsList;
-                foreach (var notification in notificationData.Notifications)
-                {
-                    notifications.Add(notification);
-                }
+                    // TODO check if task is complete; if so then truncate BOTH the ObservableCollection and the events stack before adding
+
+                    // Add a SetArgument event to the events list and reinvoke the function
+                    var model = ((e.OriginalSource as Button).DataContext);
+                    switch (model)
+                    {
+                        case Bucket bucket:
+                            events.Push(TaskEvent.NewSetArgument(TaskResponse.NewBucket(bucket)));
+                            break;
+                    }
+
+                    btnStartTask.Command.Execute(null);
+                    break;
+                default:
+                    throw new ArgumentException($"StartMiniTask_Executed: unknown parameter value for TaskManagerCommandParameterValue");
             }
         }
 

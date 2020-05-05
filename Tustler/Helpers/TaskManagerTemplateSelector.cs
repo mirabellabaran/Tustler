@@ -4,6 +4,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using TustlerFSharpPlatform;
+using TustlerModels;
 using TustlerServicesLib;
 
 namespace Tustler.Helpers
@@ -33,7 +34,28 @@ namespace Tustler.Helpers
                     TaskResponse.TaskComplete _ => element.FindResource("TaskCompleteTemplate") as DataTemplate,
                     TaskResponse.Bucket _ => element.FindResource("BucketTemplate") as DataTemplate,
                     TaskResponse.BucketItem _ => element.FindResource("BucketItemTemplate") as DataTemplate,
+                    TaskResponse.BucketsModel _ => element.FindResource("BucketsModelTemplate") as DataTemplate,
+                    TaskResponse.BucketItemsModel _ => element.FindResource("BucketItemsModelTemplate") as DataTemplate,
                     TaskResponse.TranscriptionJob _ => element.FindResource("TranscriptionJobTemplate") as DataTemplate,
+                    _ => null
+                };
+
+                return template;
+            }
+
+            return null;
+        }
+    }
+
+    public class TaskManagerChildDataTemplateSelector : DataTemplateSelector
+    {
+        public override DataTemplate SelectTemplate(object item, DependencyObject container)
+        {
+            if (container is FrameworkElement element && item != null)
+            {
+                var template = item switch
+                {
+                    Bucket _ => element.FindResource("BucketTemplate") as DataTemplate,
                     _ => null
                 };
 
