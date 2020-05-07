@@ -57,33 +57,42 @@
             </Button>
         </DataTemplate>
 
-        <DataTemplate x:Key="BucketItemTemplate" DataType="{x:Type fsharp:TaskResponse}">
+        <DataTemplate x:Key="BucketItemTemplate" DataType="{x:Type local:BucketItem}">
             <Border Name="border" BorderBrush="BlanchedAlmond" CornerRadius="3" BorderThickness="3" Padding="5" Margin="5">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition/>
-                        <RowDefinition/>
-                        <RowDefinition/>
-                        <RowDefinition/>
+                        <RowDefinition Height="20"/>
+                        <RowDefinition Height="20"/>
+                        <RowDefinition Height="20"/>
+                        <RowDefinition Height="20"/>
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="100"/>
-                        <ColumnDefinition Width="400"/>
+                        <ColumnDefinition Width="200"/>
                         <ColumnDefinition Width="100"/>
                         <ColumnDefinition Width="200"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Key:"/>
-                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Path=Item.Key}" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Path=Key}" />
                     <TextBlock Grid.Row="0" Grid.Column="2" Text="Size:"/>
-                    <TextBlock Grid.Row="0" Grid.Column="3" Text="{Binding Path=Item.Size}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="3" Text="{Binding Path=Size}"/>
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="LastModified:"/>
-                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path=Item.LastModified}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path=LastModified}"/>
                     <TextBlock Grid.Row="1" Grid.Column="2" Text="Owner:"/>
-                    <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding Path=Item.Owner}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding Path=Owner}"/>
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="MimeType:"/>
-                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Path=Item.MimeType}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Path=MimeType}"/>
                     <TextBlock Grid.Row="2" Grid.Column="2" Text="Extension:"/>
-                    <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding Path=Item.Extension}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding Path=Extension}"/>
+
+                    <Button Grid.Row="3" Grid.Column="0" Content="Download" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource ButtonDark}">
+                        <Button.CommandParameter>
+                            <helpers:TaskManagerCommandParameterValue ParameterType="Download">
+                                <helpers:TaskManagerCommandParameterArgument ItemType="System.String" ItemKey="BucketName" />
+                                <helpers:TaskManagerCommandParameterArgument ItemType="System.String" ItemKey="Key" />
+                            </helpers:TaskManagerCommandParameterValue>
+                        </Button.CommandParameter>
+                    </Button>
 
                     <Button Grid.Row="3" Grid.Column="3" Content="Delete" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource ButtonDark}">
                         <Button.CommandParameter>
@@ -110,52 +119,16 @@
         <DataTemplate x:Key="BucketItemsModelTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <Border Name="border" BorderBrush="DarkGray" BorderThickness="10" Padding="5" Margin="5">
                 <StackPanel Orientation="Horizontal">
-                    <DataGrid AutoGenerateColumns="False" ItemsSource="{Binding Item.BucketItems}">
+                    <DataGrid x:Name="dgBucketItemsModelTemplate" AutoGenerateColumns="False" ItemsSource="{Binding Item.BucketItems}">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Item Name" Binding="{Binding Path=Key}" />
                         </DataGrid.Columns>
                     </DataGrid>
-                    <Grid Margin="10">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="20"/>
-                            <RowDefinition Height="20"/>
-                            <RowDefinition Height="20"/>
-                            <RowDefinition Height="20"/>
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="100"/>
-                            <ColumnDefinition Width="200"/>
-                            <ColumnDefinition Width="100"/>
-                            <ColumnDefinition Width="200"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Size:"/>
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Path=Item.Size}"/>
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="LastModified:"/>
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path=Item.LastModified}"/>
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Owner:"/>
-                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Path=Item.Owner}"/>
-                        <TextBlock Grid.Row="0" Grid.Column="2" Text="MimeType:"/>
-                        <TextBlock Grid.Row="0" Grid.Column="3" Text="{Binding Path=Item.MimeType}"/>
-                        <TextBlock Grid.Row="1" Grid.Column="2" Text="Extension:"/>
-                        <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding Path=Item.Extension}"/>
-                        <Button Grid.Row="3" Grid.Column="0" Content="Download" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource ButtonDark}">
-                            <Button.CommandParameter>
-                                <helpers:TaskManagerCommandParameterValue ParameterType="Download">
-                                    <helpers:TaskManagerCommandParameterArgument ItemType="System.String" ItemKey="BucketName" />
-                                    <helpers:TaskManagerCommandParameterArgument ItemType="System.String" ItemKey="Key" />
-                                </helpers:TaskManagerCommandParameterValue>
-                            </Button.CommandParameter>
-                        </Button>
-
-                        <Button Grid.Row="3" Grid.Column="3" Content="Delete" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource ButtonDark}">
-                            <Button.CommandParameter>
-                                <helpers:TaskManagerCommandParameterValue ParameterType="Delete">
-                                    <helpers:TaskManagerCommandParameterArgument ItemType="System.String" ItemKey="BucketName" />
-                                    <helpers:TaskManagerCommandParameterArgument ItemType="System.String" ItemKey="Key" />
-                                </helpers:TaskManagerCommandParameterValue>
-                            </Button.CommandParameter>
-                        </Button>
-                    </Grid>
+                    <Border Background="{StaticResource NormalBackground}">
+                        <ContentControl
+                            ContentTemplateSelector="{StaticResource taskManagerChildDataTemplateSelector}"
+                            Content="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" />
+                    </Border>
                 </StackPanel>
             </Border>
         </DataTemplate>

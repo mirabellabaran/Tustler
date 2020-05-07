@@ -56,6 +56,7 @@ namespace Tustler.Helpers
                 var template = item switch
                 {
                     Bucket _ => element.FindResource("BucketTemplate") as DataTemplate,
+                    BucketItem _ => element.FindResource("BucketItemTemplate") as DataTemplate,
                     _ => null
                 };
 

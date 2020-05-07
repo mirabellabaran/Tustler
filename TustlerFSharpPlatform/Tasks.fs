@@ -16,6 +16,7 @@ type TaskResponse =
     | StringArgument of string
     | TaskInfo of string
     | TaskComplete of string
+    | TaskSelect of string                  // prompt the user to select an item (this is also a truncation point for subsequent reselection)
     | Notification of Notification
     | DelaySequence of int
     | Bucket of Bucket
@@ -26,8 +27,11 @@ type TaskResponse =
 
 [<RequireQualifiedAccess>]
 type TaskEvent =
-    | InvokedFunction
+    | InvokingFunction
     | SetArgument of TaskResponse
+    | SelectArgument
+    | ClearArguments
+    | FunctionCompleted
 
 [<RequireQualifiedAccess>]
 type MaybeResponse =
@@ -71,10 +75,11 @@ module public MiniTasks =
 module public Tasks =            
     
     // all or some of the arguments can be Nothing
-    let private validateArgs expectedNum argChecker (args: Stack<MaybeResponse>) =
+    let private validateArgs expectedNum argChecker (args: InfiniteList<MaybeResponse>) =
         if args.Count < expectedNum then
             invalidArg "expectedNum" (sprintf "Expecting %d arguments" expectedNum)
         args
+        |> Seq.takeWhile (fun mr -> mr.IsSet)   // only examine arguments that are set
         |> Seq.iteri(fun index mr ->
             match mr with
             | MaybeResponse.Just tr -> argChecker index tr
@@ -103,13 +108,13 @@ module public Tasks =
             (TaskFunction.GetBucketItems (fun s3Interface notifications string -> async { return new BucketItemsCollection( bucketItems ) }))
 
 
-    let S3FetchItems (arguments: ITaskArgumentCollection) (args: Stack<MaybeResponse>) =      //(events: Queue<TaskEvent>) =
+    let S3FetchItems (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =      //(events: Queue<TaskEvent>) =
 
-        let getBuckets awsInterface (notifications: NotificationsList) =
-            S3.getBuckets awsInterface notifications
+        //let getBuckets awsInterface (notifications: NotificationsList) =
+        //    S3.getBuckets awsInterface notifications
 
-        let getBucketItems awsInterface (notifications: NotificationsList) bucketName =
-            S3.getBucketItems awsInterface notifications bucketName
+        //let getBucketItems awsInterface (notifications: NotificationsList) bucketName =
+        //    S3.getBucketItems awsInterface notifications bucketName
 
         // prepare expensive function steps (may be replaced with cached values)
         //let (TaskFunction.GetBuckets getBuckets) = ReplaceWithConstant (TaskFunction.GetBuckets (getBuckets))
@@ -130,11 +135,12 @@ module public Tasks =
             // is BucketsModel set?
             if args.Pop().IsNotSet then
                 yield TaskResponse.TaskInfo "Retrieving buckets..."
-                let model = getBuckets awsInterface notifications |> Async.RunSynchronously
+                let model = S3.getBuckets awsInterface notifications |> Async.RunSynchronously
                 yield! getNotificationResponse notifications
+                yield TaskResponse.TaskSelect "Choose a bucket:"
                 yield TaskResponse.BucketsModel model
 
-            // is SelectedBucket set?   (SelectedBucket is set via UI selection (and passed via a mini task)
+            // is SelectedBucket set?   (SelectedBucket is set via UI selection; see TaskSelect above)
             let selectedBucket = args.Pop()
 
             // is BucketItemsModel set?
@@ -146,12 +152,14 @@ module public Tasks =
 
                 yield TaskResponse.TaskInfo "Retrieving bucket items..."
 
-                let model = getBucketItems awsInterface notifications bucketName |> Async.RunSynchronously
+                let model = S3.getBucketItems awsInterface notifications bucketName |> Async.RunSynchronously
                 yield! getNotificationResponse notifications
                 yield TaskResponse.BucketItemsModel model
+
+                yield TaskResponse.TaskComplete "Finished"
         }
 
-    let TranscribeCleanup (arguments: ITaskArgumentCollection) (args: Stack<MaybeResponse>) =
+    let TranscribeCleanup (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =
 
         let listTranscriptionJobs awsInterface (notifications: NotificationsList) =
             Transcribe.listTranscriptionJobs awsInterface notifications
@@ -166,7 +174,7 @@ module public Tasks =
         }
 
     // upload and transcribe some audio
-    let TranscribeAudio (arguments: ITaskArgumentCollection) (args: Stack<MaybeResponse>) =
+    let TranscribeAudio (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =
         
         let startTranscriptionJob (args: TranscribeAudioArguments) =
             // note: task name used as job name and as S3 media key (from upload)

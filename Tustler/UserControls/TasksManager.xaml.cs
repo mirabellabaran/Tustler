@@ -28,7 +28,7 @@ namespace Tustler.UserControls
     {
         private readonly AmazonWebServiceInterface awsInterface;
 
-        private readonly Stack<TaskEvent> events;    // ground truth for the events generated in a given session (start task to TaskResponse.TaskComplete)
+        private readonly List<TaskEvent> events;    // ground truth for the events generated in a given session (start task to TaskResponse.TaskComplete)
         private readonly ObservableCollection<TaskResponse> taskResponses;      // bound to UI
 
         public static readonly DependencyProperty TaskNameProperty = DependencyProperty.Register("TaskName", typeof(string), typeof(TasksManager), new PropertyMetadata("", PropertyChangedCallback));
@@ -71,7 +71,7 @@ namespace Tustler.UserControls
             internal set;
         }
 
-        public Func<ITaskArgumentCollection, Stack<MaybeResponse>, IEnumerable<TaskResponse>> TaskFunction
+        public Func<ITaskArgumentCollection, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> TaskFunction
         {
             get;
             internal set;
@@ -83,7 +83,7 @@ namespace Tustler.UserControls
 
             this.awsInterface = awsInterface;
 
-            this.events = new Stack<TaskEvent>();
+            this.events = new List<TaskEvent>();
             this.taskResponses = new ObservableCollection<TaskResponse>();
         }
 
@@ -192,7 +192,13 @@ namespace Tustler.UserControls
                     case TaskResponse.BucketItemsModel _:
                     case TaskResponse.BucketsModel _:
                     case TaskResponse.TranscriptionJob _:
-                        events.Push(TaskEvent.NewSetArgument(response));
+                        events.Add(TaskEvent.NewSetArgument(response));
+                        break;
+                    case TaskResponse.TaskSelect _:
+                        events.Add(TaskEvent.SelectArgument);
+                        break;
+                    case TaskResponse.TaskComplete _:
+                        events.Add(TaskEvent.FunctionCompleted);
                         break;
                 }
 
@@ -260,29 +266,35 @@ namespace Tustler.UserControls
                 //    }
                 //}
 
-                // generate an arguments stack based on the observed events
-                var argCount = 3;
-                var setArgumentCount = events.Count(evt => evt switch
-                {
-                    TaskEvent.SetArgument _ => true,
-                    _ => false
-                });
+                //var argCount = 3;
+                //var setArgumentCount = events.Count(evt => evt switch
+                //{
+                //    TaskEvent.SetArgument _ => true,
+                //    _ => false
+                //});
 
-                // create arguments stack and add unset arguments
-                var args = new Stack<MaybeResponse>();
-                for (int i = 0; i < argCount - setArgumentCount; i++)
-                {
-                    args.Push(MaybeResponse.Nothing);
-                }
+                //for (int i = 0; i < argCount - setArgumentCount; i++)
+                //{
+                //    args.Push(MaybeResponse.Nothing);
+                //}
 
+                // generate an arguments stack (by default an infinite enumerable of Nothing arguments)
+                var args = new InfiniteList<MaybeResponse>(MaybeResponse.Nothing);
+
+                // replay the observed events, adding any defined arguments
                 foreach (var evt in events)
                 {
                     if (evt is TaskEvent.SetArgument arg)
                     {
-                        args.Push(MaybeResponse.NewJust(arg.Item));
+                        args.Add(MaybeResponse.NewJust(arg.Item));
+                    }
+                    else if (evt.IsClearArguments)
+                    {
+                        args.Clear();
                     }
                 }
 
+                events.Add(TaskEvent.InvokingFunction);
                 var responseStream = TaskFunction(TaskArguments, args);
                 lbTaskResponses.ItemsSource = taskResponses;
 
@@ -340,10 +352,11 @@ namespace Tustler.UserControls
             // transform each TaskManagerCommandParameterArgument into a MiniTaskArgument
             MiniTaskArgument[] GenerateArgumentList(TaskManagerCommandParameterValue parameterValue)
             {
-                var boundResponse = (e.OriginalSource as Button).DataContext as TaskResponse;
-                var model = boundResponse switch
+                var model = ((e.OriginalSource as Button).DataContext) switch
                 {
-                    TaskResponse.BucketItem taskBucketItem => taskBucketItem.Item as object,
+                    BucketItem bucketItem => bucketItem as object,
+                    //TaskResponse.BucketItem taskBucketItem => taskBucketItem.Item as object,
+                    //TaskResponse.BucketItemsModel bucketItemsModel => bucketItemsModel.Item as object,
                     _ => null
                 };
 
@@ -369,14 +382,46 @@ namespace Tustler.UserControls
                     break;
                 case TaskManagerCommandParameterValue parameterValue when parameterValue.ParameterType == "Select":
 
-                    // TODO check if task is complete; if so then truncate BOTH the ObservableCollection and the events stack before adding
+                    // the user has selected an item that sets an argument
+                    // first check if the task is complete
+                    if (events.Last().IsFunctionCompleted)
+                    {
+                        // if so then add a ClearArguments to the events stack before adding SetArgument below
+                        events.Add(TaskEvent.ClearArguments);
+
+                        // and prune the ObservableCollection back to the last TaskSelect
+                        var tempStack = new Stack<TaskResponse>(taskResponses);
+                        TaskResponse lastResponse = null;
+                        while (!tempStack.Peek().IsTaskSelect)
+                        {
+                            lastResponse = tempStack.Pop();
+                        }
+
+                        if (lastResponse is object)
+                        {
+                            // re-add the last response (immediately after the TaskSelect)
+                            tempStack.Push(lastResponse);
+
+                            // add the last response as a SetArgument to the event source (after a SelectArgument)
+                            events.Add(TaskEvent.SelectArgument);
+                            events.Add(TaskEvent.NewSetArgument(lastResponse));
+                        }
+
+                        // clearing the ObservableCollection will disconnect the data bindings (the DataContext on the ItemsControl item containers)
+                        // instead, just remove the last numItems items
+                        var numItems = taskResponses.Count - tempStack.Count;
+                        for (int i = 0; i < numItems; i++)
+                        {
+                            taskResponses.RemoveAt(taskResponses.Count - 1);
+                        }
+                    }
 
                     // Add a SetArgument event to the events list and reinvoke the function
                     var model = ((e.OriginalSource as Button).DataContext);
                     switch (model)
                     {
                         case Bucket bucket:
-                            events.Push(TaskEvent.NewSetArgument(TaskResponse.NewBucket(bucket)));
+                            events.Add(TaskEvent.NewSetArgument(TaskResponse.NewBucket(bucket)));
                             break;
                     }
 
