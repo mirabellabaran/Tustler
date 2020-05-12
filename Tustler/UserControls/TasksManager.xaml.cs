@@ -18,6 +18,7 @@ using static TustlerFSharpPlatform.TaskArguments;
 using AWSTasks = TustlerFSharpPlatform.Tasks;
 using AWSMiniTasks = TustlerFSharpPlatform.MiniTasks;
 using Tustler.Helpers;
+using System.IO;
 
 namespace Tustler.UserControls
 {
@@ -307,11 +308,35 @@ namespace Tustler.UserControls
 
         private void StartMiniTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = true;
+            var btn = e.OriginalSource as Button;
+            var parameterInfo = btn.Tag as TaskManagerParameterInfoCollection;
+
+            switch (parameterInfo?.ParameterType)
+            {
+                // enable if DataContext is set (DataGrid SelectedItem is not null)
+                case "DownloadPrompt":
+                case "ConfirmDelete":
+                    var context = (btn.DataContext as TaskResponse);
+                    if (context is null)
+                        e.CanExecute = false;
+                    else
+                        e.CanExecute = true;
+                    break;
+                case "Download":
+                    var filePath = e.Parameter as string;
+                    e.CanExecute = !string.IsNullOrEmpty(filePath);
+                    break;
+                default:
+                    e.CanExecute = true;
+                    break;
+            }
         }
 
         private void StartMiniTask_Executed(object sender, ExecutedRoutedEventArgs e)
         {
+            var btn = e.OriginalSource as Button;
+            var parameterInfo = btn.Tag as TaskManagerParameterInfoCollection;
+
 #nullable enable
             static object? GetValueFromModel(object? model, Type? itemType, string itemName)
             {
@@ -347,40 +372,83 @@ namespace Tustler.UserControls
 
                 return result;
             }
-#nullable disable
 
             // transform each TaskManagerCommandParameterArgument into a MiniTaskArgument
-            MiniTaskArgument[] GenerateArgumentList(TaskManagerCommandParameterValue parameterValue)
+            MiniTaskArgument?[] GenerateArgumentList(TaskManagerParameterInfoCollection parameterValue, object? model)
             {
-                var model = ((e.OriginalSource as Button).DataContext) switch
-                {
-                    BucketItem bucketItem => bucketItem as object,
-                    //TaskResponse.BucketItem taskBucketItem => taskBucketItem.Item as object,
-                    //TaskResponse.BucketItemsModel bucketItemsModel => bucketItemsModel.Item as object,
-                    _ => null
-                };
-
-                return parameterValue.Items.Cast<TaskManagerCommandParameterArgument>()
+                return parameterValue.Items.Cast<TaskManagerParameterInfo>()
                     .Select(arg => GenerateArgument(model, arg.ItemType, arg.ItemKey))
                     .ToArray();
             }
 
-            switch (e.Parameter as TaskManagerCommandParameterValue)
+            static void SwitchMode(BucketItemViewModelMode mode, TaskResponse context)
             {
-                case TaskManagerCommandParameterValue parameterValue when parameterValue.ParameterType == "Delete":
-                    var taskUpdate = AWSMiniTasks.Delete(awsInterface, new NotificationsList(), GenerateArgumentList(parameterValue));
-                    var success = taskUpdate?.Item1;
-                    var notificationData = taskUpdate.Item2;
-                    if (notificationData is object && notificationData.Notifications.Count > 0)
+                switch (context)
+                {
+                    case TaskResponse.BucketItemsModel bucketItemsModel:
+                        var bucketItemViewModel = bucketItemsModel.Item as BucketItemViewModel;
+                        bucketItemViewModel.Mode = mode;
+                        break;
+                }
+            }
+#nullable disable
+
+            switch (parameterInfo.ParameterType)
+            {
+                case "ConfirmDelete":
+                    SwitchMode(BucketItemViewModelMode.ConfirmDelete, btn.DataContext as TaskResponse);
+                    break;
+                case "CancelDelete":
+                    SwitchMode(BucketItemViewModelMode.Standard, btn.DataContext as TaskResponse);
+                    break;
+                case "Delete":
+                    var context = btn.DataContext as TaskResponse;
+                    SwitchMode(BucketItemViewModelMode.Standard, context);
+                    var notifications = new NotificationsList();    // create a new list for each operation
+                    var (success, key) = AWSMiniTasks.Delete(awsInterface, notifications, context, GenerateArgumentList(parameterInfo, e.Parameter));
+                    if (success)
                     {
-                        var notifications = this.FindResource("applicationNotifications") as NotificationsList;
-                        foreach (var notification in notificationData.Notifications)
+                        // deletion from the remote source was successful; now delete from the local view model
+                        var deleteItemInterface = context switch
                         {
-                            notifications.Add(notification);
+                            TaskResponse.BucketItemsModel bucketItemsModel => bucketItemsModel.Item as IDeletableViewModelItem,
+                            _ => null
+                        };
+
+                        deleteItemInterface.DeleteItem(key);
+                    }
+                    if (notifications.Notifications.Count > 0)
+                    {
+                        var notifiableInterface = context switch
+                        {
+                            TaskResponse.BucketItemsModel bucketItemsModel => bucketItemsModel.Item as INotifiableViewModel<Notification>,
+                            _ => null
+                        };
+
+                        var collection = notifications.Notifications;
+                        notifiableInterface.NotificationsList.Add(collection.First());
+
+                        if (collection.Count > 1)
+                        {
+                            // show any additional notifications in the main window notifications area
+                            var applicationNotifications = this.FindResource("applicationNotifications") as NotificationsList;
+                            foreach (var notification in collection)
+                            {
+                                applicationNotifications.Add(notification);
+                            }
                         }
                     }
                     break;
-                case TaskManagerCommandParameterValue parameterValue when parameterValue.ParameterType == "Select":
+                case "DownloadPrompt":
+                    SwitchMode(BucketItemViewModelMode.DownloadPrompt, btn.DataContext as TaskResponse);
+                    break;
+                case "CancelDownload":
+                    SwitchMode(BucketItemViewModelMode.Standard, btn.DataContext as TaskResponse);
+                    break;
+                case "Download":
+                    MessageBox.Show("TODO");
+                    break;
+                case "Select":
 
                     // the user has selected an item that sets an argument
                     // first check if the task is complete
@@ -417,8 +485,7 @@ namespace Tustler.UserControls
                     }
 
                     // Add a SetArgument event to the events list and reinvoke the function
-                    var model = ((e.OriginalSource as Button).DataContext);
-                    switch (model)
+                    switch (btn.DataContext)
                     {
                         case Bucket bucket:
                             events.Add(TaskEvent.NewSetArgument(TaskResponse.NewBucket(bucket)));

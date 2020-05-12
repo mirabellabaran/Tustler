@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:TustlerModels;assembly=TustlerModels"
              xmlns:fsharp="clr-namespace:TustlerFSharpPlatform;assembly=TustlerFSharpPlatform"
+             xmlns:services="clr-namespace:TustlerServicesLib;assembly=TustlerServicesLib"
              xmlns:helpers="clr-namespace:Tustler.Helpers"
              xmlns:uc="clr-namespace:Tustler.UserControls"
              mc:Ignorable="d" 
@@ -20,21 +21,13 @@
         <helpers:TaskManagerDataTemplateSelector x:Key="taskManagerDataTemplateSelector"/>
         <helpers:TaskManagerChildDataTemplateSelector x:Key="taskManagerChildDataTemplateSelector"/>
 
-        <DataTemplate x:Key="TaskInfoTemplate" DataType="{x:Type fsharp:TaskResponse}">
-            <TextBlock Foreground="Green" Text="{Binding Path=Item}" />
-        </DataTemplate>
-
-        <DataTemplate x:Key="TaskCompleteTemplate" DataType="{x:Type fsharp:TaskResponse}">
-            <TextBlock Foreground="Green" Text="{Binding Path=Item}" />
-        </DataTemplate>
-
         <DataTemplate x:Key="BucketTemplate" DataType="{x:Type local:Bucket}">
             <Button Command="{x:Static uc:TaskCommands.StartMiniTask}" Background="{StaticResource ContrastingBackground}" Margin="10">
-                <Button.CommandParameter>
-                    <helpers:TaskManagerCommandParameterValue ParameterType="Select">
-                        <helpers:TaskManagerCommandParameterArgument ItemType="System.String" ItemKey="Name" />
-                    </helpers:TaskManagerCommandParameterValue>
-                </Button.CommandParameter>
+                <Button.Tag>
+                    <helpers:TaskManagerParameterInfoCollection ParameterType="Select">
+                        <helpers:TaskManagerParameterInfo ItemType="System.String" ItemKey="Name" />
+                    </helpers:TaskManagerParameterInfoCollection>
+                </Button.Tag>
                 <Button.Content>
                     <Border Name="border" BorderBrush="BlanchedAlmond" CornerRadius="10" BorderThickness="5" Padding="5" Margin="5">
                         <Grid>
@@ -64,7 +57,6 @@
                         <RowDefinition Height="20"/>
                         <RowDefinition Height="20"/>
                         <RowDefinition Height="20"/>
-                        <RowDefinition Height="20"/>
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="100"/>
@@ -72,38 +64,97 @@
                         <ColumnDefinition Width="100"/>
                         <ColumnDefinition Width="200"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Key:"/>
-                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Path=Key}" />
-                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Size:"/>
-                    <TextBlock Grid.Row="0" Grid.Column="3" Text="{Binding Path=Size}"/>
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="LastModified:"/>
-                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path=LastModified}"/>
-                    <TextBlock Grid.Row="1" Grid.Column="2" Text="Owner:"/>
-                    <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding Path=Owner}"/>
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="MimeType:"/>
-                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Path=MimeType}"/>
-                    <TextBlock Grid.Row="2" Grid.Column="2" Text="Extension:"/>
-                    <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding Path=Extension}"/>
+                    <Grid.Resources>
+                        <Style x:Key="textBlockStyles" TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+                        </Style>
+                        <Style x:Key="textBlockLabelStyles" TargetType="TextBlock">
+                            <Setter Property="FontWeight" Value="Bold" />
+                            <Setter Property="Foreground" Value="BlanchedAlmond" />
+                        </Style>
+                    </Grid.Resources>
 
-                    <Button Grid.Row="3" Grid.Column="0" Content="Download" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource ButtonDark}">
-                        <Button.CommandParameter>
-                            <helpers:TaskManagerCommandParameterValue ParameterType="Download">
-                                <helpers:TaskManagerCommandParameterArgument ItemType="System.String" ItemKey="BucketName" />
-                                <helpers:TaskManagerCommandParameterArgument ItemType="System.String" ItemKey="Key" />
-                            </helpers:TaskManagerCommandParameterValue>
-                        </Button.CommandParameter>
-                    </Button>
-
-                    <Button Grid.Row="3" Grid.Column="3" Content="Delete" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource ButtonDark}">
-                        <Button.CommandParameter>
-                            <helpers:TaskManagerCommandParameterValue ParameterType="Delete">
-                                <helpers:TaskManagerCommandParameterArgument ItemType="System.String" ItemKey="BucketName" />
-                                <helpers:TaskManagerCommandParameterArgument ItemType="System.String" ItemKey="Key" />
-                            </helpers:TaskManagerCommandParameterValue>
-                        </Button.CommandParameter>
-                    </Button>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource textBlockLabelStyles}" Text="Key:"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource textBlockStyles}" Text="{Binding Path=Key}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Row="0" Grid.Column="2" Style="{StaticResource textBlockLabelStyles}" Text="Size:"/>
+                    <TextBlock Grid.Row="0" Grid.Column="3" Style="{StaticResource textBlockStyles}" Text="{Binding Path=Size}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource textBlockLabelStyles}" Text="LastModified:"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource textBlockStyles}" Text="{Binding Path=LastModified}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource textBlockLabelStyles}" Text="Owner:"/>
+                    <TextBlock Grid.Row="1" Grid.Column="3" Style="{StaticResource textBlockStyles}" Text="{Binding Path=Owner}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource textBlockLabelStyles}" Text="MimeType:"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource textBlockStyles}" Text="{Binding Path=MimeType}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="2" Style="{StaticResource textBlockLabelStyles}" Text="Extension:"/>
+                    <TextBlock Grid.Row="2" Grid.Column="3" Style="{StaticResource textBlockStyles}" Text="{Binding Path=Extension}"/>
                 </Grid>
             </Border>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type services:ApplicationMessageInfo}">
+            <StackPanel Orientation="Horizontal">
+                <StackPanel.Resources>
+                    <Style x:Key="textBlockHeaderStyles" TargetType="TextBlock" >
+                        <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+                        <Setter Property="FontWeight" Value="Bold" />
+                        <Setter Property="Padding" Value="2" />
+                        <Setter Property="Margin" Value="10, 0, 0, 0" />
+                    </Style>
+                    <Style x:Key="textBlockStyles" TargetType="TextBlock" >
+                        <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+                        <Setter Property="Margin" Value="10, 0, 0, 0" />
+                    </Style>
+                </StackPanel.Resources>
+                <Viewbox>
+                    <Grid Margin="1">
+                        <Path Stretch="Fill" Fill="AliceBlue" Data="{StaticResource notification_icon_info}" />
+                    </Grid>
+                </Viewbox>
+                <TextBlock Text="{Binding Path=Message}" VerticalAlignment="Center" Style="{StaticResource textBlockHeaderStyles}" />
+                <TextBlock Text="{Binding Path=Detail}" VerticalAlignment="Center" Style="{StaticResource textBlockStyles}" />
+                <!--<TextBlock Text="{Binding Path=Timestamp}" VerticalAlignment="Center" Style="{StaticResource textBlockStyles}" />-->
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type services:ApplicationErrorInfo}">
+            <StackPanel Orientation="Horizontal" Height="40" HorizontalAlignment="Stretch">
+                <StackPanel.Resources>
+                    <Style x:Key="textBlockHeaderStyles" TargetType="TextBlock" >
+                        <Setter Property="Background" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+                        <Setter Property="Padding" Value="2" />
+                        <Setter Property="Margin" Value="10, 0, 0, 0" />
+                    </Style>
+                </StackPanel.Resources>
+                <Viewbox>
+                    <Grid Margin="1" ToolTip="{Binding Path=Context}">
+                        <Path Stretch="Fill" Fill="AliceBlue" Data="{StaticResource notification_icon_error}" />
+                    </Grid>
+                </Viewbox>
+                <TextBlock Text="{Binding Path=Message}" ToolTip="{Binding Path=Exception.Message}" VerticalAlignment="Center" Style="{StaticResource textBlockHeaderStyles}" />
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ApplicationErrorInfoTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <Border BorderBrush="DarkGray" BorderThickness="1" Padding="5" Margin="5">
+                <ContentPresenter Content="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Content.Item}" ContentTemplate="{DynamicResource errorInfo}" />
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ApplicationMessageInfoTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <Border BorderBrush="DarkGray" BorderThickness="1" Padding="5" Margin="5">
+                <ContentPresenter Content="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Content.Item}" ContentTemplate="{DynamicResource messageInfo}" />
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="TaskInfoTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <TextBlock Foreground="LimeGreen" Text="{Binding Path=Item}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="TaskCompleteTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <TextBlock Foreground="LimeGreen" Text="{Binding Path=Item}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="TaskSelectTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <Label Foreground="#637074" Background="#BDD4E7" FontWeight="Bold" Margin="10" Content="{Binding Path=Item}" />
         </DataTemplate>
 
         <DataTemplate x:Key="BucketsModelTemplate" DataType="{x:Type fsharp:TaskResponse}">
@@ -117,33 +168,108 @@
         </DataTemplate>
         
         <DataTemplate x:Key="BucketItemsModelTemplate" DataType="{x:Type fsharp:TaskResponse}">
-            <Border Name="border" BorderBrush="DarkGray" BorderThickness="10" Padding="5" Margin="5">
-                <StackPanel Orientation="Horizontal">
-                    <DataGrid x:Name="dgBucketItemsModelTemplate" AutoGenerateColumns="False" ItemsSource="{Binding Item.BucketItems}">
+            <Border Name="border" BorderBrush="{StaticResource ContrastingBackground}" Height="200" BorderThickness="10" Padding="5" Margin="5">
+                <DockPanel LastChildFill="True">
+                    <DataGrid x:Name="dgBucketItemsModelTemplate" DockPanel.Dock="Left" AutoGenerateColumns="False" CanUserAddRows="false" ItemsSource="{Binding Item.BucketItems}">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Item Name" Binding="{Binding Path=Key}" />
+                            <DataGridTextColumn Header="Item Name" Width="280" IsReadOnly="True" Binding="{Binding Path=Key}" />
                         </DataGrid.Columns>
                     </DataGrid>
-                    <Border Background="{StaticResource NormalBackground}">
-                        <ContentControl
-                            ContentTemplateSelector="{StaticResource taskManagerChildDataTemplateSelector}"
-                            Content="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" />
+                    <Border BorderBrush="#AFCBFF" BorderThickness="3" CornerRadius="3" Margin="10">
+                        <Grid Background="Transparent">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition />
+                                <RowDefinition Height="30" />
+                                <RowDefinition Height="30" />
+                            </Grid.RowDefinitions>
+                            <Grid.Resources>
+                                <Style x:Key="buttonStyles" TargetType="Button" BasedOn="{StaticResource ButtonDark}">
+                                    <Setter Property="Margin" Value="5" />
+                                    <Setter Property="Width" Value="90" />
+                                </Style>
+
+                                <DataTemplate x:Key="StandardMode">
+                                    <ListBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Background="{StaticResource ContrastingBackground}" ItemsSource="{Binding Path=Item.NotificationsList}" />
+                                </DataTemplate>
+
+                                <DataTemplate x:Key="DownloadPromptMode">
+                                    <StackPanel Orientation="Horizontal" Background="Red">
+                                        <TextBox x:Name="txtDownloadPrompt" />
+                                        <Button Content="Start Downloading" ToolTip="Download this file" CommandParameter="{Binding ElementName=txtDownloadPrompt, Path=Text}" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource buttonStyles}">
+                                            <Button.Tag>
+                                                <helpers:TaskManagerParameterInfoCollection ParameterType="Download">
+                                                    <helpers:TaskManagerParameterInfo ItemType="System.String" ItemKey="BucketName" />
+                                                    <helpers:TaskManagerParameterInfo ItemType="System.String" ItemKey="Key" />
+                                                </helpers:TaskManagerParameterInfoCollection>
+                                            </Button.Tag>
+                                        </Button>
+                                        <Button Content="Cancel" ToolTip="Cancel deletion" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource buttonStyles}">
+                                            <Button.Tag>
+                                                <helpers:TaskManagerParameterInfoCollection ParameterType="CancelDownload" />
+                                            </Button.Tag>
+                                        </Button>
+                                    </StackPanel>
+                                </DataTemplate>
+
+                                <DataTemplate x:Key="ConfirmDeleteMode">
+                                    <UniformGrid Rows="1" Columns="2">
+                                        <Button Grid.Row="0" Grid.Column="0" Content="Confirm" ToolTip="Delete this file" CommandParameter="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource buttonStyles}">
+                                            <Button.Tag>
+                                                <helpers:TaskManagerParameterInfoCollection ParameterType="Delete">
+                                                    <helpers:TaskManagerParameterInfo ItemType="System.String" ItemKey="BucketName" />
+                                                    <helpers:TaskManagerParameterInfo ItemType="System.String" ItemKey="Key" />
+                                                </helpers:TaskManagerParameterInfoCollection>
+                                            </Button.Tag>
+                                        </Button>
+                                        <Button Grid.Row="0" Grid.Column="1" Content="Cancel" ToolTip="Cancel deletion" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource buttonStyles}">
+                                            <Button.Tag>
+                                                <helpers:TaskManagerParameterInfoCollection ParameterType="CancelDelete" />
+                                            </Button.Tag>
+                                        </Button>
+                                    </UniformGrid>
+                                </DataTemplate>
+
+                                <Style x:Key="childSelectingStyle" TargetType="ContentPresenter">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource StandardMode}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Item.Mode}" Value="ConfirmDelete">
+                                            <Setter Property="ContentTemplate" Value="{StaticResource ConfirmDeleteMode}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Item.Mode}" Value="DownloadPrompt">
+                                            <Setter Property="ContentTemplate" Value="{StaticResource DownloadPromptMode}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Resources>
+                            
+                            <ContentControl Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                                ContentTemplateSelector="{StaticResource taskManagerChildDataTemplateSelector}"
+                                Content="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" />
+
+                            <Button Grid.Row="1" Grid.Column="0" Content="Download" ToolTip="Download this file" CommandParameter="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource buttonStyles}">
+                                <Button.Tag>
+                                    <helpers:TaskManagerParameterInfoCollection ParameterType="DownloadPrompt" />
+                                </Button.Tag>
+                            </Button>
+
+                            <Button Grid.Row="1" Grid.Column="1" Content="Delete" ToolTip="Delete this file" CommandParameter="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource buttonStyles}">
+                                <Button.Tag>
+                                    <helpers:TaskManagerParameterInfoCollection ParameterType="ConfirmDelete" />
+                                </Button.Tag>
+                            </Button>
+
+                            <ContentPresenter Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource childSelectingStyle}" Content="{Binding}" />
+                        </Grid>
                     </Border>
-                </StackPanel>
+                </DockPanel>
             </Border>
         </DataTemplate>
 
         <DataTemplate x:Key="TranscriptionJobTemplate" DataType="{x:Type fsharp:TaskResponse}">
-            <Border Name="border" BorderBrush="DarkGray" BorderThickness="10" Padding="5" Margin="5">
-            </Border>
-        </DataTemplate>
-
-        <DataTemplate x:Key="ApplicationErrorInfoTemplate" DataType="{x:Type fsharp:TaskResponse}">
-            <Border Name="border" BorderBrush="DarkGray" BorderThickness="10" Padding="5" Margin="5">
-            </Border>
-        </DataTemplate>
-
-        <DataTemplate x:Key="ApplicationMessageInfoTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <Border Name="border" BorderBrush="DarkGray" BorderThickness="10" Padding="5" Margin="5">
             </Border>
         </DataTemplate>
@@ -159,7 +285,18 @@
                 </Grid.ColumnDefinitions>
             </Grid>
         </StackPanel>
-        <Button x:Name="btnStartTask" Content="Start Task" DockPanel.Dock="Top" Height="30" Width="100" Margin="0,5,0,0" Command="{x:Static uc:TaskCommands.StartTask}" Style="{StaticResource ButtonDark}" />
-        <ListBox x:Name="lbTaskResponses" Margin="20, 10, 20, 10" Background="{StaticResource NormalBackground}" ItemTemplateSelector="{StaticResource taskManagerDataTemplateSelector}" />
+        <Button x:Name="btnStartTask" Content="Start Task" DockPanel.Dock="Top" Height="30" Width="100" Margin="0,5,0,5" Command="{x:Static uc:TaskCommands.StartTask}" Style="{StaticResource ButtonDark}" />
+        <Border BorderThickness="2" BorderBrush="DarkGray">
+            <!--<ListBox x:Name="lbTaskResponses" Margin="20, 10, 20, 10" Background="{StaticResource NormalBackground}" ItemTemplateSelector="{StaticResource taskManagerDataTemplateSelector}" />-->
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="lbTaskResponses" Margin="20, 10, 20, 10" Background="{StaticResource NormalBackground}" ItemTemplateSelector="{StaticResource taskManagerDataTemplateSelector}" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Vertical" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
     </DockPanel>
 </UserControl>

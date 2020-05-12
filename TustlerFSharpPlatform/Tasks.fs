@@ -10,6 +10,7 @@ open TustlerInterfaces
 open TustlerAWSLib
 open System.Collections.Generic
 open System
+open System.Runtime.InteropServices
 
 [<RequireQualifiedAccess>]
 type TaskResponse =
@@ -45,7 +46,15 @@ type MaybeResponse with
 
 [<RequireQualifiedAccess>]
 type TaskUpdate =
-    | DeleteBucketItem of bool * NotificationsList
+    | DeleteBucketItem of bool * string     // returns success flag and the deleted key
+
+type TaskUpdate with
+    member x.Deconstruct([<Out>] success : byref<bool>, [<Out>] key : byref<string>) =
+        match x with
+        | TaskUpdate.DeleteBucketItem (a, b) ->
+            success <- a
+            key <- b
+        //| _ -> invalidArg "args" "TaskUpdate.Deconstruct: unknown type"
 
 [<RequireQualifiedAccess>]
 type MiniTaskArgument =
@@ -61,15 +70,18 @@ type TaskFunction =
 
 module public MiniTasks =
 
-    let Delete awsInterface (notifications: NotificationsList) (args:MiniTaskArgument[]) =
+    let Delete awsInterface (notifications: NotificationsList) (context:TaskResponse) (args:MiniTaskArgument[]) =
         if args.Length >= 2 then
-            let (bucketName, key) =
-                match (args.[0], args.[1]) with
-                | (MiniTaskArgument.String a, MiniTaskArgument.String b) -> (a, b)
-                | _ -> invalidArg "args" "MiniTasks.Delete: Expecting two string arguments"
-            let success = S3.deleteBucketItem awsInterface notifications bucketName key |> Async.RunSynchronously
-            TaskUpdate.DeleteBucketItem (success, notifications)
-        else invalidArg "args" "Expecting two arguments"
+            match context with
+            | TaskResponse.BucketItemsModel _ ->
+                let (bucketName, key) =
+                    match (args.[0], args.[1]) with
+                    | (MiniTaskArgument.String a, MiniTaskArgument.String b) -> (a, b)
+                    | _ -> invalidArg "args" "MiniTasks.Delete: Expecting two string arguments"
+                let success = S3.deleteBucketItem awsInterface notifications bucketName key |> Async.RunSynchronously
+                TaskUpdate.DeleteBucketItem (success, key)
+            | _ -> invalidArg "context" "MiniTasks.Delete: Unrecognized context"
+        else invalidArg "args" "MiniTasks.Delete: Expecting two arguments"
 
 
 module public Tasks =            
@@ -137,8 +149,9 @@ module public Tasks =
                 yield TaskResponse.TaskInfo "Retrieving buckets..."
                 let model = S3.getBuckets awsInterface notifications |> Async.RunSynchronously
                 yield! getNotificationResponse notifications
-                yield TaskResponse.TaskSelect "Choose a bucket:"
-                yield TaskResponse.BucketsModel model
+                if model.Buckets.Count > 0 then
+                    yield TaskResponse.TaskSelect "Choose a bucket:"
+                    yield TaskResponse.BucketsModel model
 
             // is SelectedBucket set?   (SelectedBucket is set via UI selection; see TaskSelect above)
             let selectedBucket = args.Pop()
@@ -151,6 +164,7 @@ module public Tasks =
                     | _ -> invalidArg "SelectedBucket" "Expecting a Bucket" 
 
                 yield TaskResponse.TaskInfo "Retrieving bucket items..."
+                notifications.ShowMessage("Poop", "Hi there")
 
                 let model = S3.getBucketItems awsInterface notifications bucketName |> Async.RunSynchronously
                 yield! getNotificationResponse notifications

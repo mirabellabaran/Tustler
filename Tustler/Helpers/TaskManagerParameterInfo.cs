@@ -7,11 +7,11 @@ using TustlerFSharpPlatform;
 
 namespace Tustler.Helpers
 {
-    public class TaskManagerCommandParameterValue : ItemsControl
+    public class TaskManagerParameterInfoCollection : ItemsControl
     {
-        public static readonly DependencyProperty ParameterTypeProperty = DependencyProperty.Register("ParameterType", typeof(string), typeof(TaskManagerCommandParameterValue));
+        public static readonly DependencyProperty ParameterTypeProperty = DependencyProperty.Register("ParameterType", typeof(string), typeof(TaskManagerParameterInfoCollection));
 
-        public TaskManagerCommandParameterValue()
+        public TaskManagerParameterInfoCollection()
         {
         }
 
@@ -22,12 +22,12 @@ namespace Tustler.Helpers
         }
     }
 
-    public class TaskManagerCommandParameterArgument : DependencyObject
+    public class TaskManagerParameterInfo : DependencyObject
     {
-        public static readonly DependencyProperty ItemTypeProperty = DependencyProperty.Register("ItemType", typeof(string), typeof(TaskManagerCommandParameterArgument));
-        public static readonly DependencyProperty ItemKeyProperty = DependencyProperty.Register("ItemKey", typeof(string), typeof(TaskManagerCommandParameterArgument));
+        public static readonly DependencyProperty ItemTypeProperty = DependencyProperty.Register("ItemType", typeof(string), typeof(TaskManagerParameterInfo));
+        public static readonly DependencyProperty ItemKeyProperty = DependencyProperty.Register("ItemKey", typeof(string), typeof(TaskManagerParameterInfo));
 
-        public TaskManagerCommandParameterArgument()
+        public TaskManagerParameterInfo()
         {
         }
 

@@ -85,7 +85,6 @@ namespace TustlerServicesLib
             get;
             internal set;
         }
-
     }
 
 }

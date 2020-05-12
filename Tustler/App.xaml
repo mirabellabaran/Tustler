@@ -32,6 +32,28 @@
             <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="LightGray"/>
             <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#535c60"/>
 
+            <StreamGeometry x:Key="notification_icon_info">
+                M0 2a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H2a2 2 0 01-2-2V2zm8.93 4.588l-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM8 5.5a1 1 0 100-2 1 1 0 000 2z
+            </StreamGeometry>
+
+            <GeometryGroup x:Key="notification_icon_error" FillRule="EvenOdd">
+                <StreamGeometry>
+                    M8 15A6 6 0 108 3a6 6 0 000 12zm0 1A7 7 0 108 2a7 7 0 000 14z
+                </StreamGeometry>
+                <StreamGeometry>
+                    M8 4.5a.5.5 0 01.5.5v4a.5.5 0 01-.053.224l-1.5 3a.5.5 0 11-.894-.448L7.5 8.882V5a.5.5 0 01.5-.5z
+                </StreamGeometry>
+                <StreamGeometry>
+                    M.86 5.387A2.5 2.5 0 114.387 1.86 8.035 8.035 0 00.86 5.387zM11.613 1.86a2.5 2.5 0 113.527 3.527 8.035 8.035 0 00-3.527-3.527z
+                </StreamGeometry>
+                <StreamGeometry>
+                    M11.646 14.146a.5.5 0 01.708 0l1 1a.5.5 0 01-.708.708l-1-1a.5.5 0 010-.708zm-7.292 0a.5.5 0 00-.708 0l-1 1a.5.5 0 00.708.708l1-1a.5.5 0 000-.708zM5.5.5A.5.5 0 016 0h4a.5.5 0 010 1H6a.5.5 0 01-.5-.5z
+                </StreamGeometry>
+                <StreamGeometry>
+                    M7 1h2v2H7V1z
+                </StreamGeometry>
+            </GeometryGroup>
+
             <Style TargetType="TabControl">
                 <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
             </Style>

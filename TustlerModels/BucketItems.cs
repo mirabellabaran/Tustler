@@ -3,7 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using TustlerAWSLib;
 using TustlerInterfaces;
@@ -11,6 +13,13 @@ using TustlerServicesLib;
 
 namespace TustlerModels
 {
+    public enum BucketItemViewModelMode
+    {
+        Standard,
+        ConfirmDelete,
+        DownloadPrompt
+    }
+
     public class BucketItemsCollection: ObservableCollection<BucketItem>
     {
         readonly Dictionary<string, BucketItem> keyLookup;
@@ -47,31 +56,70 @@ namespace TustlerModels
 
         public void UpdateItem(string key, string mimetype, string extension)
         {
-            keyLookup.TryGetValue(key, out BucketItem currentItem);
-
-            currentItem.MimeType = mimetype;
-            currentItem.Extension = extension;
-
-            using (this.BlockReentrancy())
+            if (keyLookup.TryGetValue(key, out BucketItem currentItem))
             {
-                OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+                currentItem.MimeType = mimetype;
+                currentItem.Extension = extension;
+
+                using (this.BlockReentrancy())
+                {
+                    OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+                }
+            }
+        }
+
+        internal void DeleteKey(string key)
+        {
+            if (keyLookup.TryGetValue(key, out BucketItem currentItem))
+            {
+                Remove(currentItem);
             }
         }
     }
 
-    public class BucketItemViewModel
+    public class BucketItemViewModel : INotifyPropertyChanged, IDeletableViewModelItem, INotifiableViewModel<Notification>
     {
+        public event PropertyChangedEventHandler PropertyChanged;
+        private BucketItemViewModelMode mode;
+
         public BucketItemViewModel()
         {
             this.BucketItems = new BucketItemsCollection();
             this.NeedsRefresh = true;
             this.CurrentBucketName = null;
+
+            this.NotificationsList = new ObservableCollection<Notification>();
+            this.Mode = BucketItemViewModelMode.Standard;
+        }
+
+        protected void OnPropertyChanged([CallerMemberName] string name = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
 
         public BucketItemsCollection BucketItems
         {
             get;
             private set;
+        }
+
+        public ObservableCollection<Notification> NotificationsList
+        {
+            get;
+            private set;
+        }
+
+        public BucketItemViewModelMode Mode
+        {
+            get
+            {
+                return mode;
+            }
+            set
+            {
+                mode = value;
+                OnPropertyChanged();
+            }
         }
 
         public bool NeedsRefresh
@@ -84,6 +132,16 @@ namespace TustlerModels
         {
             get;
             set;
+        }
+
+        /// <summary>
+        /// Delete the specified BucketItem from the view
+        /// </summary>
+        /// <remarks>An alternative is to call ForceRefresh after deleting an item</remarks>
+        /// <param name="key"></param>
+        public void DeleteItem(string key)
+        {
+            BucketItems.DeleteKey(key);
         }
 
         public async Task ForceRefresh(AmazonWebServiceInterface awsInterface, NotificationsList notifications, string bucketName)
