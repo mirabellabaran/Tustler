@@ -1,0 +1,115 @@
+﻿<UserControl x:Class="Tustler.UserControls.TaskMemberControls.S3ItemManagement"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:helpers="clr-namespace:Tustler.Helpers"
+             xmlns:uc="clr-namespace:Tustler.UserControls.TaskMemberControls"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+
+    <UserControl.CommandBindings>
+        <CommandBinding Command="{x:Static uc:S3ItemManagementCommands.Download}" CanExecute="Download_CanExecute" Executed="Download_Executed" />
+        <CommandBinding Command="{x:Static uc:S3ItemManagementCommands.CancelDownload}" CanExecute="CancelDownload_CanExecute" Executed="CancelDownload_Executed" />
+        <CommandBinding Command="{x:Static uc:S3ItemManagementCommands.Delete}" CanExecute="Delete_CanExecute" Executed="Delete_Executed" />
+        <CommandBinding Command="{x:Static uc:S3ItemManagementCommands.CancelDelete}" CanExecute="CancelDelete_CanExecute" Executed="CancelDelete_Executed" />
+        <CommandBinding Command="{x:Static uc:S3ItemManagementCommands.ChangeMode}" CanExecute="ChangeMode_CanExecute" Executed="ChangeMode_Executed" />
+        <CommandBinding Command="{x:Static uc:S3ItemManagementCommands.OpenFilePicker}" CanExecute="OpenFilePicker_CanExecute" Executed="OpenFilePicker_Executed" />
+    </UserControl.CommandBindings>
+
+    <UserControl.Resources>
+        <Style x:Key="textBlockStyles" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="10, 0, 2, 0" />
+        </Style>
+    </UserControl.Resources>
+
+    <!-- Note the default data context is this user control (see ctor) -->
+    <Grid x:Name="LayoutRoot" Background="Transparent">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition />
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition Height="30" />
+            <RowDefinition Height="30" />
+        </Grid.RowDefinitions>
+        <Grid.Resources>
+            <Style x:Key="buttonStyles" TargetType="Button" BasedOn="{StaticResource ButtonDark}">
+                <Setter Property="Margin" Value="2" />
+                <Setter Property="Width" Value="90" />
+            </Style>
+
+            <!-- Note this data template uses a different data context from the containing grid (see Context dependency property) -->
+            <DataTemplate x:Key="StandardMode">
+                <ListBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Background="{StaticResource ContrastingBackground}" ItemsSource="{Binding Path=Context.Item.NotificationsList}" />
+            </DataTemplate>
+
+            <DataTemplate x:Key="DownloadPromptMode">
+                <Border Background="{StaticResource ContrastingBackground}" BorderBrush="{x:Static SystemColors.ControlBrush}" BorderThickness="1" Margin="1">
+                    <DockPanel LastChildFill="True">
+                        <DockPanel.Resources>
+                            <Style x:Key="buttonStyles" TargetType="Button" BasedOn="{StaticResource ButtonDark}">
+                                <Setter Property="Margin" Value="0" />
+                                <Setter Property="Width" Value="120" />
+                            </Style>
+                        </DockPanel.Resources>
+                        <TextBlock Text="File Path:" Style="{StaticResource textBlockStyles}" />
+                        <Grid ShowGridLines="False" Margin="3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="300"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="tbFilePath" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Stretch" Style="{StaticResource TextBoxDark}" />
+                            <Button Content="..." Width="20" Grid.Row="0" Grid.Column="1" Margin="5, 0, 10, 0" Style="{StaticResource ButtonDark}"
+                                Command="{x:Static uc:S3ItemManagementCommands.OpenFilePicker}" CommandParameter="{Binding ElementName=tbFilePath}" />
+
+                            <Button Content="Start Downloading" ToolTip="Download this file" Grid.Row="0" Grid.Column="2" CommandParameter="{Binding ElementName=tbFilePath, Path=Text}" Command="{x:Static uc:S3ItemManagementCommands.Download}" Style="{StaticResource buttonStyles}" />
+                            <Button Content="Cancel" ToolTip="Cancel deletion" Grid.Row="0" Grid.Column="3" Command="{x:Static uc:S3ItemManagementCommands.CancelDownload}" Style="{StaticResource buttonStyles}" />
+                        </Grid>
+                    </DockPanel>
+                </Border>
+            </DataTemplate>
+
+            <DataTemplate x:Key="ConfirmDeleteMode">
+                <Border Background="{StaticResource ContrastingBackground}" BorderBrush="{x:Static SystemColors.ControlBrush}" BorderThickness="1" Margin="1">
+                    <DockPanel>
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Path=SelectedItem.Key, StringFormat=Confirm delete of {0}}" TextAlignment="Right" Margin="0,0,10,0" Style="{StaticResource textBlockStyles}" />
+                            <Button Grid.Row="0" Grid.Column="1" Content="Confirm" ToolTip="Delete this file" CommandParameter="{Binding Path=SelectedItem}" Command="{x:Static uc:S3ItemManagementCommands.Delete}" Style="{StaticResource buttonStyles}" />
+                            <Button Grid.Row="0" Grid.Column="2" Content="Cancel" ToolTip="Cancel deletion" Command="{x:Static uc:S3ItemManagementCommands.CancelDelete}" Style="{StaticResource buttonStyles}" />
+                        </Grid>
+                    </DockPanel>
+                </Border>
+            </DataTemplate>
+
+            <Style x:Key="childSelectingStyle" TargetType="ContentPresenter">
+                <Setter Property="ContentTemplate" Value="{StaticResource StandardMode}"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Path=Mode}" Value="Delete">
+                        <Setter Property="ContentTemplate" Value="{StaticResource ConfirmDeleteMode}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Path=Mode}" Value="Download">
+                        <Setter Property="ContentTemplate" Value="{StaticResource DownloadPromptMode}" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Grid.Resources>
+
+        <Button Grid.Row="1" Grid.Column="0" Content="Download" ToolTip="Download this file" CommandParameter="DownloadPrompt" Command="{x:Static uc:S3ItemManagementCommands.ChangeMode}" Style="{StaticResource buttonStyles}" />
+
+        <Button Grid.Row="1" Grid.Column="1" Content="Delete" ToolTip="Delete this file" CommandParameter="ConfirmDelete" Command="{x:Static uc:S3ItemManagementCommands.ChangeMode}" Style="{StaticResource buttonStyles}" />
+
+        <ContentPresenter Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource childSelectingStyle}" Content="{Binding}" />
+    </Grid>
+
+</UserControl>

@@ -39,4 +39,16 @@
     <ProjectReference Include="..\TustlerWinPlatformLib\TustlerWinPlatformLib.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Update="UserControls\TaskMemberControls\S3ItemManagement.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Update="UserControls\TaskMemberControls\S3ItemManagement.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
+
 </Project>

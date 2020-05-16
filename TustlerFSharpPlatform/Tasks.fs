@@ -46,15 +46,32 @@ type MaybeResponse with
 
 [<RequireQualifiedAccess>]
 type TaskUpdate =
-    | DeleteBucketItem of bool * string     // returns success flag and the deleted key
+    | DeleteBucketItem of NotificationsList * bool * string                 // returns success flag and the deleted key
+    | DownloadBucketItem of NotificationsList * bool * string * string      // returns success flag, the key of the downloaded item and the download file path
 
 type TaskUpdate with
-    member x.Deconstruct([<Out>] success : byref<bool>, [<Out>] key : byref<string>) =
+    member x.Deconstruct([<Out>] notifications : byref<NotificationsList>, [<Out>] success : byref<bool>, [<Out>] key : byref<string>) =
         match x with
-        | TaskUpdate.DeleteBucketItem (a, b) ->
-            success <- a
-            key <- b
-        //| _ -> invalidArg "args" "TaskUpdate.Deconstruct: unknown type"
+        | TaskUpdate.DeleteBucketItem (a, b, c) ->
+            notifications <- a
+            success <- b
+            key <- c
+        | _ -> invalidArg "DeleteBucketItem" "TaskUpdate.Deconstruct: unknown type"
+
+    member x.Deconstruct([<Out>] notifications : byref<NotificationsList>, [<Out>] success : byref<bool>, [<Out>] key : byref<string>, [<Out>] filePath : byref<string>) =
+        match x with
+        | TaskUpdate.DownloadBucketItem (a, b, c, d) ->
+            notifications <- a
+            success <- b
+            key <- c
+            filePath <- d
+        | _ -> invalidArg "DownloadBucketItem" "TaskUpdate.Deconstruct: unknown type"
+
+[<RequireQualifiedAccess>]
+type MiniTaskMode =
+    | Unknown
+    | Delete
+    | Download
 
 [<RequireQualifiedAccess>]
 type MiniTaskArgument =
@@ -79,10 +96,22 @@ module public MiniTasks =
                     | (MiniTaskArgument.String a, MiniTaskArgument.String b) -> (a, b)
                     | _ -> invalidArg "args" "MiniTasks.Delete: Expecting two string arguments"
                 let success = S3.deleteBucketItem awsInterface notifications bucketName key |> Async.RunSynchronously
-                TaskUpdate.DeleteBucketItem (success, key)
+                TaskUpdate.DeleteBucketItem (notifications, success, key)
             | _ -> invalidArg "context" "MiniTasks.Delete: Unrecognized context"
         else invalidArg "args" "MiniTasks.Delete: Expecting two arguments"
 
+    let Download awsInterface (notifications: NotificationsList) (context:TaskResponse) (args:MiniTaskArgument[]) =
+        if args.Length >= 3 then
+            match context with
+            | TaskResponse.BucketItemsModel _ ->
+                let (bucketName, key, filePath) =
+                    match (args.[0], args.[1], args.[2]) with
+                    | (MiniTaskArgument.String a, MiniTaskArgument.String b, MiniTaskArgument.String c) -> (a, b, c)
+                    | _ -> invalidArg "args" "MiniTasks.Download: Expecting three string arguments"
+                let success = S3.downloadBucketItem awsInterface notifications bucketName key filePath |> Async.RunSynchronously
+                TaskUpdate.DownloadBucketItem (notifications, success, key, filePath)
+            | _ -> invalidArg "context" "MiniTasks.Download: Unrecognized context"
+        else invalidArg "args" "MiniTasks.Download: Expecting three arguments"
 
 module public Tasks =            
     
@@ -119,6 +148,19 @@ module public Tasks =
             |]
             (TaskFunction.GetBucketItems (fun s3Interface notifications string -> async { return new BucketItemsCollection( bucketItems ) }))
 
+
+    let AAA (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =
+
+        let awsInterface = (arguments :?> NotificationsOnlyArguments).AWSInterface
+        let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
+
+        seq {
+            let model = S3.getBucketItems awsInterface notifications "tator" |> Async.RunSynchronously
+            yield! getNotificationResponse notifications
+            yield TaskResponse.BucketItemsModel model
+
+            yield TaskResponse.TaskComplete "Finished"
+        }        
 
     let S3FetchItems (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =      //(events: Queue<TaskEvent>) =
 

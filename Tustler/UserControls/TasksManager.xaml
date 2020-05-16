@@ -8,6 +8,7 @@
              xmlns:services="clr-namespace:TustlerServicesLib;assembly=TustlerServicesLib"
              xmlns:helpers="clr-namespace:Tustler.Helpers"
              xmlns:uc="clr-namespace:Tustler.UserControls"
+             xmlns:uctask="clr-namespace:Tustler.UserControls.TaskMemberControls"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
     <UserControl.CommandBindings>
@@ -250,7 +251,9 @@
                                 ContentTemplateSelector="{StaticResource taskManagerChildDataTemplateSelector}"
                                 Content="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" />
 
-                            <Button Grid.Row="1" Grid.Column="0" Content="Download" ToolTip="Download this file" CommandParameter="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource buttonStyles}">
+                            <uctask:S3ItemManagement Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Grid.RowSpan="2" Context="{Binding}" SelectedItem="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" Command="{x:Static uc:TaskCommands.StartMiniTask}" />
+                            
+                            <!--<Button Grid.Row="1" Grid.Column="0" Content="Download" ToolTip="Download this file" CommandParameter="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource buttonStyles}">
                                 <Button.Tag>
                                     <helpers:TaskManagerParameterInfoCollection ParameterType="DownloadPrompt" />
                                 </Button.Tag>
@@ -262,7 +265,7 @@
                                 </Button.Tag>
                             </Button>
 
-                            <ContentPresenter Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource childSelectingStyle}" Content="{Binding}" />
+                            <ContentPresenter Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource childSelectingStyle}" Content="{Binding}" />-->
                         </Grid>
                     </Border>
                 </DockPanel>
