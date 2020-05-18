@@ -20,43 +20,6 @@ namespace Tustler.UserControls.TaskMemberControls
     }
 
     /// <summary>
-    /// The data collected by this user control command source
-    /// </summary>
-    /// <remarks>The CommandParameter value</remarks>
-    public class S3ItemManagementParameter
-    {
-        public MiniTaskMode Mode
-        {
-            get;
-            internal set;
-        }
-
-        public IEnumerable<MiniTaskArgument> TaskArguments
-        {
-            get;
-            internal set;
-        }
-
-        //public string BucketName
-        //{
-        //    get;
-        //    internal set;
-        //}
-
-        //public string ItemKey
-        //{
-        //    get;
-        //    internal set;
-        //}
-
-        //public string Filepath
-        //{
-        //    get;
-        //    internal set;
-        //}
-    }
-
-    /// <summary>
     /// Interaction logic for S3ItemManagement.xaml
     /// </summary>
     public partial class S3ItemManagement : UserControl, ICommandSource, INotifyPropertyChanged
@@ -67,7 +30,6 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             InitializeComponent();
 
-            CommandParameter = new S3ItemManagementParameter();
             LayoutRoot.DataContext = this;      // child elements of LayoutRoot use this as the context
         }
 
@@ -257,24 +219,18 @@ namespace Tustler.UserControls.TaskMemberControls
                 MiniTaskArgument.NewString((string?) filePath)
             };
 
-            CommandParameter = new S3ItemManagementParameter()
+            CommandParameter = new MiniTaskArguments()
             {
                 Mode = mode switch
                 {
-                    S3ItemManagementMode.Delete => MiniTaskMode.Delete,
-                    S3ItemManagementMode.Download => MiniTaskMode.Download,
+                    S3ItemManagementMode.Delete => MiniTaskMode.DeleteBucketItem,
+                    S3ItemManagementMode.Download => MiniTaskMode.DownloadBucketItem,
                     _ => MiniTaskMode.Unknown
                 },
                 TaskArguments = parameterData
             };
         }
 #nullable disable
-
-        //private void TbFilePath_TextChanged(object sender, TextChangedEventArgs e)
-        //{
-        //    var tbFilePath = e.OriginalSource as TextBox;
-        //    _filePath = tbFilePath.Text;
-        //}
 
         private void Download_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {

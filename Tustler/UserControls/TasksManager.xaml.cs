@@ -253,61 +253,39 @@ namespace Tustler.UserControls
         {
             if (TaskArguments.IsComplete())
             {
-                //var eventDict = new Dictionary<int, TaskEvent>(events.Where(evt => evt switch
-                //{
-                //    TaskEvent.SetArgument _ => true,
-                //    _ => false
-                //})
-                //.Select((evt, i) => KeyValuePair.Create(i, evt)));
-
-                // TODO generate correct number of arguments
-                //var count = 3;
-                //var argDict = new Dictionary<int, MaybeResponse>(Enumerable.Range(0, count).Select(i => KeyValuePair.Create(i, MaybeResponse.Nothing)));
-
-                //foreach (var setArgumentEvent in eventDict)
-                //{
-                //    if (setArgumentEvent.Value is TaskEvent.SetArgument arg)
-                //    {
-                //        argDict[setArgumentEvent.Key] = MaybeResponse.NewJust(arg.Item);
-                //    }
-                //}
-
-                //var argCount = 3;
-                //var setArgumentCount = events.Count(evt => evt switch
-                //{
-                //    TaskEvent.SetArgument _ => true,
-                //    _ => false
-                //});
-
-                //for (int i = 0; i < argCount - setArgumentCount; i++)
-                //{
-                //    args.Push(MaybeResponse.Nothing);
-                //}
-
-                // generate an arguments stack (by default an infinite enumerable of Nothing arguments)
-                var args = new InfiniteList<MaybeResponse>(MaybeResponse.Nothing);
-
-                // replay the observed events, adding any defined arguments
-                foreach (var evt in events)
+                try
                 {
-                    if (evt is TaskEvent.SetArgument arg)
+                    Mouse.OverrideCursor = Cursors.Wait;
+
+                    // generate an arguments stack (by default an infinite enumerable of Nothing arguments)
+                    var args = new InfiniteList<MaybeResponse>(MaybeResponse.Nothing);
+
+                    // replay the observed events, adding any defined arguments
+                    foreach (var evt in events)
                     {
-                        args.Add(MaybeResponse.NewJust(arg.Item));
+                        if (evt is TaskEvent.SetArgument arg)
+                        {
+                            args.Add(MaybeResponse.NewJust(arg.Item));
+                        }
+                        else if (evt.IsClearArguments)
+                        {
+                            args.Clear();
+                        }
                     }
-                    else if (evt.IsClearArguments)
-                    {
-                        args.Clear();
-                    }
+
+                    events.Add(TaskEvent.InvokingFunction);
+                    var responseStream = TaskFunction(TaskArguments, args);
+                    lbTaskResponses.ItemsSource = taskResponses;
+
+                    var collection = new ObservableCollection<TaskResponse>();
+                    collection.CollectionChanged += Collection_CollectionChanged;
+
+                    await TaskQueue.Run(responseStream, collection).ConfigureAwait(true);
                 }
-
-                events.Add(TaskEvent.InvokingFunction);
-                var responseStream = TaskFunction(TaskArguments, args);
-                lbTaskResponses.ItemsSource = taskResponses;
-
-                var collection = new ObservableCollection<TaskResponse>();
-                collection.CollectionChanged += Collection_CollectionChanged;
-
-                await TaskQueue.Run(responseStream, collection).ConfigureAwait(true);
+                finally
+                {
+                    Mouse.OverrideCursor = null;
+                }
             }
         }
 
@@ -341,9 +319,13 @@ namespace Tustler.UserControls
 
         private void StartMiniTask_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            //var btn = e.OriginalSource as Button;
-            var context = ((e.OriginalSource as S3ItemManagement).DataContext) as TaskResponse;
-            var parameterInfo = e.Parameter as S3ItemManagementParameter;   // btn.Tag as TaskManagerParameterInfoCollection;
+            var context = e.OriginalSource switch
+            {
+                S3ItemManagement itemManagement => itemManagement.DataContext as TaskResponse,
+                S3BucketSelector bucketSelector => bucketSelector.DataContext as TaskResponse,
+                _ => throw new ArgumentException($"StartMiniTask: Unknown data context")
+            };
+            var parameterInfo = e.Parameter as MiniTaskArguments;   // btn.Tag as TaskManagerParameterInfoCollection;
 
 #nullable enable
             static T? GetNotifier<T>(TaskResponse context)
@@ -374,7 +356,7 @@ namespace Tustler.UserControls
                 }
             }
 
-            void RunDeleteMiniTask(TaskResponse dataContext, S3ItemManagementParameter parameterInfo)
+            void RunDeleteMiniTask(TaskResponse dataContext, MiniTaskArguments parameterInfo)
             {
                 // create a new notifications list for each operation
                 var (notifications, success, key) = AWSMiniTasks.Delete(awsInterface, new NotificationsList(), dataContext, parameterInfo.TaskArguments.ToArray());
@@ -394,7 +376,7 @@ namespace Tustler.UserControls
                 RouteNotifications(notifications, applicationNotifications, notifiableInterface);
             }
 
-            void RunDownloadMiniTask(TaskResponse dataContext, S3ItemManagementParameter parameterInfo)
+            void RunDownloadMiniTask(TaskResponse dataContext, MiniTaskArguments parameterInfo)
             {
                 var (notifications, success, _, _) = AWSMiniTasks.Download(awsInterface, new NotificationsList(), dataContext, parameterInfo.TaskArguments.ToArray());
                 if (success)
@@ -405,63 +387,66 @@ namespace Tustler.UserControls
                 }
             }
 
+            void RunSelectBucketMiniTask(TaskResponse dataContext, MiniTaskArguments parameterInfo)
+            {
+                // the user has selected an item that sets an argument
+                // first check if the task is complete
+                if (events.Last().IsFunctionCompleted)
+                {
+                    // if so then add a ClearArguments to the events stack before adding SetArgument below
+                    events.Add(TaskEvent.ClearArguments);
+
+                    // and prune the ObservableCollection back to the last TaskSelect
+                    var tempStack = new Stack<TaskResponse>(taskResponses);
+                    TaskResponse? lastResponse = null;
+                    while (!tempStack.Peek().IsTaskSelect)
+                    {
+                        lastResponse = tempStack.Pop();
+                    }
+
+                    if (lastResponse is object)
+                    {
+                        // re-add the last response (immediately after the TaskSelect)
+                        tempStack.Push(lastResponse);
+
+                        // add the last response as a SetArgument to the event source (after a SelectArgument)
+                        events.Add(TaskEvent.SelectArgument);
+                        events.Add(TaskEvent.NewSetArgument(lastResponse));
+                    }
+
+                    // clearing the ObservableCollection will disconnect the data bindings (the DataContext on the ItemsControl item containers)
+                    // instead, just remove the last numItems items
+                    var numItems = taskResponses.Count - tempStack.Count;
+                    for (int i = 0; i < numItems; i++)
+                    {
+                        taskResponses.RemoveAt(taskResponses.Count - 1);
+                    }
+                }
+
+                // Add a SetArgument event to the events list and reinvoke the function
+                var bucket = parameterInfo.TaskArguments.First() switch
+                {
+                    MiniTaskArgument.Bucket bucketArg => bucketArg.Item,
+                    _ => throw new ArgumentException($"RunSelectBucketMiniTask: Unknown argument type")
+                };
+                events.Add(TaskEvent.NewSetArgument(TaskResponse.NewBucket(bucket)));
+
+                btnStartTask.Command.Execute(null);
+            }
+
 #nullable disable
 
             switch (parameterInfo.Mode.Tag)
             {
-                case MiniTaskMode.Tags.Delete:
+                case MiniTaskMode.Tags.DeleteBucketItem:
                     RunDeleteMiniTask(context, parameterInfo);
                     break;
-                case MiniTaskMode.Tags.Download:
+                case MiniTaskMode.Tags.DownloadBucketItem:
                     RunDownloadMiniTask(context, parameterInfo);
                     break;
-
-                //case "Select":
-
-                //    // the user has selected an item that sets an argument
-                //    // first check if the task is complete
-                //    if (events.Last().IsFunctionCompleted)
-                //    {
-                //        // if so then add a ClearArguments to the events stack before adding SetArgument below
-                //        events.Add(TaskEvent.ClearArguments);
-
-                //        // and prune the ObservableCollection back to the last TaskSelect
-                //        var tempStack = new Stack<TaskResponse>(taskResponses);
-                //        TaskResponse lastResponse = null;
-                //        while (!tempStack.Peek().IsTaskSelect)
-                //        {
-                //            lastResponse = tempStack.Pop();
-                //        }
-
-                //        if (lastResponse is object)
-                //        {
-                //            // re-add the last response (immediately after the TaskSelect)
-                //            tempStack.Push(lastResponse);
-
-                //            // add the last response as a SetArgument to the event source (after a SelectArgument)
-                //            events.Add(TaskEvent.SelectArgument);
-                //            events.Add(TaskEvent.NewSetArgument(lastResponse));
-                //        }
-
-                //        // clearing the ObservableCollection will disconnect the data bindings (the DataContext on the ItemsControl item containers)
-                //        // instead, just remove the last numItems items
-                //        var numItems = taskResponses.Count - tempStack.Count;
-                //        for (int i = 0; i < numItems; i++)
-                //        {
-                //            taskResponses.RemoveAt(taskResponses.Count - 1);
-                //        }
-                //    }
-
-                //    // Add a SetArgument event to the events list and reinvoke the function
-                //    switch (btn.DataContext)
-                //    {
-                //        case Bucket bucket:
-                //            events.Add(TaskEvent.NewSetArgument(TaskResponse.NewBucket(bucket)));
-                //            break;
-                //    }
-
-                //    btnStartTask.Command.Execute(null);
-                //    break;
+                case MiniTaskMode.Tags.SelectBucket:
+                    RunSelectBucketMiniTask(context, parameterInfo);
+                    break;
                 default:
                     throw new ArgumentException($"StartMiniTask_Executed: unknown parameter mode for S3ItemManagementParameter");
             }

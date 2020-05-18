@@ -44,7 +44,9 @@
 
             <!-- Note this data template uses a different data context from the containing grid (see Context dependency property) -->
             <DataTemplate x:Key="StandardMode">
-                <ListBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Background="{StaticResource ContrastingBackground}" ItemsSource="{Binding Path=Context.Item.NotificationsList}" />
+                <ListBox x:Name="bucketItemNotifications" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                         Background="{StaticResource ContrastingBackground}" ItemsSource="{Binding Path=Context.Item.NotificationsList}"
+                         helpers:ScrollToLastItemBehavior.Items="{Binding ElementName=bucketItemNotifications, Path=Items}" />
             </DataTemplate>
 
             <DataTemplate x:Key="DownloadPromptMode">

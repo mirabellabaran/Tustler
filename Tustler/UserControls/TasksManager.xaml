@@ -22,7 +22,7 @@
         <helpers:TaskManagerDataTemplateSelector x:Key="taskManagerDataTemplateSelector"/>
         <helpers:TaskManagerChildDataTemplateSelector x:Key="taskManagerChildDataTemplateSelector"/>
 
-        <DataTemplate x:Key="BucketTemplate" DataType="{x:Type local:Bucket}">
+        <!--<DataTemplate x:Key="BucketTemplate" DataType="{x:Type local:Bucket}">
             <Button Command="{x:Static uc:TaskCommands.StartMiniTask}" Background="{StaticResource ContrastingBackground}" Margin="10">
                 <Button.Tag>
                     <helpers:TaskManagerParameterInfoCollection ParameterType="Select">
@@ -49,7 +49,7 @@
                     </Border>
                 </Button.Content>
             </Button>
-        </DataTemplate>
+        </DataTemplate>-->
 
         <DataTemplate x:Key="BucketItemTemplate" DataType="{x:Type local:BucketItem}">
             <Border Name="border" BorderBrush="BlanchedAlmond" CornerRadius="3" BorderThickness="3" Padding="5" Margin="5">
@@ -159,13 +159,7 @@
         </DataTemplate>
 
         <DataTemplate x:Key="BucketsModelTemplate" DataType="{x:Type fsharp:TaskResponse}">
-            <ItemsControl ItemTemplateSelector="{StaticResource taskManagerChildDataTemplateSelector}" ItemsSource="{Binding Item.Buckets}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-            </ItemsControl>
+            <uctask:S3BucketSelector Command="{x:Static uc:TaskCommands.StartMiniTask}" />
         </DataTemplate>
         
         <DataTemplate x:Key="BucketItemsModelTemplate" DataType="{x:Type fsharp:TaskResponse}">
@@ -187,85 +181,12 @@
                                 <RowDefinition Height="30" />
                                 <RowDefinition Height="30" />
                             </Grid.RowDefinitions>
-                            <Grid.Resources>
-                                <Style x:Key="buttonStyles" TargetType="Button" BasedOn="{StaticResource ButtonDark}">
-                                    <Setter Property="Margin" Value="5" />
-                                    <Setter Property="Width" Value="90" />
-                                </Style>
-
-                                <DataTemplate x:Key="StandardMode">
-                                    <ListBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Background="{StaticResource ContrastingBackground}" ItemsSource="{Binding Path=Item.NotificationsList}" />
-                                </DataTemplate>
-
-                                <DataTemplate x:Key="DownloadPromptMode">
-                                    <StackPanel Orientation="Horizontal" Background="Red">
-                                        <TextBox x:Name="txtDownloadPrompt" />
-                                        <Button Content="Start Downloading" ToolTip="Download this file" CommandParameter="{Binding ElementName=txtDownloadPrompt, Path=Text}" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource buttonStyles}">
-                                            <Button.Tag>
-                                                <helpers:TaskManagerParameterInfoCollection ParameterType="Download">
-                                                    <helpers:TaskManagerParameterInfo ItemType="System.String" ItemKey="BucketName" />
-                                                    <helpers:TaskManagerParameterInfo ItemType="System.String" ItemKey="Key" />
-                                                </helpers:TaskManagerParameterInfoCollection>
-                                            </Button.Tag>
-                                        </Button>
-                                        <Button Content="Cancel" ToolTip="Cancel deletion" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource buttonStyles}">
-                                            <Button.Tag>
-                                                <helpers:TaskManagerParameterInfoCollection ParameterType="CancelDownload" />
-                                            </Button.Tag>
-                                        </Button>
-                                    </StackPanel>
-                                </DataTemplate>
-
-                                <DataTemplate x:Key="ConfirmDeleteMode">
-                                    <UniformGrid Rows="1" Columns="2">
-                                        <Button Grid.Row="0" Grid.Column="0" Content="Confirm" ToolTip="Delete this file" CommandParameter="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource buttonStyles}">
-                                            <Button.Tag>
-                                                <helpers:TaskManagerParameterInfoCollection ParameterType="Delete">
-                                                    <helpers:TaskManagerParameterInfo ItemType="System.String" ItemKey="BucketName" />
-                                                    <helpers:TaskManagerParameterInfo ItemType="System.String" ItemKey="Key" />
-                                                </helpers:TaskManagerParameterInfoCollection>
-                                            </Button.Tag>
-                                        </Button>
-                                        <Button Grid.Row="0" Grid.Column="1" Content="Cancel" ToolTip="Cancel deletion" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource buttonStyles}">
-                                            <Button.Tag>
-                                                <helpers:TaskManagerParameterInfoCollection ParameterType="CancelDelete" />
-                                            </Button.Tag>
-                                        </Button>
-                                    </UniformGrid>
-                                </DataTemplate>
-
-                                <Style x:Key="childSelectingStyle" TargetType="ContentPresenter">
-                                    <Setter Property="ContentTemplate" Value="{StaticResource StandardMode}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Item.Mode}" Value="ConfirmDelete">
-                                            <Setter Property="ContentTemplate" Value="{StaticResource ConfirmDeleteMode}" />
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding Item.Mode}" Value="DownloadPrompt">
-                                            <Setter Property="ContentTemplate" Value="{StaticResource DownloadPromptMode}" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Grid.Resources>
                             
                             <ContentControl Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
                                 ContentTemplateSelector="{StaticResource taskManagerChildDataTemplateSelector}"
                                 Content="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" />
 
                             <uctask:S3ItemManagement Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Grid.RowSpan="2" Context="{Binding}" SelectedItem="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" Command="{x:Static uc:TaskCommands.StartMiniTask}" />
-                            
-                            <!--<Button Grid.Row="1" Grid.Column="0" Content="Download" ToolTip="Download this file" CommandParameter="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource buttonStyles}">
-                                <Button.Tag>
-                                    <helpers:TaskManagerParameterInfoCollection ParameterType="DownloadPrompt" />
-                                </Button.Tag>
-                            </Button>
-
-                            <Button Grid.Row="1" Grid.Column="1" Content="Delete" ToolTip="Delete this file" CommandParameter="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" Command="{x:Static uc:TaskCommands.StartMiniTask}" Style="{StaticResource buttonStyles}">
-                                <Button.Tag>
-                                    <helpers:TaskManagerParameterInfoCollection ParameterType="ConfirmDelete" />
-                                </Button.Tag>
-                            </Button>
-
-                            <ContentPresenter Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource childSelectingStyle}" Content="{Binding}" />-->
                         </Grid>
                     </Border>
                 </DockPanel>

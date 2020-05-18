@@ -70,14 +70,26 @@ type TaskUpdate with
 [<RequireQualifiedAccess>]
 type MiniTaskMode =
     | Unknown
-    | Delete
-    | Download
+    | DeleteBucketItem
+    | DownloadBucketItem
+    | SelectBucket
 
 [<RequireQualifiedAccess>]
 type MiniTaskArgument =
     | Bool of bool
     | String of string
     | Int of int
+    | Bucket of Bucket
+
+/// Collects MiniTask arguments (used by user control command source objects)
+type MiniTaskArguments () =
+    let mutable mode = MiniTaskMode.Unknown
+    let mutable arguments: MiniTaskArgument[] = Array.empty
+
+    member this.Mode with get () = mode and set _mode = mode <- _mode
+    member this.TaskArguments
+        with get() = Seq.ofArray arguments
+        and set args = arguments <- Seq.toArray args
 
 [<RequireQualifiedAccess>]
 type TaskFunction =
@@ -206,7 +218,6 @@ module public Tasks =
                     | _ -> invalidArg "SelectedBucket" "Expecting a Bucket" 
 
                 yield TaskResponse.TaskInfo "Retrieving bucket items..."
-                notifications.ShowMessage("Poop", "Hi there")
 
                 let model = S3.getBucketItems awsInterface notifications bucketName |> Async.RunSynchronously
                 yield! getNotificationResponse notifications
