@@ -45,15 +45,15 @@ module public AWSInterface =
         let startTranscriptionJob awsInterface notifications jobName bucketName s3MediaKey languageCode vocabularyName =
             async {
                 let model = TranscriptionJobsViewModel()
-                let _s3OutputKey = model.AddNewTask (awsInterface, notifications, jobName, bucketName, s3MediaKey, languageCode, vocabularyName) |> Async.AwaitTask
-                return model.TranscriptionJobs
+                let _success = model.AddNewTask (awsInterface, notifications, jobName, bucketName, s3MediaKey, languageCode, vocabularyName) |> Async.AwaitTask |> Async.RunSynchronously
+                return model
             }
 
         let listTranscriptionJobs awsInterface notifications =
             async {
                 let model = TranscriptionJobsViewModel()
-                do! model.ListTasks (awsInterface, notifications) |> Async.AwaitTask
-                return model.TranscriptionJobs
+                let _ = model.ListTasks (awsInterface, notifications) |> Async.AwaitTask |> Async.RunSynchronously
+                return model
             }
 
         /// returns the specified job after first forcing an update of the job details

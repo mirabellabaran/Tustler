@@ -24,7 +24,7 @@ type TaskResponse =
     | BucketItem of BucketItem
     | BucketsModel of BucketViewModel
     | BucketItemsModel of BucketItemViewModel
-    | TranscriptionJob of TranscriptionJob
+    | TranscriptionJobsModel of TranscriptionJobsViewModel
 
 [<RequireQualifiedAccess>]
 type TaskEvent =
@@ -161,18 +161,18 @@ module public Tasks =
             (TaskFunction.GetBucketItems (fun s3Interface notifications string -> async { return new BucketItemsCollection( bucketItems ) }))
 
 
-    let AAA (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =
+    //let AAA (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =
 
-        let awsInterface = (arguments :?> NotificationsOnlyArguments).AWSInterface
-        let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
+    //    let awsInterface = (arguments :?> NotificationsOnlyArguments).AWSInterface
+    //    let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
 
-        seq {
-            let model = S3.getBucketItems awsInterface notifications "tator" |> Async.RunSynchronously
-            yield! getNotificationResponse notifications
-            yield TaskResponse.BucketItemsModel model
+    //    seq {
+    //        let model = S3.getBucketItems awsInterface notifications "tator" |> Async.RunSynchronously
+    //        yield! getNotificationResponse notifications
+    //        yield TaskResponse.BucketItemsModel model
 
-            yield TaskResponse.TaskComplete "Finished"
-        }        
+    //        yield TaskResponse.TaskComplete "Finished"
+    //    }        
 
     let S3FetchItems (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =      //(events: Queue<TaskEvent>) =
 
@@ -217,7 +217,7 @@ module public Tasks =
                     | TaskResponse.Bucket bucket -> bucket.Name
                     | _ -> invalidArg "SelectedBucket" "Expecting a Bucket" 
 
-                yield TaskResponse.TaskInfo "Retrieving bucket items..."
+                yield TaskResponse.TaskInfo (sprintf "Retrieving bucket items from %s..." bucketName)
 
                 let model = S3.getBucketItems awsInterface notifications bucketName |> Async.RunSynchronously
                 yield! getNotificationResponse notifications
@@ -228,16 +228,24 @@ module public Tasks =
 
     let TranscribeCleanup (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =
 
-        let listTranscriptionJobs awsInterface (notifications: NotificationsList) =
-            Transcribe.listTranscriptionJobs awsInterface notifications
-
         let awsInterface = (arguments :?> NotificationsOnlyArguments).AWSInterface
         let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
 
         seq {
-            let jobs = listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
+            yield TaskResponse.TaskInfo "Starting a new transcription job..."
+            
+            let model = Transcribe.startTranscriptionJob awsInterface notifications "myJob" "tator" "myAudioDataKey" "en" "myVocabulary" |> Async.RunSynchronously
+            yield TaskResponse.TaskInfo (sprintf "Count: %d" model.TranscriptionJobs.Count)
             yield! getNotificationResponse notifications
-            yield! Seq.map (fun job -> TaskResponse.TranscriptionJob job) jobs
+            yield TaskResponse.TranscriptionJobsModel model
+
+            yield TaskResponse.TaskInfo "Retrieving transcription jobs..."
+            
+            let jobs = Transcribe.listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
+            yield! getNotificationResponse notifications
+            yield TaskResponse.TranscriptionJobsModel model
+
+            yield TaskResponse.TaskComplete "Finished"
         }
 
     // upload and transcribe some audio
@@ -247,7 +255,7 @@ module public Tasks =
             // note: task name used as job name and as S3 media key (from upload)
             Transcribe.startTranscriptionJob args.AWSInterface args.Notifications args.TaskName args.MediaRef.BucketName args.MediaRef.Key args.TranscriptionLanguageCode args.VocabularyName
 
-        let (TaskFunction.StartTranscriptionJob startTranscriptionJob) = CheckFileExistsReplaceWithFilePath (TaskFunction.StartTranscriptionJob (startTranscriptionJob))
+        //let (TaskFunction.StartTranscriptionJob startTranscriptionJob) = CheckFileExistsReplaceWithFilePath (TaskFunction.StartTranscriptionJob (startTranscriptionJob))
 
         let isTranscriptionComplete (jobName: string) (jobs: ObservableCollection<TranscriptionJob>) =
             let currentJob = jobs |> Seq.find (fun job -> job.TranscriptionJobName = jobName)
@@ -265,16 +273,16 @@ module public Tasks =
 
             if success then
 
-                let transcribeTasks = startTranscriptionJob args |> Async.RunSynchronously
-                yield! getNotificationResponse notifications
-                yield! Seq.map (fun item -> TaskResponse.TranscriptionJob item) transcribeTasks
+                //let transcribeTasks = startTranscriptionJob args |> Async.RunSynchronously
+                //yield! getNotificationResponse notifications
+                //yield! Seq.map (fun item -> TaskResponse.TranscriptionJob item) transcribeTasks
 
                 let waitOnCompletionSeq =
                     0 // try ten times from zero
                     |> Seq.unfold (fun i ->
                         Task.Delay(1000) |> Async.AwaitTask |> Async.RunSynchronously
-                        let jobs = Transcribe.listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
-                        if i > 9 || isTranscriptionComplete args.TaskName jobs then
+                        let model = Transcribe.listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
+                        if i > 9 || isTranscriptionComplete args.TaskName model.TranscriptionJobs then
                             None
                         else
                             Some( TaskResponse.DelaySequence i, i + 1))

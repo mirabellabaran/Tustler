@@ -37,7 +37,7 @@ namespace Tustler.Helpers
                     TaskResponse.BucketItem _ => element.FindResource("BucketItemTemplate") as DataTemplate,
                     TaskResponse.BucketsModel _ => element.FindResource("BucketsModelTemplate") as DataTemplate,
                     TaskResponse.BucketItemsModel _ => element.FindResource("BucketItemsModelTemplate") as DataTemplate,
-                    TaskResponse.TranscriptionJob _ => element.FindResource("TranscriptionJobTemplate") as DataTemplate,
+                    TaskResponse.TranscriptionJobsModel _ => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
                     _ => null
                 };
 

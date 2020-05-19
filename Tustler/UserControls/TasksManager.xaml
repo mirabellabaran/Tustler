@@ -14,7 +14,7 @@
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static uc:TaskCommands.StartTask}" CanExecute="StartTask_CanExecute" Executed="StartTask_Executed" />
         <CommandBinding Command="{x:Static uc:TaskCommands.StartMiniTask}" CanExecute="StartMiniTask_CanExecute" Executed="StartMiniTask_Executed" />
-        <CommandBinding Command="{x:Static uc:TaskCommands.UpdateTaskArguments}" CanExecute="UpdateTaskArguments_CanExecute" Executed="UpdateTaskArguments_Executed" />
+        <!--<CommandBinding Command="{x:Static uc:TaskCommands.UpdateTaskArguments}" CanExecute="UpdateTaskArguments_CanExecute" Executed="UpdateTaskArguments_Executed" />-->
     </UserControl.CommandBindings>
 
     <UserControl.Resources>
@@ -22,35 +22,7 @@
         <helpers:TaskManagerDataTemplateSelector x:Key="taskManagerDataTemplateSelector"/>
         <helpers:TaskManagerChildDataTemplateSelector x:Key="taskManagerChildDataTemplateSelector"/>
 
-        <!--<DataTemplate x:Key="BucketTemplate" DataType="{x:Type local:Bucket}">
-            <Button Command="{x:Static uc:TaskCommands.StartMiniTask}" Background="{StaticResource ContrastingBackground}" Margin="10">
-                <Button.Tag>
-                    <helpers:TaskManagerParameterInfoCollection ParameterType="Select">
-                        <helpers:TaskManagerParameterInfo ItemType="System.String" ItemKey="Name" />
-                    </helpers:TaskManagerParameterInfoCollection>
-                </Button.Tag>
-                <Button.Content>
-                    <Border Name="border" BorderBrush="BlanchedAlmond" CornerRadius="10" BorderThickness="5" Padding="5" Margin="5">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition/>
-                                <RowDefinition/>
-                                <RowDefinition/>
-                            </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="100"/>
-                                <ColumnDefinition />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Name:"/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Path=Name}" />
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Creation Date:"/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path=CreationDate}"/>
-                        </Grid>
-                    </Border>
-                </Button.Content>
-            </Button>
-        </DataTemplate>-->
-
+        <!-- Called within the BucketItemsModelTemplate ContentControl (DataGrid.SelectedItem) -->
         <DataTemplate x:Key="BucketItemTemplate" DataType="{x:Type local:BucketItem}">
             <Border Name="border" BorderBrush="BlanchedAlmond" CornerRadius="3" BorderThickness="3" Padding="5" Margin="5">
                 <Grid>
@@ -112,7 +84,6 @@
                 </Viewbox>
                 <TextBlock Text="{Binding Path=Message}" VerticalAlignment="Center" Style="{StaticResource textBlockHeaderStyles}" />
                 <TextBlock Text="{Binding Path=Detail}" VerticalAlignment="Center" Style="{StaticResource textBlockStyles}" />
-                <!--<TextBlock Text="{Binding Path=Timestamp}" VerticalAlignment="Center" Style="{StaticResource textBlockStyles}" />-->
             </StackPanel>
         </DataTemplate>
 
@@ -193,11 +164,28 @@
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="TranscriptionJobTemplate" DataType="{x:Type fsharp:TaskResponse}">
+        <!--<DataTemplate x:Key="TranscriptionJobTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <Border Name="border" BorderBrush="DarkGray" BorderThickness="10" Padding="5" Margin="5">
+                <TextBlock Text="{Binding Item.TranscriptionJobName}" Background="Red" />
+            </Border>
+        </DataTemplate>-->
+
+        <DataTemplate x:Key="TranscriptionJobsModelTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <Border Name="border" BorderBrush="DarkGray" BorderThickness="10" Padding="5" Margin="5">
+                <DataGrid Height="120" Margin="5" AutoGenerateColumns="False"
+                          HeadersVisibility="All" CanUserResizeRows="False" IsReadOnly="True"
+                          ItemsSource="{Binding Path=Item.TranscriptionJobs}"
+                          FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}"
+                          AlternatingRowBackground="{StaticResource DataGridAlternatingBackground}"  AlternationCount="2">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Job Name" Binding="{Binding Path=TranscriptionJobName}" MinWidth="100" />
+                        <DataGridTextColumn Header="TranscriptionJobStatus" Binding="{Binding Path=TranscriptionJobStatus}" MinWidth="150" />
+                        <DataGridTextColumn Header="CompletionTime" Binding="{Binding Path=CompletionTime}" MinWidth="150" />
+                    </DataGrid.Columns>
+                </DataGrid>
             </Border>
         </DataTemplate>
-
+        
     </UserControl.Resources>
     
     <DockPanel Margin="20">

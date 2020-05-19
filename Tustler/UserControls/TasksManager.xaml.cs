@@ -44,20 +44,16 @@ namespace Tustler.UserControls
                     var taskName = dependencyPropertyChangedEventArgs.NewValue as string;
                     switch (taskName)
                     {
-                        case "AAA":
-                            ctrl.TaskArguments = new TaskArguments.NotificationsOnlyArguments(ctrl.awsInterface, new NotificationsList());
-                            ctrl.TaskFunction = AWSTasks.AAA;
-                            break;
                         case "TranscribeCleanup":
-                            ctrl.TaskArguments = new TaskArguments.NotificationsOnlyArguments(ctrl.awsInterface, new NotificationsList());
+                            //ctrl.TaskArguments = new TaskArguments.NotificationsOnlyArguments(ctrl.awsInterface, new NotificationsList());
                             ctrl.TaskFunction = AWSTasks.TranscribeCleanup;
                             break;
                         case "S3FetchItems":
-                            ctrl.TaskArguments = new TaskArguments.NotificationsOnlyArguments(ctrl.awsInterface, new NotificationsList());
+                            //ctrl.TaskArguments = new TaskArguments.NotificationsOnlyArguments(ctrl.awsInterface, new NotificationsList());
                             ctrl.TaskFunction = AWSTasks.S3FetchItems;
                             break;
                         case "TranscribeAudio":
-                            ctrl.TaskArguments = new TaskArguments.TranscribeAudioArguments(ctrl.awsInterface, new NotificationsList());
+                            //ctrl.TaskArguments = new TaskArguments.TranscribeAudioArguments(ctrl.awsInterface, new NotificationsList());
                             ctrl.TaskFunction = AWSTasks.TranscribeAudio;
                             break;
                     }
@@ -71,11 +67,11 @@ namespace Tustler.UserControls
             set { SetValue(TaskNameProperty, value); }
         }
 
-        public ITaskArgumentCollection TaskArguments
-        {
-            get;
-            internal set;
-        }
+        //public ITaskArgumentCollection TaskArguments
+        //{
+        //    get;
+        //    internal set;
+        //}
 
         public Func<ITaskArgumentCollection, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> TaskFunction
         {
@@ -98,89 +94,89 @@ namespace Tustler.UserControls
             var notifications = this.FindResource("applicationNotifications") as NotificationsList;
             notifications.ShowMessage("Parameter set", $"Task name set to {TaskName}");
 
-            grdMembers.RowDefinitions.Clear();
-            grdMembers.ColumnDefinitions.Clear();
+            //grdMembers.RowDefinitions.Clear();
+            //grdMembers.ColumnDefinitions.Clear();
 
-            var requiredMembersOption = TaskArguments.GetRequiredMembers();
-            if (requiredMembersOption.IsRequired)
-            {
-                // add the required number of rows and columns
-                for (int i = 0; i < requiredMembersOption.Rows; i++)
-                {
-                    grdMembers.RowDefinitions.Add(new RowDefinition());
-                }
-                for (int i = 0; i < requiredMembersOption.Columns; i++)
-                {
-                    grdMembers.ColumnDefinitions.Add(new ColumnDefinition());
-                }
+            //var requiredMembersOption = TaskArguments.GetRequiredMembers();
+            //if (requiredMembersOption.IsRequired)
+            //{
+            //    // add the required number of rows and columns
+            //    for (int i = 0; i < requiredMembersOption.Rows; i++)
+            //    {
+            //        grdMembers.RowDefinitions.Add(new RowDefinition());
+            //    }
+            //    for (int i = 0; i < requiredMembersOption.Columns; i++)
+            //    {
+            //        grdMembers.ColumnDefinitions.Add(new ColumnDefinition());
+            //    }
 
-                // instantiate the appropriate user control and set the position in the grid
-                foreach (var requiredMemberGridReference in requiredMembersOption.Members)
-                {
-                    // instantiate the user control and add to grid container in read-order
-                    UserControl uc;
-                    switch (requiredMemberGridReference.Tag)
-                    {
-                        case "taskName":
-                            var taskNameCtrl = new TaskMemberControls.TaskName
-                            {
-                                Command = TaskCommands.UpdateTaskArguments,      // Command must come first
-                                AttachedTask = TaskName
-                            };
-                            uc = taskNameCtrl;
-                            break;
-                        case "mediaRef":
-                            var mediaReferenceCtrl = new TaskMemberControls.MediaReference(awsInterface)
-                            {
-                                Command = TaskCommands.UpdateTaskArguments,
-                                MediaType = BucketItemMediaType.Audio
-                            };
-                            uc = mediaReferenceCtrl;
-                            break;
-                        case "filePath":
-                            var filePathCtrl = new TaskMemberControls.FilePath
-                            {
-                                Command = TaskCommands.UpdateTaskArguments
-                            };
-                            uc = filePathCtrl;
-                            break;
-                        case "transcriptionLanguageCode":
-                            var transcriptionLanguageCodesInstance = this.FindResource("transcriptionLanguageCodesInstance") as TranscriptionLanguageCodesViewModel;
-                            var transcriptionLanguageCodeCtrl = new TaskMemberControls.LanguageCode
-                            {
-                                Command = TaskCommands.UpdateTaskArguments,
-                                LanguageCodesViewModel = transcriptionLanguageCodesInstance
-                            };
-                            uc = transcriptionLanguageCodeCtrl;
-                            break;
-                        case "translationLanguageCode":
-                            var translationLanguageCodesInstance = this.FindResource("translationLanguageCodesInstance") as TranslationLanguageCodesViewModel;
-                            var translationLanguageCodeCtrl = new TaskMemberControls.LanguageCode
-                            {
-                                Command = TaskCommands.UpdateTaskArguments,
-                                LanguageCodesViewModel = translationLanguageCodesInstance
-                            };
-                            uc = translationLanguageCodeCtrl;
-                            break;
-                        case "vocabularyName":
-                            var vocabularyNameCtrl = new TaskMemberControls.VocabularyName(awsInterface)
-                            {
-                                Command = TaskCommands.UpdateTaskArguments
-                            };
-                            uc = vocabularyNameCtrl;
-                            break;
-                        default:
-                            throw new ArgumentException("Unknown Task Member Control tag.");
-                    }
+            //    // instantiate the appropriate user control and set the position in the grid
+            //    foreach (var requiredMemberGridReference in requiredMembersOption.Members)
+            //    {
+            //        // instantiate the user control and add to grid container in read-order
+            //        UserControl uc;
+            //        switch (requiredMemberGridReference.Tag)
+            //        {
+            //            case "taskName":
+            //                var taskNameCtrl = new TaskMemberControls.TaskName
+            //                {
+            //                    Command = TaskCommands.UpdateTaskArguments,      // Command must come first
+            //                    AttachedTask = TaskName
+            //                };
+            //                uc = taskNameCtrl;
+            //                break;
+            //            case "mediaRef":
+            //                var mediaReferenceCtrl = new TaskMemberControls.MediaReference(awsInterface)
+            //                {
+            //                    Command = TaskCommands.UpdateTaskArguments,
+            //                    MediaType = BucketItemMediaType.Audio
+            //                };
+            //                uc = mediaReferenceCtrl;
+            //                break;
+            //            case "filePath":
+            //                var filePathCtrl = new TaskMemberControls.FilePath
+            //                {
+            //                    Command = TaskCommands.UpdateTaskArguments
+            //                };
+            //                uc = filePathCtrl;
+            //                break;
+            //            case "transcriptionLanguageCode":
+            //                var transcriptionLanguageCodesInstance = this.FindResource("transcriptionLanguageCodesInstance") as TranscriptionLanguageCodesViewModel;
+            //                var transcriptionLanguageCodeCtrl = new TaskMemberControls.LanguageCode
+            //                {
+            //                    Command = TaskCommands.UpdateTaskArguments,
+            //                    LanguageCodesViewModel = transcriptionLanguageCodesInstance
+            //                };
+            //                uc = transcriptionLanguageCodeCtrl;
+            //                break;
+            //            case "translationLanguageCode":
+            //                var translationLanguageCodesInstance = this.FindResource("translationLanguageCodesInstance") as TranslationLanguageCodesViewModel;
+            //                var translationLanguageCodeCtrl = new TaskMemberControls.LanguageCode
+            //                {
+            //                    Command = TaskCommands.UpdateTaskArguments,
+            //                    LanguageCodesViewModel = translationLanguageCodesInstance
+            //                };
+            //                uc = translationLanguageCodeCtrl;
+            //                break;
+            //            case "vocabularyName":
+            //                var vocabularyNameCtrl = new TaskMemberControls.VocabularyName(awsInterface)
+            //                {
+            //                    Command = TaskCommands.UpdateTaskArguments
+            //                };
+            //                uc = vocabularyNameCtrl;
+            //                break;
+            //            default:
+            //                throw new ArgumentException("Unknown Task Member Control tag.");
+            //        }
 
-                    Grid.SetRow(uc, requiredMemberGridReference.RowIndex);
-                    Grid.SetColumn(uc, requiredMemberGridReference.ColumnIndex);
-                    Grid.SetRowSpan(uc, requiredMemberGridReference.RowSpan);
-                    Grid.SetColumnSpan(uc, requiredMemberGridReference.ColumnSpan);
+            //        Grid.SetRow(uc, requiredMemberGridReference.RowIndex);
+            //        Grid.SetColumn(uc, requiredMemberGridReference.ColumnIndex);
+            //        Grid.SetRowSpan(uc, requiredMemberGridReference.RowSpan);
+            //        Grid.SetColumnSpan(uc, requiredMemberGridReference.ColumnSpan);
 
-                    grdMembers.Children.Add(uc);
-                }
-            }
+            //        grdMembers.Children.Add(uc);
+            //    }
+            //}
         }
 
         private async void Collection_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -197,7 +193,7 @@ namespace Tustler.UserControls
                     case TaskResponse.BucketItem _:
                     case TaskResponse.BucketItemsModel _:
                     case TaskResponse.BucketsModel _:
-                    case TaskResponse.TranscriptionJob _:
+                    case TaskResponse.TranscriptionJobsModel _:
                         events.Add(TaskEvent.NewSetArgument(response));
                         break;
                     case TaskResponse.TaskSelect _:
@@ -251,41 +247,40 @@ namespace Tustler.UserControls
 
         private async void StartTask_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            if (TaskArguments.IsComplete())
+            //if (TaskArguments.IsComplete())
+
+            try
             {
-                try
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                // generate an arguments stack (by default an infinite enumerable of Nothing arguments)
+                var args = new InfiniteList<MaybeResponse>(MaybeResponse.Nothing);
+
+                // replay the observed events, adding any defined arguments
+                foreach (var evt in events)
                 {
-                    Mouse.OverrideCursor = Cursors.Wait;
-
-                    // generate an arguments stack (by default an infinite enumerable of Nothing arguments)
-                    var args = new InfiniteList<MaybeResponse>(MaybeResponse.Nothing);
-
-                    // replay the observed events, adding any defined arguments
-                    foreach (var evt in events)
+                    if (evt is TaskEvent.SetArgument arg)
                     {
-                        if (evt is TaskEvent.SetArgument arg)
-                        {
-                            args.Add(MaybeResponse.NewJust(arg.Item));
-                        }
-                        else if (evt.IsClearArguments)
-                        {
-                            args.Clear();
-                        }
+                        args.Add(MaybeResponse.NewJust(arg.Item));
                     }
-
-                    events.Add(TaskEvent.InvokingFunction);
-                    var responseStream = TaskFunction(TaskArguments, args);
-                    lbTaskResponses.ItemsSource = taskResponses;
-
-                    var collection = new ObservableCollection<TaskResponse>();
-                    collection.CollectionChanged += Collection_CollectionChanged;
-
-                    await TaskQueue.Run(responseStream, collection).ConfigureAwait(true);
+                    else if (evt.IsClearArguments)
+                    {
+                        args.Clear();
+                    }
                 }
-                finally
-                {
-                    Mouse.OverrideCursor = null;
-                }
+
+                events.Add(TaskEvent.InvokingFunction);
+                var responseStream = TaskFunction(new TaskArguments.NotificationsOnlyArguments(awsInterface, new NotificationsList()), args);
+                lbTaskResponses.ItemsSource = taskResponses;
+
+                var collection = new ObservableCollection<TaskResponse>();
+                collection.CollectionChanged += Collection_CollectionChanged;
+
+                await TaskQueue.Run(responseStream, collection).ConfigureAwait(true);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
             }
         }
 
@@ -452,16 +447,16 @@ namespace Tustler.UserControls
             }
         }
 
-        private void UpdateTaskArguments_CanExecute(object sender, CanExecuteRoutedEventArgs e)
-        {
-            e.CanExecute = true;
-        }
+        //private void UpdateTaskArguments_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        //{
+        //    e.CanExecute = true;
+        //}
 
-        private void UpdateTaskArguments_Executed(object sender, ExecutedRoutedEventArgs e)
-        {
-            if (e.Parameter is TaskArgumentMember data)
-                this.TaskArguments.SetValue(data);
-        }
+        //private void UpdateTaskArguments_Executed(object sender, ExecutedRoutedEventArgs e)
+        //{
+        //    if (e.Parameter is TaskArgumentMember data)
+        //        this.TaskArguments.SetValue(data);
+        //}
 
         //private async Task RunTaskAsync()
         //{
@@ -499,13 +494,13 @@ namespace Tustler.UserControls
                 null
             );
 
-        public static readonly RoutedUICommand UpdateTaskArguments = new RoutedUICommand
-            (
-                "UpdateTaskArguments",
-                "UpdateTaskArguments",
-                typeof(TaskCommands),
-                null
-            );
+        //public static readonly RoutedUICommand UpdateTaskArguments = new RoutedUICommand
+        //    (
+        //        "UpdateTaskArguments",
+        //        "UpdateTaskArguments",
+        //        typeof(TaskCommands),
+        //        null
+        //    );
     }
 
 }

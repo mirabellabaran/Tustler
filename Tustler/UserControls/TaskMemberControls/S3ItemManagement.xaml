@@ -37,7 +37,7 @@
             <RowDefinition Height="30" />
         </Grid.RowDefinitions>
         <Grid.Resources>
-            <Style x:Key="buttonStyles" TargetType="Button" BasedOn="{StaticResource ButtonDark}">
+            <Style x:Key="buttonStyles" TargetType="Button" BasedOn="{StaticResource ButtonDarkFlat}">
                 <Setter Property="Margin" Value="2" />
                 <Setter Property="Width" Value="90" />
             </Style>
@@ -53,7 +53,7 @@
                 <Border Background="{StaticResource ContrastingBackground}" BorderBrush="{x:Static SystemColors.ControlBrush}" BorderThickness="1" Margin="1">
                     <DockPanel LastChildFill="True">
                         <DockPanel.Resources>
-                            <Style x:Key="buttonStyles" TargetType="Button" BasedOn="{StaticResource ButtonDark}">
+                            <Style x:Key="buttonStyles" TargetType="Button" BasedOn="{StaticResource ButtonDarkFlat}">
                                 <Setter Property="Margin" Value="0" />
                                 <Setter Property="Width" Value="120" />
                             </Style>
@@ -67,7 +67,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBox x:Name="tbFilePath" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Stretch" Style="{StaticResource TextBoxDark}" />
-                            <Button Content="..." Width="20" Grid.Row="0" Grid.Column="1" Margin="5, 0, 10, 0" Style="{StaticResource ButtonDark}"
+                            <Button Content="..." Width="20" Grid.Row="0" Grid.Column="1" Margin="5, 0, 10, 0" Style="{StaticResource buttonStyles}"
                                 Command="{x:Static uc:S3ItemManagementCommands.OpenFilePicker}" CommandParameter="{Binding ElementName=tbFilePath}" />
 
                             <Button Content="Start Downloading" ToolTip="Download this file" Grid.Row="0" Grid.Column="2" CommandParameter="{Binding ElementName=tbFilePath, Path=Text}" Command="{x:Static uc:S3ItemManagementCommands.Download}" Style="{StaticResource buttonStyles}" />

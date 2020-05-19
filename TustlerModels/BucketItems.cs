@@ -89,12 +89,6 @@ namespace TustlerModels
             this.CurrentBucketName = null;
 
             this.NotificationsList = new ObservableCollection<Notification>();
-            this.Mode = BucketItemViewModelMode.Standard;
-        }
-
-        protected void OnPropertyChanged([CallerMemberName] string name = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
 
         public BucketItemsCollection BucketItems
@@ -107,19 +101,6 @@ namespace TustlerModels
         {
             get;
             private set;
-        }
-
-        public BucketItemViewModelMode Mode
-        {
-            get
-            {
-                return mode;
-            }
-            set
-            {
-                mode = value;
-                OnPropertyChanged();
-            }
         }
 
         public bool NeedsRefresh
