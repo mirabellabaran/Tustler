@@ -223,8 +223,8 @@ namespace Tustler.UserControls.TaskMemberControls
             {
                 Mode = mode switch
                 {
-                    S3ItemManagementMode.Delete => MiniTaskMode.DeleteBucketItem,
-                    S3ItemManagementMode.Download => MiniTaskMode.DownloadBucketItem,
+                    S3ItemManagementMode.Delete => MiniTaskMode.Delete,
+                    S3ItemManagementMode.Download => MiniTaskMode.Download,
                     _ => MiniTaskMode.Unknown
                 },
                 TaskArguments = parameterData

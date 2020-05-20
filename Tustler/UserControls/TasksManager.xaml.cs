@@ -44,9 +44,9 @@ namespace Tustler.UserControls
                     var taskName = dependencyPropertyChangedEventArgs.NewValue as string;
                     switch (taskName)
                     {
-                        case "TranscribeCleanup":
+                        case "Cleanup":
                             //ctrl.TaskArguments = new TaskArguments.NotificationsOnlyArguments(ctrl.awsInterface, new NotificationsList());
-                            ctrl.TaskFunction = AWSTasks.TranscribeCleanup;
+                            ctrl.TaskFunction = AWSTasks.Cleanup;
                             break;
                         case "S3FetchItems":
                             //ctrl.TaskArguments = new TaskArguments.NotificationsOnlyArguments(ctrl.awsInterface, new NotificationsList());
@@ -314,12 +314,6 @@ namespace Tustler.UserControls
 
         private void StartMiniTask_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var context = e.OriginalSource switch
-            {
-                S3ItemManagement itemManagement => itemManagement.DataContext as TaskResponse,
-                S3BucketSelector bucketSelector => bucketSelector.DataContext as TaskResponse,
-                _ => throw new ArgumentException($"StartMiniTask: Unknown data context")
-            };
             var parameterInfo = e.Parameter as MiniTaskArguments;   // btn.Tag as TaskManagerParameterInfoCollection;
 
 #nullable enable
@@ -349,6 +343,16 @@ namespace Tustler.UserControls
                         }
                     }
                 }
+            }
+
+            static TaskResponse? GetContext(object eventSource)
+            {
+                return eventSource switch
+                {
+                    S3ItemManagement itemManagement => itemManagement.DataContext as TaskResponse,
+                    S3BucketSelector bucketSelector => bucketSelector.DataContext as TaskResponse,
+                    _ => throw new ArgumentException($"StartMiniTask: Unknown data context")
+                };
             }
 
             void RunDeleteMiniTask(TaskResponse dataContext, MiniTaskArguments parameterInfo)
@@ -382,7 +386,7 @@ namespace Tustler.UserControls
                 }
             }
 
-            void RunSelectBucketMiniTask(TaskResponse dataContext, MiniTaskArguments parameterInfo)
+            void RunSelectMiniTask(MiniTaskArguments parameterInfo)
             {
                 // the user has selected an item that sets an argument
                 // first check if the task is complete
@@ -433,14 +437,17 @@ namespace Tustler.UserControls
 
             switch (parameterInfo.Mode.Tag)
             {
-                case MiniTaskMode.Tags.DeleteBucketItem:
-                    RunDeleteMiniTask(context, parameterInfo);
+                case MiniTaskMode.Tags.Delete:
+                    RunDeleteMiniTask(GetContext(e.OriginalSource), parameterInfo);
                     break;
-                case MiniTaskMode.Tags.DownloadBucketItem:
-                    RunDownloadMiniTask(context, parameterInfo);
+                case MiniTaskMode.Tags.Download:
+                    RunDownloadMiniTask(GetContext(e.OriginalSource), parameterInfo);
                     break;
-                case MiniTaskMode.Tags.SelectBucket:
-                    RunSelectBucketMiniTask(context, parameterInfo);
+                case MiniTaskMode.Tags.Select:
+                    RunSelectMiniTask(parameterInfo);
+                    break;
+                case MiniTaskMode.Tags.Continue:
+                    btnStartTask.Command.Execute(null);
                     break;
                 default:
                     throw new ArgumentException($"StartMiniTask_Executed: unknown parameter mode for S3ItemManagementParameter");

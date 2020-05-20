@@ -108,6 +108,7 @@
             </Style>
 
             <!-- Button Resources -->
+            <!-- See: https://stackoverflow.com/questions/2401519/style-the-mouseover-on-a-silverlight-wpf-button-->
             <SolidColorBrush x:Key="Brush_WindowBackground" Color="#FF333333"/>
 
             <SolidColorBrush x:Key="Brush_Foreground" Color="#FFE5E5E5"/>

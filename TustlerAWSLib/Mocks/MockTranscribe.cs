@@ -41,7 +41,19 @@ namespace TustlerAWSLib.Mocks
 
             vocabularyDictionary = new Dictionary<string, VocabularyInfo>(vocabularies);
 
-            transcriptionTaskDictionary = new ConcurrentDictionary<string, TranscriptionJob>();
+
+            var existingJobs = new TranscriptionJob[] {
+                CreateTranscriptionJob("myJob1", "tator", "myAudioDataKey1", "en", "myVocabulary"),
+                CreateTranscriptionJob("myJob2", "tator", "myAudioDataKey2", "en", "myVocabulary"),
+                CreateTranscriptionJob("myJob3", "tator", "myAudioDataKey3", "en", "myVocabulary")
+            }
+            .Select(job => KeyValuePair.Create(job.TranscriptionJobName, job));
+
+            transcriptionTaskDictionary = new ConcurrentDictionary<string, TranscriptionJob>(existingJobs);
+
+            // set the status of two jobs to complete
+            transcriptionTaskDictionary["myJob1"].TranscriptionJobStatus = TranscriptionJobStatus.COMPLETED;
+            transcriptionTaskDictionary["myJob2"].TranscriptionJobStatus = TranscriptionJobStatus.COMPLETED;
         }
 
         private TranscriptionJob CreateTranscriptionJob(string jobName, string bucketName, string s3MediaKey, string languageCode, string vocabularyName)

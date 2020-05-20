@@ -125,6 +125,10 @@
             <TextBlock Foreground="LimeGreen" Text="{Binding Path=Item}" />
         </DataTemplate>
 
+        <DataTemplate x:Key="TaskPromptTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <uctask:TaskContinue Command="{x:Static uc:TaskCommands.StartMiniTask}" />
+        </DataTemplate>
+        
         <DataTemplate x:Key="TaskSelectTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <Label Foreground="#637074" Background="#BDD4E7" FontWeight="Bold" Margin="10" Content="{Binding Path=Item}" />
         </DataTemplate>
@@ -164,15 +168,9 @@
             </Border>
         </DataTemplate>
 
-        <!--<DataTemplate x:Key="TranscriptionJobTemplate" DataType="{x:Type fsharp:TaskResponse}">
-            <Border Name="border" BorderBrush="DarkGray" BorderThickness="10" Padding="5" Margin="5">
-                <TextBlock Text="{Binding Item.TranscriptionJobName}" Background="Red" />
-            </Border>
-        </DataTemplate>-->
-
         <DataTemplate x:Key="TranscriptionJobsModelTemplate" DataType="{x:Type fsharp:TaskResponse}">
-            <Border Name="border" BorderBrush="DarkGray" BorderThickness="10" Padding="5" Margin="5">
-                <DataGrid Height="120" Margin="5" AutoGenerateColumns="False"
+            <Border Name="border" Width="500" BorderBrush="BlanchedAlmond" BorderThickness="5" CornerRadius="10" Padding="5" Margin="5">
+                <DataGrid Height="80" Margin="5" AutoGenerateColumns="False"
                           HeadersVisibility="All" CanUserResizeRows="False" IsReadOnly="True"
                           ItemsSource="{Binding Path=Item.TranscriptionJobs}"
                           FrozenColumnCount="1" RowBackground="{StaticResource ContrastingBackground}"

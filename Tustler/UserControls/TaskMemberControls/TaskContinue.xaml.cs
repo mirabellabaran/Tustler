@@ -11,16 +11,15 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using TustlerFSharpPlatform;
-using TustlerModels;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
     /// <summary>
-    /// Interaction logic for S3BucketSelector.xaml
+    /// Interaction logic for TaskContinue.xaml
     /// </summary>
-    public partial class S3BucketSelector : UserControl, ICommandSource
+    public partial class TaskContinue : UserControl, ICommandSource
     {
-        public S3BucketSelector()
+        public TaskContinue()
         {
             InitializeComponent();
         }
@@ -106,13 +105,13 @@ namespace Tustler.UserControls.TaskMemberControls
             DependencyProperty.Register(
                 "Command",
                 typeof(ICommand),
-                typeof(S3BucketSelector),
+                typeof(TaskContinue),
                 new PropertyMetadata((ICommand)null,
                 new PropertyChangedCallback(CommandChanged)));
 
         private static void CommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            S3BucketSelector ctrl = (S3BucketSelector)d;
+            TaskContinue ctrl = (TaskContinue)d;
             ctrl.HookUpCommand((ICommand)e.OldValue, (ICommand)e.NewValue);
         }
 
@@ -142,36 +141,30 @@ namespace Tustler.UserControls.TaskMemberControls
             }
         }
 
-        private void Select_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        private void Continue_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
             e.CanExecute = true;
         }
 
-        private void Select_Executed(object sender, ExecutedRoutedEventArgs e)
+        private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var context = (e.OriginalSource as Button).DataContext as Bucket;
-
-            var parameterData = new MiniTaskArgument?[] {
-                MiniTaskArgument.NewBucket(context)
-            };
-
             CommandParameter = new MiniTaskArguments()
             {
-                Mode = MiniTaskMode.Select,
-                TaskArguments = parameterData
+                Mode = MiniTaskMode.Continue,
+                TaskArguments = Array.Empty<MiniTaskArgument?>()
             };
 
             ExecuteCommand();
         }
     }
 
-    public static class S3BucketSelectorCommands
+    public static class TaskContinueCommands
     {
-        public static readonly RoutedUICommand Select = new RoutedUICommand
+        public static readonly RoutedUICommand Continue = new RoutedUICommand
             (
-                "Select",
-                "Select",
-                typeof(S3BucketSelectorCommands),
+                "Continue",
+                "Continue",
+                typeof(TaskContinueCommands),
                 null
             );
     }

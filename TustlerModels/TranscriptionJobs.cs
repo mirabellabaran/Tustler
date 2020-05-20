@@ -194,6 +194,7 @@ namespace TustlerModels
             }
         }
     }
+#nullable disable
 
     public class TranscriptionJob
     {

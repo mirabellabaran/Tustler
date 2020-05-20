@@ -17,6 +17,7 @@ type TaskResponse =
     | StringArgument of string
     | TaskInfo of string
     | TaskComplete of string
+    | TaskPrompt of string                  // prompt the user to continue (a single Continue button is displayed along with the prompt message)
     | TaskSelect of string                  // prompt the user to select an item (this is also a truncation point for subsequent reselection)
     | Notification of Notification
     | DelaySequence of int
@@ -70,9 +71,10 @@ type TaskUpdate with
 [<RequireQualifiedAccess>]
 type MiniTaskMode =
     | Unknown
-    | DeleteBucketItem
-    | DownloadBucketItem
-    | SelectBucket
+    | Delete
+    | Download
+    | Select
+    | Continue
 
 [<RequireQualifiedAccess>]
 type MiniTaskArgument =
@@ -129,8 +131,8 @@ module public Tasks =
     
     // all or some of the arguments can be Nothing
     let private validateArgs expectedNum argChecker (args: InfiniteList<MaybeResponse>) =
-        if args.Count < expectedNum then
-            invalidArg "expectedNum" (sprintf "Expecting %d arguments" expectedNum)
+        if args.Count > expectedNum then
+            invalidArg "expectedNum" (sprintf "Expecting up to %d set argument values" expectedNum)
         args
         |> Seq.takeWhile (fun mr -> mr.IsSet)   // only examine arguments that are set
         |> Seq.iteri(fun index mr ->
@@ -226,26 +228,62 @@ module public Tasks =
                 yield TaskResponse.TaskComplete "Finished"
         }
 
-    let TranscribeCleanup (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =
+    let Cleanup (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =
+
+        let hasDeleteableJobs (model: TranscriptionJobsViewModel) =
+            let empty =
+                model.TranscriptionJobs
+                |> Seq.filter (fun job -> List.contains job.TranscriptionJobStatus [ "COMPLETED"; "FAILED" ] )
+                |> Seq.isEmpty
+            not empty
+
+        let deleteAll awsInterface notifications (model: TranscriptionJobsViewModel) =
+            model.TranscriptionJobs
+            |> Seq.filter (fun job -> List.contains job.TranscriptionJobStatus [ "COMPLETED"; "FAILED" ] )      // skip IN_PROGRESS and QUEUED
+            |> Seq.map (fun job -> job.TranscriptionJobName)
+            |> Seq.map (fun jobName ->
+                let success = Transcribe.deleteTranscriptionJobByName awsInterface notifications jobName |> Async.RunSynchronously
+                TaskResponse.TaskInfo (sprintf "Delete job %s...%s" jobName (if success then "succeeded" else "failed"))
+            )
+
+        let argChecker index tr =
+            match (index, tr) with
+            | 0, TaskResponse.TranscriptionJobsModel _ -> ()
+            | _ -> invalidArg "tr" "Cleanup: Expecting one argument: TranscriptionJobsModel"
 
         let awsInterface = (arguments :?> NotificationsOnlyArguments).AWSInterface
         let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
+        validateArgs 1 argChecker args
 
         seq {
-            yield TaskResponse.TaskInfo "Starting a new transcription job..."
-            
-            let model = Transcribe.startTranscriptionJob awsInterface notifications "myJob" "tator" "myAudioDataKey" "en" "myVocabulary" |> Async.RunSynchronously
-            yield TaskResponse.TaskInfo (sprintf "Count: %d" model.TranscriptionJobs.Count)
-            yield! getNotificationResponse notifications
-            yield TaskResponse.TranscriptionJobsModel model
+            // is TranscriptionJobsModel set?
+            let modelResponse = args.Pop()
 
-            yield TaskResponse.TaskInfo "Retrieving transcription jobs..."
+            if modelResponse.IsNotSet then
+                yield TaskResponse.TaskInfo "Retrieving transcription jobs..."
             
-            let jobs = Transcribe.listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
-            yield! getNotificationResponse notifications
-            yield TaskResponse.TranscriptionJobsModel model
+                let model = Transcribe.listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
+                yield! getNotificationResponse notifications
+                yield TaskResponse.TranscriptionJobsModel model
+                yield TaskResponse.TaskPrompt "Delete all completed transcription jobs?"
+            
+            if modelResponse.IsSet then
+                let model =
+                    match modelResponse.Value with
+                    | TaskResponse.TranscriptionJobsModel jm -> jm
+                    | _ -> invalidArg "modelResponse" "Expecting a TranscriptionJobsModel" 
 
-            yield TaskResponse.TaskComplete "Finished"
+                if hasDeleteableJobs model then
+                    yield! deleteAll awsInterface notifications model
+                    yield! getNotificationResponse notifications
+
+                    let model = Transcribe.listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
+                    yield! getNotificationResponse notifications
+                    yield TaskResponse.TranscriptionJobsModel model
+                else
+                    yield TaskResponse.TaskInfo "No transcription jobs to delete"
+
+                yield TaskResponse.TaskComplete "Finished"
         }
 
     // upload and transcribe some audio

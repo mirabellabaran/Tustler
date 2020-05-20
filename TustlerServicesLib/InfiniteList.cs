@@ -31,14 +31,13 @@ namespace TustlerServicesLib
         }
 
         /// <summary>
-        /// Get the length of the list
+        /// Return the number of set values
         /// </summary>
-        /// <remarks>Will always return MaxInteger</remarks>
         public int Count
         {
             get
             {
-                return int.MaxValue;
+                return list.Length;
             }
         }
 
@@ -58,7 +57,7 @@ namespace TustlerServicesLib
         /// <summary>
         /// Add an item to the end of the list
         /// </summary>
-        /// <param name="item"></param>
+        /// <param name="item">The item to add to the list</param>
         public void Add(T item)
         {
             list = list.Add(item);
@@ -67,7 +66,7 @@ namespace TustlerServicesLib
         /// <summary>
         /// Retrieve and remove the first element in the underlying list
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A set value if values have been set, or a default value otherwise</returns>
         public T Pop()
         {
             if (list.Length > 0)

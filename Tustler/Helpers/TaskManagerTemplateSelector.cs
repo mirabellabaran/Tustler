@@ -32,6 +32,7 @@ namespace Tustler.Helpers
                     TaskResponse.Notification note => GetErrorTemplate(note),
                     TaskResponse.TaskInfo _ => element.FindResource("TaskInfoTemplate") as DataTemplate,
                     TaskResponse.TaskComplete _ => element.FindResource("TaskCompleteTemplate") as DataTemplate,
+                    TaskResponse.TaskPrompt _ => element.FindResource("TaskPromptTemplate") as DataTemplate,
                     TaskResponse.TaskSelect _ => element.FindResource("TaskSelectTemplate") as DataTemplate,
                     TaskResponse.Bucket _ => element.FindResource("BucketTemplate") as DataTemplate,
                     TaskResponse.BucketItem _ => element.FindResource("BucketItemTemplate") as DataTemplate,
