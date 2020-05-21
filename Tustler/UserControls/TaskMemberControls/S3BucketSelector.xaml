@@ -14,9 +14,7 @@
 
     <UserControl.Resources>
 
-        <helpers:TaskManagerChildDataTemplateSelector x:Key="taskManagerChildDataTemplateSelector"/>
-
-        <DataTemplate x:Key="BucketTemplate" DataType="{x:Type local:Bucket}">
+        <DataTemplate DataType="{x:Type local:Bucket}">
             <Button Command="{x:Static uc:S3BucketSelectorCommands.Select}" Margin="10" Style="{StaticResource ButtonDark}">
                 <Button.Content>
                     <Border Name="border" BorderBrush="BlanchedAlmond" CornerRadius="10" BorderThickness="5" Padding="5" Margin="5">
@@ -43,7 +41,7 @@
     </UserControl.Resources>
 
     <Grid>
-        <ItemsControl ItemTemplateSelector="{StaticResource taskManagerChildDataTemplateSelector}" ItemsSource="{Binding Item.Buckets}">
+        <ItemsControl ItemsSource="{Binding Item.Buckets}">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                     <StackPanel Orientation="Horizontal" />

@@ -15,37 +15,11 @@ using TustlerFSharpPlatform;
 namespace Tustler.UserControls.TaskMemberControls
 {
     /// <summary>
-    /// Interaction logic for TaskContinue.xaml
+    /// Interaction logic for TaskMultiSelect.xaml
     /// </summary>
-    public partial class TaskContinue : UserControl, ICommandSource
+    public partial class TaskMultiSelect : UserControl, ICommandSource
     {
-        #region IsButtonEnabled DependencyProperty
-        public static readonly DependencyProperty IsButtonEnabledProperty =
-            DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(TaskContinue), new PropertyMetadata(true, PropertyChangedCallback));
-
-        private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
-        {
-            if (dependencyObject is TaskContinue ctrl)
-            {
-                if (dependencyPropertyChangedEventArgs.NewValue != null)
-                {
-                    var newState = (bool) dependencyPropertyChangedEventArgs.NewValue;
-                    ctrl.btnContinue.IsEnabled = newState;
-                }
-            }
-        }
-
-        /// <summary>
-        ///  Enables or disables the Continue button
-        /// </summary>
-        public bool IsButtonEnabled
-        {
-            get { return (bool)GetValue(IsButtonEnabledProperty); }
-            set { SetValue(IsButtonEnabledProperty, value); }
-        }
-        #endregion
-
-        public TaskContinue()
+        public TaskMultiSelect()
         {
             InitializeComponent();
         }
@@ -131,13 +105,13 @@ namespace Tustler.UserControls.TaskMemberControls
             DependencyProperty.Register(
                 "Command",
                 typeof(ICommand),
-                typeof(TaskContinue),
+                typeof(TaskMultiSelect),
                 new PropertyMetadata((ICommand)null,
                 new PropertyChangedCallback(CommandChanged)));
 
         private static void CommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            TaskContinue ctrl = (TaskContinue)d;
+            TaskMultiSelect ctrl = (TaskMultiSelect)d;
             ctrl.HookUpCommand((ICommand)e.OldValue, (ICommand)e.NewValue);
         }
 
@@ -174,23 +148,31 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
+            //var context = (e.OriginalSource as Button).DataContext as Bucket;
+
+            var parameterData = new MiniTaskArgument?[] {
+                MiniTaskArgument.NewString("A"),
+                MiniTaskArgument.NewString("B"),
+                MiniTaskArgument.NewString("c")
+            };
+
             CommandParameter = new MiniTaskArguments()
             {
                 Mode = MiniTaskMode.Continue,
-                TaskArguments = Array.Empty<MiniTaskArgument?>()
+                TaskArguments = parameterData
             };
 
             ExecuteCommand();
         }
     }
 
-    public static class TaskContinueCommands
+    public static class TaskMultiSelectCommands
     {
         public static readonly RoutedUICommand Continue = new RoutedUICommand
             (
                 "Continue",
                 "Continue",
-                typeof(TaskContinueCommands),
+                typeof(TaskMultiSelectCommands),
                 null
             );
     }

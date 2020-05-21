@@ -447,6 +447,8 @@ namespace Tustler.UserControls
                     RunSelectMiniTask(parameterInfo);
                     break;
                 case MiniTaskMode.Tags.Continue:
+                    // disable the Continue button
+                    (e.OriginalSource as TaskContinue).IsButtonEnabled = false;
                     btnStartTask.Command.Execute(null);
                     break;
                 default:

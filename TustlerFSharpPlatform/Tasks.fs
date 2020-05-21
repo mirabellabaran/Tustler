@@ -19,6 +19,7 @@ type TaskResponse =
     | TaskComplete of string
     | TaskPrompt of string                  // prompt the user to continue (a single Continue button is displayed along with the prompt message)
     | TaskSelect of string                  // prompt the user to select an item (this is also a truncation point for subsequent reselection)
+    | TaskMultiSelect of string[]
     | Notification of Notification
     | DelaySequence of int
     | Bucket of Bucket
@@ -256,6 +257,8 @@ module public Tasks =
         validateArgs 1 argChecker args
 
         seq {
+            yield TaskResponse.TaskMultiSelect (Array.ofList [ "X"; "Y"; "Z" ])
+
             // is TranscriptionJobsModel set?
             let modelResponse = args.Pop()
 
