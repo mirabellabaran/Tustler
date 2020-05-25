@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -16,11 +15,11 @@ using TustlerFSharpPlatform;
 namespace Tustler.UserControls.TaskMemberControls
 {
     /// <summary>
-    /// Interaction logic for TaskMultiSelect.xaml
+    /// Interaction logic for TaskAutoContinue.xaml
     /// </summary>
-    public partial class TaskMultiSelect : UserControl, ICommandSource
+    public partial class TaskAutoContinue : UserControl, ICommandSource
     {
-        public TaskMultiSelect()
+        public TaskAutoContinue()
         {
             InitializeComponent();
         }
@@ -106,13 +105,13 @@ namespace Tustler.UserControls.TaskMemberControls
             DependencyProperty.Register(
                 "Command",
                 typeof(ICommand),
-                typeof(TaskMultiSelect),
+                typeof(TaskAutoContinue),
                 new PropertyMetadata((ICommand)null,
                 new PropertyChangedCallback(CommandChanged)));
 
         private static void CommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            TaskMultiSelect ctrl = (TaskMultiSelect)d;
+            TaskAutoContinue ctrl = (TaskAutoContinue)d;
             ctrl.HookUpCommand((ICommand)e.OldValue, (ICommand)e.NewValue);
         }
 
@@ -142,36 +141,22 @@ namespace Tustler.UserControls.TaskMemberControls
             }
         }
 
-        private void Continue_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        private void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
-            e.CanExecute = true;
-        }
-
-        private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
-        {
-            //var context = (e.OriginalSource as Button).DataContext as TaskResponse.TaskMultiSelect;
-
-            var selectedSubTasks = lbTasks.SelectedItems.Cast<SubTaskItem>();
-            var parameterData = new MiniTaskArgument[] { MiniTaskArgument.NewForEach(selectedSubTasks) };
+            // auto-execute the attached Command, passing the TaskResponse context
+            ContinueWithArgument arg = (DataContext as TaskResponse) switch
+            {
+                TaskResponse.TaskContinueWith type => type.Item,
+                _ => throw new ArgumentException($"TaskAutoContinue: Unknown continuation type")
+            };
 
             CommandParameter = new MiniTaskArguments()
             {
-                Mode = MiniTaskMode.ForEach,
-                TaskArguments = parameterData
+                Mode = MiniTaskMode.AutoContinue,
+                TaskArguments = new MiniTaskArgument[] { MiniTaskArgument.NewContinueWithArgument(arg) }
             };
 
             ExecuteCommand();
         }
-    }
-
-    public static class TaskMultiSelectCommands
-    {
-        public static readonly RoutedUICommand Continue = new RoutedUICommand
-            (
-                "Continue",
-                "Continue",
-                typeof(TaskMultiSelectCommands),
-                null
-            );
     }
 }

@@ -137,6 +137,10 @@
             <uctask:TaskMultiSelect Command="{x:Static uc:TaskCommands.StartMiniTask}" />
         </DataTemplate>
 
+        <DataTemplate x:Key="TaskContinueWithTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <uctask:TaskAutoContinue Command="{x:Static uc:TaskCommands.StartMiniTask}" />
+        </DataTemplate>
+        
         <DataTemplate x:Key="BucketsModelTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <uctask:S3BucketSelector Command="{x:Static uc:TaskCommands.StartMiniTask}" />
         </DataTemplate>

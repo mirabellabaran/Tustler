@@ -44,13 +44,17 @@ namespace Tustler.UserControls
                     var taskName = dependencyPropertyChangedEventArgs.NewValue as string;
                     switch (taskName)
                     {
+                        case "S3FetchItems":
+                            ctrl.TaskFunction = AWSTasks.S3FetchItems;
+                            break;
                         case "Cleanup":
-                            //ctrl.TaskArguments = new TaskArguments.NotificationsOnlyArguments(ctrl.awsInterface, new NotificationsList());
                             ctrl.TaskFunction = AWSTasks.Cleanup;
                             break;
-                        case "S3FetchItems":
-                            //ctrl.TaskArguments = new TaskArguments.NotificationsOnlyArguments(ctrl.awsInterface, new NotificationsList());
-                            ctrl.TaskFunction = AWSTasks.S3FetchItems;
+                        case "CleanTranscriptionJobHistory":
+                            ctrl.TaskFunction = AWSTasks.CleanTranscriptionJobHistory;
+                            break;
+                        case "SomeSubTask":
+                            ctrl.TaskFunction = AWSTasks.SomeSubTask;
                             break;
                         case "TranscribeAudio":
                             //ctrl.TaskArguments = new TaskArguments.TranscribeAudioArguments(ctrl.awsInterface, new NotificationsList());
@@ -179,6 +183,47 @@ namespace Tustler.UserControls
             //}
         }
 
+#nullable enable
+        private async Task SetNextLoopItem(SubTaskItem? nextTask)
+        {
+            // get the next item on the ForEach stack (if there is one)
+            // and start the appropriate function...
+
+            SubTaskItem? GetNextSubTask()
+            {
+                // ... first get the last ForEach event
+                var lastForeach = events.FindLast(evt =>
+                    evt switch
+                    {
+                        TaskEvent.ForEach _ => true,
+                        _ => false
+                    }
+                );
+
+                // ... and retrieve the next item from its payload
+                return lastForeach switch
+                {
+                    TaskEvent.ForEach items => (items.Item.Count > 0) ? items.Item.Pop() : null,
+                    _ => null
+                };
+            }
+
+            if (nextTask is null)
+                nextTask = GetNextSubTask();
+
+            if (nextTask is object)
+            {
+                //events.Add(TaskEvent.ClearArguments);
+                this.TaskName = nextTask.TaskName;
+                events.Add(TaskEvent.ClearArguments);
+                events.Add(TaskEvent.NewSubTask(nextTask.TaskName));
+                events.Add(TaskEvent.NewSetArgument(TaskResponse.NewTaskItem(nextTask)));
+
+                await RunTask().ConfigureAwait(true);
+            }
+        }
+#nullable disable
+
         private async void Collection_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             var newItems = e.NewItems as System.Collections.IEnumerable;
@@ -188,7 +233,7 @@ namespace Tustler.UserControls
             {
                 switch (response)
                 {
-                    // argument responses are responses that return actual values
+                    // argument responses that return actual values; set an event argument
                     case TaskResponse.Bucket _:
                     case TaskResponse.BucketItem _:
                     case TaskResponse.BucketItemsModel _:
@@ -196,11 +241,20 @@ namespace Tustler.UserControls
                     case TaskResponse.TranscriptionJobsModel _:
                         events.Add(TaskEvent.NewSetArgument(response));
                         break;
+
+                    //case TaskResponse.TaskContinueWith arg:
+                    //    switch (arg.Item.Tag) {
+                    //        case ContinueWithArgument.Tags.Next:
+                    //            SetNextLoopItem(null);
+                    //            break;
+                    //    }
+                    //    break;
                     case TaskResponse.TaskSelect _:
                         events.Add(TaskEvent.SelectArgument);
                         break;
                     case TaskResponse.TaskComplete _:
                         events.Add(TaskEvent.FunctionCompleted);
+                        await SetNextLoopItem(null).ConfigureAwait(true);      // go to the next sub-task (if there is one)
                         break;
                 }
 
@@ -253,35 +307,40 @@ namespace Tustler.UserControls
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                // generate an arguments stack (by default an infinite enumerable of Nothing arguments)
-                var args = new InfiniteList<MaybeResponse>(MaybeResponse.Nothing);
-
-                // replay the observed events, adding any defined arguments
-                foreach (var evt in events)
-                {
-                    if (evt is TaskEvent.SetArgument arg)
-                    {
-                        args.Add(MaybeResponse.NewJust(arg.Item));
-                    }
-                    else if (evt.IsClearArguments)
-                    {
-                        args.Clear();
-                    }
-                }
-
-                events.Add(TaskEvent.InvokingFunction);
-                var responseStream = TaskFunction(new TaskArguments.NotificationsOnlyArguments(awsInterface, new NotificationsList()), args);
-                lbTaskResponses.ItemsSource = taskResponses;
-
-                var collection = new ObservableCollection<TaskResponse>();
-                collection.CollectionChanged += Collection_CollectionChanged;
-
-                await TaskQueue.Run(responseStream, collection).ConfigureAwait(true);
+                await RunTask().ConfigureAwait(true);
             }
             finally
             {
                 Mouse.OverrideCursor = null;
             }
+        }
+
+        private async Task RunTask()
+        {
+            // generate an arguments stack (by default an infinite enumerable of Nothing arguments)
+            var args = new InfiniteList<MaybeResponse>(MaybeResponse.Nothing);
+
+            // replay the observed events, adding any defined arguments
+            foreach (var evt in events)
+            {
+                if (evt is TaskEvent.SetArgument arg)
+                {
+                    args.Add(MaybeResponse.NewJust(arg.Item));
+                }
+                else if (evt.IsClearArguments)
+                {
+                    args.Clear();
+                }
+            }
+
+            events.Add(TaskEvent.InvokingFunction);
+            var responseStream = TaskFunction(new TaskArguments.NotificationsOnlyArguments(awsInterface, new NotificationsList()), args);
+            lbTaskResponses.ItemsSource = taskResponses;
+
+            var collection = new ObservableCollection<TaskResponse>();
+            collection.CollectionChanged += Collection_CollectionChanged;
+
+            await TaskQueue.Run(responseStream, collection).ConfigureAwait(true);
         }
 
         private void StartMiniTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -312,7 +371,7 @@ namespace Tustler.UserControls
             //}
         }
 
-        private void StartMiniTask_Executed(object sender, ExecutedRoutedEventArgs e)
+        private async void StartMiniTask_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             var parameterInfo = e.Parameter as MiniTaskArguments;   // btn.Tag as TaskManagerParameterInfoCollection;
 
@@ -386,7 +445,7 @@ namespace Tustler.UserControls
                 }
             }
 
-            void RunSelectMiniTask(MiniTaskArguments parameterInfo)
+            async Task RunSelectMiniTask(MiniTaskArguments parameterInfo)
             {
                 // the user has selected an item that sets an argument
                 // first check if the task is complete
@@ -430,7 +489,7 @@ namespace Tustler.UserControls
                 };
                 events.Add(TaskEvent.NewSetArgument(TaskResponse.NewBucket(bucket)));
 
-                btnStartTask.Command.Execute(null);
+                await RunTask().ConfigureAwait(true);
             }
 
 #nullable disable
@@ -444,12 +503,30 @@ namespace Tustler.UserControls
                     RunDownloadMiniTask(GetContext(e.OriginalSource), parameterInfo);
                     break;
                 case MiniTaskMode.Tags.Select:
-                    RunSelectMiniTask(parameterInfo);
+                    await RunSelectMiniTask(parameterInfo).ConfigureAwait(true);
                     break;
                 case MiniTaskMode.Tags.Continue:
                     // disable the Continue button
                     (e.OriginalSource as TaskContinue).IsButtonEnabled = false;
-                    btnStartTask.Command.Execute(null);
+                    await RunTask().ConfigureAwait(true);
+                    break;
+                case MiniTaskMode.Tags.AutoContinue:
+                    await RunTask().ConfigureAwait(true);
+                    break;
+                case MiniTaskMode.Tags.ForEach:
+                    // expecting a single argument (an IEnumerable<MultiSelectArgument>)
+                    var subtasks = parameterInfo.TaskArguments.First() switch
+                    {
+                        MiniTaskArgument.ForEach args => new Stack<SubTaskItem>(args.Item),
+                        _ => throw new ArgumentException($"Unknown argument type")
+                    };
+
+                    // now that the user has made their selections, add those selections to the event source for later reference
+                    events.Add(TaskEvent.NewForEach(subtasks));
+
+                    // pop the first task item and set an argument on the event source
+                    var taskItem = subtasks.Pop();
+                    await SetNextLoopItem(taskItem).ConfigureAwait(true);      // go to the first sub-task
                     break;
                 default:
                     throw new ArgumentException($"StartMiniTask_Executed: unknown parameter mode for S3ItemManagementParameter");

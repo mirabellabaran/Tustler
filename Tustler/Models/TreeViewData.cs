@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FFmpeg.AutoGen;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -6,8 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using TustlerServicesLib;
-using TustlerWinPlatformLib;
+using TustlerFSharpPlatform;
 
 namespace Tustler
 {
@@ -108,7 +108,7 @@ namespace Tustler
             var tasksModule = asm.GetType("TustlerFSharpPlatform.Tasks");
             var methods = tasksModule.GetMethods(BindingFlags.Public | BindingFlags.Static);
 
-            return methods.Select(mi => (mi.Name, mi.Name));
+            return methods.Where(mi => !Attribute.IsDefined(mi, typeof(HideFromUI))).Select(mi => (mi.Name, mi.Name));
         }
     }
 }

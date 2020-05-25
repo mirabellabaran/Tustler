@@ -35,6 +35,7 @@ namespace Tustler.Helpers
                     TaskResponse.TaskPrompt _ => element.FindResource("TaskPromptTemplate") as DataTemplate,
                     TaskResponse.TaskSelect _ => element.FindResource("TaskSelectTemplate") as DataTemplate,
                     TaskResponse.TaskMultiSelect _ => element.FindResource("TaskMultiSelectTemplate") as DataTemplate,
+                    TaskResponse.TaskContinueWith _ => element.FindResource("TaskContinueWithTemplate") as DataTemplate,
                     TaskResponse.Bucket _ => element.FindResource("BucketTemplate") as DataTemplate,
                     TaskResponse.BucketItem _ => element.FindResource("BucketItemTemplate") as DataTemplate,
                     TaskResponse.BucketsModel _ => element.FindResource("BucketsModelTemplate") as DataTemplate,

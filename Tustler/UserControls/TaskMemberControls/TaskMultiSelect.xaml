@@ -11,20 +11,35 @@
     </UserControl.CommandBindings>
 
     <UserControl.Resources>
-
+        
         <DataTemplate x:Key="MultiSelectTemplate">
-            <TextBlock Text="{Binding}" />
+            <TextBlock Text="{Binding Path=Description}" />
         </DataTemplate>
 
     </UserControl.Resources>
 
-    <Grid>
-        <ItemsControl ItemsSource="{Binding Item}">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <StackPanel Orientation="Vertical" />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-        </ItemsControl>
-    </Grid>
+    <Border BorderBrush="BlanchedAlmond" BorderThickness="5" CornerRadius="10" Width="500" Padding="5">
+        <StackPanel Orientation="Vertical">
+            <TextBlock Text="Select sub-tasks" FontSize="16" Style="{StaticResource TextBlockDark}" />
+            <UniformGrid Rows="1" Columns="2">
+                <Border BorderBrush="AliceBlue" BorderThickness="2" Margin="10">
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="Available sub-tasks" Margin="2" Background="{StaticResource NormalBackground}" Style="{StaticResource TextBlockDark}" />
+                        <ListBox x:Name="lbTasks" SelectionMode="Multiple" Height="80" ItemsSource="{Binding Item}" ItemTemplate="{StaticResource MultiSelectTemplate}" Style="{StaticResource ListBoxDark}">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Style.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="FontWeight" Value="Bold" />
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                        </ListBox>
+                    </StackPanel>
+                </Border>
+                <Button Content="Continue" Height="30" Width="100" Padding="10" Command="{x:Static uc:TaskMultiSelectCommands.Continue}" Style="{StaticResource ButtonDarkFlat}" />
+            </UniformGrid>
+        </StackPanel>
+    </Border>
 </UserControl>

@@ -12,6 +12,19 @@ open System.Collections.Generic
 open System
 open System.Runtime.InteropServices
 
+// an attribute to tell the UI not to show certain task functions (those that are called as sub-tasks)
+type HideFromUI() = inherit System.Attribute()
+
+[<RequireQualifiedAccess>]
+type ContinueWithArgument =
+    | Next
+    | None
+
+type SubTaskItem = {
+    TaskName: string;           // the task function name of the sub-task
+    Description: string;
+}
+
 [<RequireQualifiedAccess>]
 type TaskResponse =
     | StringArgument of string
@@ -19,7 +32,9 @@ type TaskResponse =
     | TaskComplete of string
     | TaskPrompt of string                  // prompt the user to continue (a single Continue button is displayed along with the prompt message)
     | TaskSelect of string                  // prompt the user to select an item (this is also a truncation point for subsequent reselection)
-    | TaskMultiSelect of string[]
+    | TaskMultiSelect of IEnumerable<SubTaskItem>       // user selects zero or more sub-tasks to perform
+    | TaskItem of SubTaskItem                           // the current subtask function name and description (one of the user-selected items from the MultiSelect list)
+    | TaskContinueWith of ContinueWithArgument
     | Notification of Notification
     | DelaySequence of int
     | Bucket of Bucket
@@ -32,6 +47,8 @@ type TaskResponse =
 type TaskEvent =
     | InvokingFunction
     | SetArgument of TaskResponse
+    | ForEach of Stack<SubTaskItem>
+    | SubTask of string     // the name of the sub-task
     | SelectArgument
     | ClearArguments
     | FunctionCompleted
@@ -76,6 +93,8 @@ type MiniTaskMode =
     | Download
     | Select
     | Continue
+    | AutoContinue
+    | ForEach
 
 [<RequireQualifiedAccess>]
 type MiniTaskArgument =
@@ -83,6 +102,8 @@ type MiniTaskArgument =
     | String of string
     | Int of int
     | Bucket of Bucket
+    | ForEach of IEnumerable<SubTaskItem>
+    | ContinueWithArgument of ContinueWithArgument
 
 /// Collects MiniTask arguments (used by user control command source objects)
 type MiniTaskArguments () =
@@ -229,7 +250,8 @@ module public Tasks =
                 yield TaskResponse.TaskComplete "Finished"
         }
 
-    let Cleanup (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =
+    [<HideFromUI>]
+    let CleanTranscriptionJobHistory (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =
 
         let hasDeleteableJobs (model: TranscriptionJobsViewModel) =
             let empty =
@@ -247,29 +269,37 @@ module public Tasks =
                 TaskResponse.TaskInfo (sprintf "Delete job %s...%s" jobName (if success then "succeeded" else "failed"))
             )
 
+        let getTaskInfo (taskInfo:MaybeResponse) =
+            match taskInfo.Value with
+            | TaskResponse.TaskItem item -> item
+            | _ -> invalidArg "taskInfo" "Expecting a TaskItem" 
+
         let argChecker index tr =
             match (index, tr) with
-            | 0, TaskResponse.TranscriptionJobsModel _ -> ()
-            | _ -> invalidArg "tr" "Cleanup: Expecting one argument: TranscriptionJobsModel"
+            | 0, TaskResponse.TaskItem _ -> ()
+            | 1, TaskResponse.TranscriptionJobsModel _ -> ()
+            | _ -> invalidArg "tr" "Cleanup: Expecting two arguments: TaskItem and TranscriptionJobsModel"
 
         let awsInterface = (arguments :?> NotificationsOnlyArguments).AWSInterface
         let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
-        validateArgs 1 argChecker args
+        validateArgs 2 argChecker args
 
         seq {
-            yield TaskResponse.TaskMultiSelect (Array.ofList [ "X"; "Y"; "Z" ])
-
+            let taskInfo = args.Pop()
+    
             // is TranscriptionJobsModel set?
             let modelResponse = args.Pop()
 
             if modelResponse.IsNotSet then
+                yield TaskResponse.TaskInfo (sprintf "Running %s" (getTaskInfo taskInfo).Description)
+
                 yield TaskResponse.TaskInfo "Retrieving transcription jobs..."
-            
+
                 let model = Transcribe.listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
                 yield! getNotificationResponse notifications
                 yield TaskResponse.TranscriptionJobsModel model
                 yield TaskResponse.TaskPrompt "Delete all completed transcription jobs?"
-            
+
             if modelResponse.IsSet then
                 let model =
                     match modelResponse.Value with
@@ -286,7 +316,36 @@ module public Tasks =
                 else
                     yield TaskResponse.TaskInfo "No transcription jobs to delete"
 
-                yield TaskResponse.TaskComplete "Finished"
+                yield TaskResponse.TaskComplete (sprintf "Completed %s" (getTaskInfo taskInfo).Description)
+        }
+
+    [<HideFromUI>]
+    let SomeSubTask (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =
+
+        let awsInterface = (arguments :?> NotificationsOnlyArguments).AWSInterface
+        let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
+
+        seq {
+            yield TaskResponse.TaskInfo "Doing SomeSubTask"
+
+            yield TaskResponse.TaskComplete "Finished SomeSubTask"
+        }
+
+    let Cleanup (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =
+
+        let awsInterface = (arguments :?> NotificationsOnlyArguments).AWSInterface
+        let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
+
+        seq {
+            // show the sub-task names (the TaskName is used for function selection)
+            yield TaskResponse.TaskMultiSelect ([|
+                { TaskName = "CleanTranscriptionJobHistory"; Description = "Transcription Job History" };
+                { TaskName = "SomeSubTask"; Description = "Other" }
+            |])
+
+            //yield TaskResponse.TaskContinueWith ContinueWithArgument.Next
+
+            //yield TaskResponse.TaskComplete "Finished all selected tasks"
         }
 
     // upload and transcribe some audio
