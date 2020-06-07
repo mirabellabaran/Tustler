@@ -73,6 +73,9 @@ namespace Tustler.Helpers.UIServices
         /// <returns></returns>
         public static List<string> GetFieldFromListBoxSelectedItems<T>(CheckBox chkIncludeNames, ListBox lbNames, Func<T, string> selector)
         {
+            if (chkIncludeNames is null) throw new ArgumentNullException(nameof(chkIncludeNames));
+            if (lbNames is null) throw new ArgumentNullException(nameof(lbNames));
+
             if (chkIncludeNames.IsChecked.HasValue && chkIncludeNames.IsChecked.Value && lbNames.SelectedItems.Count > 0)
             {
                 var selectedObjects = (lbNames.SelectedItems as IEnumerable<object>).Cast<T>();
@@ -81,6 +84,27 @@ namespace Tustler.Helpers.UIServices
             else
             {
                 return null;
+            }
+        }
+
+        public static void ScrollIntoView(this ItemsControl control, object item)
+        {
+            if (control is null) throw new ArgumentNullException(nameof(control));
+
+            if (!(control.ItemContainerGenerator.ContainerFromItem(item) is FrameworkElement element)) { return; }
+
+            element.BringIntoView();
+        }
+
+        public static void ScrollIntoView(this ItemsControl control)
+        {
+            if (control is null) throw new ArgumentNullException(nameof(control));
+            int count = control.Items.Count;
+
+            if (count > 0)
+            {
+                object item = control.Items[count - 1];
+                control.ScrollIntoView(item);
             }
         }
     }

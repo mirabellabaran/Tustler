@@ -11,7 +11,7 @@
     </UserControl.CommandBindings>
 
     <StackPanel Orientation="Horizontal">
-        <Label Foreground="#637074" Background="#BDD4E7" FontWeight="Bold" Margin="10" Content="{Binding Path=Item}" />
+        <Label Foreground="#637074" Background="#BDD4E7" FontWeight="Bold" Margin="0,10,10,10" Content="{Binding Path=Item}" />
         <Button x:Name="btnContinue" Content="Continue?" Height="30" Width="80" Command="{x:Static uc:TaskContinueCommands.Continue}" Style="{StaticResource ButtonDarkFlat}" />
     </StackPanel>
 </UserControl>

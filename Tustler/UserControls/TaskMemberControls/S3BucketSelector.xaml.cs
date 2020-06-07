@@ -16,6 +16,7 @@ using TustlerModels;
 namespace Tustler.UserControls.TaskMemberControls
 {
     /// <summary>
+    /// S3BucketSelector expects to be bound to a TaskResponse.BucketsModel
     /// Interaction logic for S3BucketSelector.xaml
     /// </summary>
     public partial class S3BucketSelector : UserControl, ICommandSource

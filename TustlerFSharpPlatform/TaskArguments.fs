@@ -3,6 +3,52 @@
 open TustlerServicesLib
 open TustlerInterfaces
 open TustlerAWSLib
+open System
+open System.IO
+
+//module public FileServices =
+//    /// Use various techniques to detect the mimetype of the data in the specified file path (see also Tustler.Helpers.FileServices)
+//    let GetMimeType filePath =
+
+//        let detectors = [|
+//            TustlerServicesLib.MimeTypeDictionary.GetMimeTypeFromList
+//            TustlerWinPlatformLib.NativeMethods.GetMimeTypeFromFile
+//            TustlerWinPlatformLib.RegistryServices.GetMimeTypeFromRegistry
+//        |]
+
+//        let chooser (detector:string -> string) =
+//            match detector filePath with
+//            | null -> None
+//            | result -> Some(result)
+
+//        Seq.tryPick chooser detectors
+
+//    //let GetExtension (filePath:string) =
+
+//    let CheckAddExtension (filePath:string) =
+
+//        let mimetype = GetMimeType filePath
+//        if mimetype.IsNone then
+//            Seq.singleton Poo
+//        else
+//            let extension =
+//                let ext = Path.GetExtension filePath
+
+//                if String.IsNullOrEmpty ext then
+//                    match TustlerServicesLib.MimeTypeDictionary.GetExtensionFromMimeType mimetype with
+//                    | null -> None
+//                    | ext -> Some(ext)
+//                else
+//                    ext.Substring(1).ToLowerInvariant()
+
+//            if extension.IsNone then
+
+//                // extension cannot be inferred
+//                Poo "No file extension was supplied and the extension cannot be inferred. Please specify an extension."
+//            else
+
+//                Poo "The inferred mimetype is {mimetype} with extension {extension}. Select Yes to upload the file with this extension, or No to add your own extension."
+//                let newpath = Path.ChangeExtension(path, extension)
 
 module public TaskArguments =
 
@@ -27,16 +73,22 @@ module public TaskArguments =
         member this.Members with get() = members
         member this.IsRequired with get () = members.Length > 0
 
-    type MediaReference(bucketName: string, key: string, mimeType: string, extension: string) =
-
+    /// A reference to a media file item stored in an S3 Bucket
+    type S3MediaReference(bucketName: string, key: string, mimeType: string, extension: string) =
         member val BucketName = bucketName
         member val Key = key
         member val MimeType = mimeType
         member val Extension = extension
 
+    /// A reference to a media file stored locally (normally a file to be uploaded to S3)
+    type FileMediaReference(filePath: string, mimeType: string, extension: string) =
+        member val FilePath = filePath
+        member val MimeType = mimeType
+        member val Extension = extension
+
     type TaskArgumentMember =
         | TaskName of string
-        | MediaRef of MediaReference
+        | MediaRef of S3MediaReference
         | FilePath of string
         | TranscriptionLanguageCode of string
         | TranslationLanguageCode of string

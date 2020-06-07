@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿#nullable enable
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -21,9 +22,9 @@ namespace TustlerServicesLib
         /// </summary>
         /// <param name="sFileNameOrPath">A filename or file path that includes a file extension</param>
         /// <returns></returns>
-        public static string GetMimeTypeFromList(string sFileNameOrPath)
+        public static string? GetMimeTypeFromList(string sFileNameOrPath)
         {
-            string sMimeType = null;
+            string? sMimeType = null;
             var sExtension = Path.GetExtension(sFileNameOrPath);
 
             if (!string.IsNullOrEmpty(sExtension))
@@ -44,9 +45,9 @@ namespace TustlerServicesLib
         /// </summary>
         /// <param name="sMimeType">A mime type such as text/plain</param>
         /// <returns></returns>
-        public static string GetExtensionFromMimeType(string sMimeType)
+        public static string? GetExtensionFromMimeType(string? sMimeType)
         {
-            string sExtension = null;
+            string? sExtension = null;
 
             if (!String.IsNullOrEmpty(sMimeType) && _mappings.Value.ContainsKey(sMimeType))
             {

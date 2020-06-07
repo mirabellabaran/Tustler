@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -10,9 +11,9 @@ namespace Tustler.Helpers
     /// <see cref="Frederick Samson"/>
     public static class FileServices
     {
-        public static string GetMimeType(string sFilePath)
+        public static string? GetMimeType(string sFilePath)
         {
-            string sMimeType = TustlerServicesLib.MimeTypeDictionary.GetMimeTypeFromList(sFilePath);
+            string? sMimeType = TustlerServicesLib.MimeTypeDictionary.GetMimeTypeFromList(sFilePath);
 
             if (String.IsNullOrEmpty(sMimeType))
             {

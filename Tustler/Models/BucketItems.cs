@@ -61,7 +61,7 @@ namespace Tustler.Models
             this.FilteredMediaType = BucketItemMediaType.All;
         }
 
-        internal static bool IsRquiredMediaType(BucketItemMediaType selectedMediaType, BucketItem item)
+        internal static bool IsRequiredMediaType(BucketItemMediaType selectedMediaType, BucketItem item)
         {
             static bool CheckTypeIs(string mimeType, string type)
             {
@@ -88,7 +88,7 @@ namespace Tustler.Models
         /// <param name="requiredMediaType"></param>
         private void SetFilter(BucketItemMediaType selectedMediaType)
         {
-            BucketItemsView.Filter = new Predicate<object>(item => IsRquiredMediaType(selectedMediaType, (item as BucketItem)));
+            BucketItemsView.Filter = new Predicate<object>(item => IsRequiredMediaType(selectedMediaType, (item as BucketItem)));
             BucketItemsView.Refresh();
         }
     }
@@ -112,7 +112,7 @@ namespace Tustler.Models
 
         public void Select(BucketItemViewModel bucketItemViewModel, BucketItemMediaType selectedMediaType)
         {
-            var filtered = bucketItemViewModel.BucketItems.Where(item => BucketItemViewSourceModel.IsRquiredMediaType(selectedMediaType, (item as BucketItem)));
+            var filtered = bucketItemViewModel.BucketItems.Where(item => BucketItemViewSourceModel.IsRequiredMediaType(selectedMediaType, (item as BucketItem)));
             foreach (var item in filtered)
             {
                 BucketItems.Add(item);

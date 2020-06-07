@@ -1,23 +1,29 @@
-﻿using Microsoft.Win32;
+﻿using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
 using System.Windows.Input;
-using static TustlerFSharpPlatform.TaskArguments;
-using AppSettings = TustlerServicesLib.ApplicationSettings;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+using TustlerAWSLib;
+using TustlerFSharpPlatform;
+using TustlerModels;
+using TustlerServicesLib;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
     /// <summary>
-    /// Interaction logic for FilePath.xaml
+    /// RequestS3Bucket has no TaskResponse binding expectations but requires dependency injection of AWS call parameters (see constructor)
+    /// Interaction logic for RequestS3Bucket.xaml
     /// </summary>
-    public partial class FilePath : UserControl, ICommandSource
+    public partial class RequestS3Bucket : UserControl, ICommandSource
     {
-        public FilePath()
-        {
-            InitializeComponent();
-        }
-
         #region ICommandSource
 
         #region ICommandSource Common Elements
@@ -28,7 +34,7 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             get
             {
-                return (ICommand) GetValue(CommandProperty);
+                return (ICommand)GetValue(CommandProperty);
             }
             set
             {
@@ -57,10 +63,9 @@ namespace Tustler.UserControls.TaskMemberControls
         private void AddCommand(ICommand newCommand)
         {
             EventHandler handler = new EventHandler(CanExecuteChanged);
-            //canExecuteChangedHandler = handler;
+
             if (newCommand != null)
             {
-                //newCommand.CanExecuteChanged += canExecuteChangedHandler;
                 newCommand.CanExecuteChanged += handler;
             }
         }
@@ -100,21 +105,57 @@ namespace Tustler.UserControls.TaskMemberControls
             DependencyProperty.Register(
                 "Command",
                 typeof(ICommand),
-                typeof(FilePath),
+                typeof(RequestS3Bucket),
                 new PropertyMetadata((ICommand)null,
                 new PropertyChangedCallback(CommandChanged)));
 
         private static void CommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            FilePath ctrl = (FilePath) d;
+            RequestS3Bucket ctrl = (RequestS3Bucket)d;
             ctrl.HookUpCommand((ICommand)e.OldValue, (ICommand)e.NewValue);
         }
 
-        public object CommandParameter => TaskArgumentMember.NewFilePath(tbFilePath.Text);
+        /// <summary>
+        /// Set to the selected bucket
+        /// </summary>
+        public object CommandParameter
+        {
+            get;
+            internal set;
+        }
 
         #endregion
 
-        private void TbFilePath_TextChanged(object sender, TextChangedEventArgs e)
+        private readonly AmazonWebServiceInterface awsInterface;
+        private readonly NotificationsList notifications;
+
+        public RequestS3Bucket()
+        {
+            InitializeComponent();
+
+            var serviceProvider = (Application.Current as App).ServiceProvider;
+
+            this.awsInterface = serviceProvider.GetRequiredService<AmazonWebServiceInterface>();
+            this.notifications = this.FindResource("applicationNotifications") as NotificationsList;
+        }
+
+        private async void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            BucketViewModel bucketViewModel = this.FindResource("bucketsInstance") as BucketViewModel;
+
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                await bucketViewModel.Refresh(awsInterface, false, notifications).ConfigureAwait(true);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        private void ExecuteCommand()
         {
             if (this.Command != null)
             {
@@ -129,37 +170,37 @@ namespace Tustler.UserControls.TaskMemberControls
             }
         }
 
-        private void OpenFilePicker_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        private void Select_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
             e.CanExecute = true;
         }
 
-        private void OpenFilePicker_Executed(object sender, ExecutedRoutedEventArgs e)
+        private void Select_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            OpenFileDialog dlg = new OpenFileDialog
-            {
-                Title = "Choose a file to open",
-                Multiselect = false,
-                InitialDirectory = AppSettings.FileCachePath
+            var context = (e.OriginalSource as Button).DataContext as Bucket;
+
+            var parameterData = new MiniTaskArgument?[] {
+                MiniTaskArgument.NewBucket(context)
             };
 
-            Nullable<bool> result = dlg.ShowDialog();
-            if (result == true)
+            CommandParameter = new MiniTaskArguments()
             {
-                tbFilePath.Text = dlg.FileName;
-            }
+                Mode = MiniTaskMode.Select,
+                TaskArguments = parameterData
+            };
+
+            ExecuteCommand();
         }
     }
 
-    public static class FilePathCommands
+    public static class RequestS3BucketCommands
     {
-        public static readonly RoutedUICommand OpenFilePicker = new RoutedUICommand
+        public static readonly RoutedUICommand Select = new RoutedUICommand
             (
-                "OpenFilePicker",
-                "OpenFilePicker",
-                typeof(FilePathCommands),
+                "Select",
+                "Select",
+                typeof(RequestS3BucketCommands),
                 null
             );
     }
-
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows;
@@ -21,26 +22,42 @@ using static TustlerFSharpPlatform.TaskArguments;
 namespace Tustler.UserControls.TaskMemberControls
 {
     /// <summary>
-    /// Interaction logic for MediaReference.xaml
+    /// Interaction logic for RequestS3MediaReference.xaml
     /// </summary>
-    public partial class MediaReference : UserControl
+    public partial class RequestS3MediaReference : UserControl, ICommandSource
     {
+        #region IsButtonEnabled DependencyProperty
+        public static readonly DependencyProperty IsButtonEnabledProperty =
+            DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(RequestS3MediaReference), new PropertyMetadata(true, PropertyChangedCallback));
+
+        private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
+        {
+            if (dependencyObject is RequestS3MediaReference ctrl)
+            {
+                if (dependencyPropertyChangedEventArgs.NewValue != null)
+                {
+                    var newState = (bool)dependencyPropertyChangedEventArgs.NewValue;
+                    ctrl.btnContinue.IsEnabled = newState;
+                }
+            }
+        }
+
+        /// <summary>
+        ///  Enables or disables the Continue button
+        /// </summary>
+        public bool IsButtonEnabled
+        {
+            get { return (bool)GetValue(IsButtonEnabledProperty); }
+            set { SetValue(IsButtonEnabledProperty, value); }
+        }
+        #endregion
+
+        #region MediaType DependencyProperty
         public static readonly DependencyProperty MediaTypeProperty =
             DependencyProperty.Register(
                 "MediaType",
                 typeof(BucketItemMediaType),
-                typeof(MediaReference));
-
-        private readonly AmazonWebServiceInterface awsInterface;
-        private readonly NotificationsList notifications;
-
-        public MediaReference(AmazonWebServiceInterface awsInterface)
-        {
-            InitializeComponent();
-
-            this.awsInterface = awsInterface;
-            this.notifications = this.FindResource("applicationNotifications") as NotificationsList;
-        }
+                typeof(RequestS3MediaReference));
 
         public BucketItemMediaType MediaType
         {
@@ -53,22 +70,7 @@ namespace Tustler.UserControls.TaskMemberControls
                 SetValue(MediaTypeProperty, value);
             }
         }
-
-        private async void UserControl_Loaded(object sender, RoutedEventArgs e)
-        {
-            BucketViewModel bucketViewModel = this.FindResource("bucketsInstance") as BucketViewModel;
-
-            try
-            {
-                Mouse.OverrideCursor = Cursors.Wait;
-
-                await bucketViewModel.Refresh(awsInterface, false, notifications).ConfigureAwait(true);
-            }
-            finally
-            {
-                Mouse.OverrideCursor = null;
-            }
-        }
+        #endregion
 
         #region ICommandSource
 
@@ -152,33 +154,52 @@ namespace Tustler.UserControls.TaskMemberControls
             DependencyProperty.Register(
                 "Command",
                 typeof(ICommand),
-                typeof(MediaReference),
+                typeof(RequestS3MediaReference),
                 new PropertyMetadata((ICommand)null,
                 new PropertyChangedCallback(CommandChanged)));
 
         private static void CommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            MediaReference ctrl = (MediaReference)d;
+            RequestS3MediaReference ctrl = (RequestS3MediaReference)d;
             ctrl.HookUpCommand((ICommand)e.OldValue, (ICommand)e.NewValue);
         }
 
         public object CommandParameter
         {
-            get
-            {
-                if (!(lbBuckets.SelectedItem is Bucket bucket) || !(lbBucketItems.SelectedItem is BucketItem bucketItem))
-                {
-                    return null;
-                }
-                else
-                {
-                    var mediaReference = new TaskArguments.MediaReference(bucket.Name, bucketItem.Key, bucketItem.MimeType, bucketItem.Extension);
-                    return TaskArgumentMember.NewMediaRef(mediaReference);
-                }
-            }
+            get;
+            internal set;
         }
 
         #endregion
+
+        private readonly AmazonWebServiceInterface awsInterface;
+        private readonly NotificationsList notifications;
+
+        public RequestS3MediaReference()
+        {
+            InitializeComponent();
+
+            var serviceProvider = (Application.Current as App).ServiceProvider;
+
+            this.awsInterface = serviceProvider.GetRequiredService<AmazonWebServiceInterface>();
+            this.notifications = this.FindResource("applicationNotifications") as NotificationsList;
+        }
+
+        private async void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            BucketViewModel bucketViewModel = this.FindResource("bucketsInstance") as BucketViewModel;
+
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                await bucketViewModel.Refresh(awsInterface, false, notifications).ConfigureAwait(true);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
 
         private async void BucketsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -201,7 +222,7 @@ namespace Tustler.UserControls.TaskMemberControls
             }
         }
 
-        private void BucketItemsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ExecuteCommand()
         {
             if (this.Command != null)
             {
@@ -215,5 +236,37 @@ namespace Tustler.UserControls.TaskMemberControls
                 }
             }
         }
+
+        private void Continue_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = (lbBuckets.SelectedItem is Bucket _) && (lbBucketItems.SelectedItem is BucketItem _);
+        }
+
+        private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            if ((lbBuckets.SelectedItem is Bucket bucket) && (lbBucketItems.SelectedItem is BucketItem bucketItem))
+            {
+                var mediaReference = new S3MediaReference(bucket.Name, bucketItem.Key, bucketItem.MimeType, bucketItem.Extension);
+
+                CommandParameter = new MiniTaskArguments()
+                {
+                    Mode = MiniTaskMode.Select,
+                    TaskArguments = new MiniTaskArgument[] { MiniTaskArgument.NewS3MediaReference(mediaReference) }
+                };
+
+                ExecuteCommand();
+            }
+        }
+    }
+
+    public static class S3MediaReferenceCommands
+    {
+        public static readonly RoutedUICommand Continue = new RoutedUICommand
+            (
+                "Continue",
+                "Continue",
+                typeof(S3MediaReferenceCommands),
+                null
+            );
     }
 }

@@ -37,17 +37,24 @@ type TaskResponse =
     | TaskContinueWith of ContinueWithArgument
     | Notification of Notification
     | DelaySequence of int
-    | Bucket of Bucket
-    | BucketItem of BucketItem
+    //| BucketItem of BucketItem
+    | Bucket of Bucket                      // selected a bucket
     | BucketsModel of BucketViewModel
     | BucketItemsModel of BucketItemViewModel
+    | S3MediaReference of S3MediaReference
+    | FileMediaReference of FileMediaReference
+    | FilePath of string
+    | FileUploadSuccess of bool
     | TranscriptionJobsModel of TranscriptionJobsViewModel
+    | BucketRequest
+    | FileMediaReferenceRequest
+    | S3MediaReferenceRequest
 
 [<RequireQualifiedAccess>]
 type TaskEvent =
     | InvokingFunction
     | SetArgument of TaskResponse
-    | ForEach of Stack<SubTaskItem>
+    | ForEach of RetainingStack<SubTaskItem>
     | SubTask of string     // the name of the sub-task
     | SelectArgument
     | ClearArguments
@@ -62,6 +69,43 @@ type MaybeResponse with
     member x.IsSet = match x with MaybeResponse.Just _ -> true | MaybeResponse.Nothing -> false
     member x.IsNotSet = match x with MaybeResponse.Nothing -> true | MaybeResponse.Just _ -> false
     member x.Value = match x with MaybeResponse.Nothing -> invalidArg "MaybeResponse.Value" "Value not set" | MaybeResponse.Just tr -> tr
+
+type TranscribeAudioArgs = {
+    S3BucketName: string option
+    FileMediaReference: FileMediaReference option
+}
+type TranscribeAudioArgs with
+    member x.AllSet =  x.S3BucketName.IsSome && x.FileMediaReference.IsSome
+    member x.NumArgs = 2
+    member x.Update response =
+        match response with
+        | TaskResponse.Bucket bucket -> { x with S3BucketName = Some(bucket.Name) }
+        | TaskResponse.FileMediaReference media -> { x with FileMediaReference = Some(media) }
+        | _ -> invalidArg "response" "Unexpected type"
+
+
+[<RequireQualifiedAccess>]
+type TaskArgumentRecord =
+    | TranscribeAudio of TranscribeAudioArgs
+    | Simple of string
+
+type TaskArgumentRecord with
+    member x.AllSet =
+        match x with
+        | TaskArgumentRecord.TranscribeAudio arg -> arg.AllSet
+        | TaskArgumentRecord.Simple arg -> arg.Length > 0
+    member x.NumArgs =
+        match x with
+        | TaskArgumentRecord.TranscribeAudio arg -> arg.NumArgs
+        | TaskArgumentRecord.Simple arg -> arg.Length
+    member x.Update response =
+        match x with
+        | TaskArgumentRecord.TranscribeAudio arg -> TaskArgumentRecord.TranscribeAudio (arg.Update response)
+        | TaskArgumentRecord.Simple arg -> TaskArgumentRecord.Simple (arg)
+
+type LocalResolverFunction = (TaskArgumentRecord -> AmazonWebServiceInterface -> NotificationsList -> seq<TaskResponse>)
+
+
 
 [<RequireQualifiedAccess>]
 type TaskUpdate =
@@ -102,8 +146,11 @@ type MiniTaskArgument =
     | String of string
     | Int of int
     | Bucket of Bucket
+    | FilePath of string
     | ForEach of IEnumerable<SubTaskItem>
     | ContinueWithArgument of ContinueWithArgument
+    | S3MediaReference of S3MediaReference
+    | FileMediaReference of FileMediaReference
 
 /// Collects MiniTask arguments (used by user control command source objects)
 type MiniTaskArguments () =
@@ -151,7 +198,37 @@ module public MiniTasks =
 
 module public Tasks =            
     
-    // all or some of the arguments can be Nothing
+    /// Find the first unset argument and send a request to the UI to resolve the value
+    let private resolveByRequest (args:InfiniteList<MaybeResponse>) (required:TaskResponse[]) =
+        let requestStack = Stack(required)
+
+        // consume the request stack for each argument that is set
+        args
+        |> Seq.takeWhile (fun mr -> mr.IsSet)
+        |> Seq.iter (fun mr -> requestStack.Pop() |> ignore)
+
+        if requestStack.Count > 0 then
+            Seq.singleton (requestStack.Pop())
+        else
+            Seq.empty
+
+    /// Find the first unset argument (skipping arguments resolved via UI request) and call the matching resolver function to set the argument value
+    let private resolveLocally (args:InfiniteList<MaybeResponse>) (argsRecord:TaskArgumentRecord) awsInterface notifications (resolvers:LocalResolverFunction[]) =
+        // get the resolver for the last unset argument
+        let resolverIndex = 
+            args
+            |> Seq.skip argsRecord.NumArgs      // skip over the UI-resolved required arguments
+            |> Seq.takeWhile (fun mr -> mr.IsSet)
+            |> Seq.length
+        resolvers.[resolverIndex] argsRecord awsInterface notifications
+
+    /// Integrate with the default record any request arguments that have been set using the TaskArgumentRecord updater function
+    let private integrateUIRequestArguments (args:InfiniteList<MaybeResponse>) (defaultArgs:TaskArgumentRecord) =
+        args
+        |> Seq.takeWhile (fun mr -> mr.IsSet)
+        |> Seq.fold (fun (argsRecord:TaskArgumentRecord) mr -> argsRecord.Update mr.Value) defaultArgs
+
+    /// Validate the supplied arguments by type and position; all or some of the arguments can be unset (MaybeResponse.IsNotSet)
     let private validateArgs expectedNum argChecker (args: InfiniteList<MaybeResponse>) =
         if args.Count > expectedNum then
             invalidArg "expectedNum" (sprintf "Expecting up to %d set argument values" expectedNum)
@@ -163,6 +240,7 @@ module public Tasks =
             | MaybeResponse.Nothing -> ()
         )
 
+    /// Get any notifications generated from the last AWS call (errors or informational messages)
     let private getNotificationResponse (notifications: NotificationsList) =
         Seq.map (fun note -> TaskResponse.Notification note) notifications.Notifications
         
@@ -197,6 +275,10 @@ module public Tasks =
 
     //        yield TaskResponse.TaskComplete "Finished"
     //    }        
+
+    // A minimal method that does nothing
+    [<HideFromUI>]
+    let MinimalMethod (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) = seq { yield TaskResponse.TaskInfo "Minimal method" }
 
     let S3FetchItems (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =      //(events: Queue<TaskEvent>) =
 
@@ -322,9 +404,6 @@ module public Tasks =
     [<HideFromUI>]
     let SomeSubTask (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =
 
-        let awsInterface = (arguments :?> NotificationsOnlyArguments).AWSInterface
-        let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
-
         seq {
             yield TaskResponse.TaskInfo "Doing SomeSubTask"
 
@@ -333,59 +412,99 @@ module public Tasks =
 
     let Cleanup (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =
 
-        let awsInterface = (arguments :?> NotificationsOnlyArguments).AWSInterface
-        let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
-
         seq {
             // show the sub-task names (the TaskName is used for function selection)
             yield TaskResponse.TaskMultiSelect ([|
                 { TaskName = "CleanTranscriptionJobHistory"; Description = "Transcription Job History" };
                 { TaskName = "SomeSubTask"; Description = "Other" }
             |])
-
-            //yield TaskResponse.TaskContinueWith ContinueWithArgument.Next
-
-            //yield TaskResponse.TaskComplete "Finished all selected tasks"
         }
 
-    // upload and transcribe some audio
-    let TranscribeAudio (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =
+    /// Upload and transcribe some audio
+    /// The function is called multiple times from the UI until all arguments are resolved
+    let TranscribeAudio (common_arguments: ITaskArgumentCollection) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+
+        //let isTranscriptionComplete (jobName: string) (jobs: ObservableCollection<TranscriptionJob>) =
+        //    let currentJob = jobs |> Seq.find (fun job -> job.TranscriptionJobName = jobName)
+        //    currentJob.TranscriptionJobStatus = "COMPLETED"
         
-        let startTranscriptionJob (args: TranscribeAudioArguments) =
-            // note: task name used as job name and as S3 media key (from upload)
-            Transcribe.startTranscriptionJob args.AWSInterface args.Notifications args.TaskName args.MediaRef.BucketName args.MediaRef.Key args.TranscriptionLanguageCode args.VocabularyName
+        let uploadMediaFile = fun argsRecord awsInterface notifications ->
+            let wrapped =
+                match argsRecord with
+                | TaskArgumentRecord.TranscribeAudio arg -> arg
+                | _ -> invalidArg "argsRecord" "Expecting a TranscribeAudio record type"
+            let bucketName = wrapped.S3BucketName.Value
+            let media = wrapped.FileMediaReference.Value
 
-        //let (TaskFunction.StartTranscriptionJob startTranscriptionJob) = CheckFileExistsReplaceWithFilePath (TaskFunction.StartTranscriptionJob (startTranscriptionJob))
+            let taskName = Guid.NewGuid().ToString()
 
-        let isTranscriptionComplete (jobName: string) (jobs: ObservableCollection<TranscriptionJob>) =
-            let currentJob = jobs |> Seq.find (fun job -> job.TranscriptionJobName = jobName)
-            currentJob.TranscriptionJobStatus = "COMPLETED"
+            // note: the task name may be used as the new S3 key
+            let success = S3.uploadBucketItem awsInterface notifications bucketName taskName media.FilePath media.MimeType media.Extension |> Async.RunSynchronously
 
-        let args = arguments :?> TranscribeAudioArguments
-        let awsInterface = args.AWSInterface
-        let notifications = args.Notifications
-        let mediaReference = args.MediaRef
+            seq {
+                yield! getNotificationResponse notifications
+                yield TaskResponse.FileUploadSuccess success
+            }
+
+        let awsInterface = (common_arguments :?> NotificationsOnlyArguments).AWSInterface
+        let notifications = (common_arguments :?> NotificationsOnlyArguments).Notifications
+        //validateArgs 2 argChecker args
         
         seq {
-            // note: the task name may be used as the new S3 key
-            let success = S3.uploadBucketItem awsInterface notifications mediaReference.BucketName mediaReference.Key args.FilePath mediaReference.MimeType mediaReference.Extension |> Async.RunSynchronously
-            yield! getNotificationResponse notifications
+            yield! resolveByRequest resolvable_arguments [| TaskResponse.FileMediaReferenceRequest; TaskResponse.BucketRequest |]
 
-            if success then
+            let defaultArgs = TaskArgumentRecord.TranscribeAudio { TranscribeAudioArgs.FileMediaReference = None; TranscribeAudioArgs.S3BucketName = None }
+            let transcribeAudioArgs = integrateUIRequestArguments resolvable_arguments defaultArgs
+            if transcribeAudioArgs.AllSet then
+                
+                yield! resolveLocally resolvable_arguments transcribeAudioArgs awsInterface notifications [|
+                    uploadMediaFile
+                |]
 
-                //let transcribeTasks = startTranscriptionJob args |> Async.RunSynchronously
-                //yield! getNotificationResponse notifications
-                //yield! Seq.map (fun item -> TaskResponse.TranscriptionJob item) transcribeTasks
+            //// is MediaReference set?
+            //let mediaReferenceResponse = args.Pop()
 
-                let waitOnCompletionSeq =
-                    0 // try ten times from zero
-                    |> Seq.unfold (fun i ->
-                        Task.Delay(1000) |> Async.AwaitTask |> Async.RunSynchronously
-                        let model = Transcribe.listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
-                        if i > 9 || isTranscriptionComplete args.TaskName model.TranscriptionJobs then
-                            None
-                        else
-                            Some( TaskResponse.DelaySequence i, i + 1))
-                yield! waitOnCompletionSeq
-                yield  TaskResponse.TaskComplete "Finished"
+            //if mediaReferenceResponse.IsNotSet then
+            //    yield TaskResponse.MediaReferenceRequest
+            //else
+            //    let mediaReference =
+            //        match mediaReferenceResponse.Value with
+            //        | TaskResponse.MediaReference media -> media
+            //        | _ -> invalidArg "mediaReferenceResponse" "Expecting a MediaReference" 
+
+            //    // is FilePath set?
+            //    let filePathResponse = args.Pop()
+
+            //    if filePathResponse.IsNotSet then
+            //        yield TaskResponse.FilePathRequest
+            //    else
+            //        let filePath =
+            //            match filePathResponse.Value with
+            //            | TaskResponse.FilePath path -> path
+            //            | _ -> invalidArg "filePathResponse" "Expecting a FilePath" 
+
+            //        // note: the task name may be used as the new S3 key
+            //        let success = S3.uploadBucketItem awsInterface notifications mediaReference.BucketName mediaReference.Key filePath mediaReference.MimeType mediaReference.Extension |> Async.RunSynchronously
+            //        yield! getNotificationResponse notifications
+
+            //        if success then
+
+            //            // note: task name used as job name and as S3 media key (from upload)
+            //            let jobsModel = Transcribe.startTranscriptionJob awsInterface notifications args.TaskName mediaReference.BucketName mediaReference.Key args.TranscriptionLanguageCode args.VocabularyName |> Async.RunSynchronously
+
+            //            //let transcribeTasks = startTranscriptionJob args |> Async.RunSynchronously
+            //            //yield! getNotificationResponse notifications
+            //            //yield! Seq.map (fun item -> TaskResponse.TranscriptionJob item) transcribeTasks
+
+            //            let waitOnCompletionSeq =
+            //                0 // try ten times from zero
+            //                |> Seq.unfold (fun i ->
+            //                    Task.Delay(1000) |> Async.AwaitTask |> Async.RunSynchronously
+            //                    let model = Transcribe.listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
+            //                    if i > 9 || isTranscriptionComplete args.TaskName model.TranscriptionJobs then
+            //                        None
+            //                    else
+            //                        Some( TaskResponse.DelaySequence i, i + 1))
+            //            yield! waitOnCompletionSeq
+            //            yield  TaskResponse.TaskComplete "Finished"
         }

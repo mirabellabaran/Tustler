@@ -141,9 +141,6 @@ namespace Tustler.UserControls.TaskMemberControls
             ctrl.HookUpCommand((ICommand)e.OldValue, (ICommand)e.NewValue);
         }
 
-        /// <summary>
-        /// Set to the selected bucket
-        /// </summary>
         public object CommandParameter
         {
             get;

@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -16,7 +17,7 @@ namespace TustlerWinPlatformLib
             out IntPtr ppwzMimeOut,
             int dwReserved);
 
-        public static string GetMimeTypeFromFile(string sFilePath)
+        public static string? GetMimeTypeFromFile(string sFilePath)
         {
             if (!System.IO.File.Exists(sFilePath))
                 throw new FileNotFoundException($"{sFilePath} not found");

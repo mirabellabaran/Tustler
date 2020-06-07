@@ -149,8 +149,6 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            //var context = (e.OriginalSource as Button).DataContext as TaskResponse.TaskMultiSelect;
-
             var selectedSubTasks = lbTasks.SelectedItems.Cast<SubTaskItem>();
             var parameterData = new MiniTaskArgument[] { MiniTaskArgument.NewForEach(selectedSubTasks) };
 
