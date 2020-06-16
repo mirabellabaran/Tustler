@@ -80,6 +80,14 @@
                 <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
             </Style>
 
+            <Style TargetType="TextBlock" x:Key="TextBlockPrompt">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="Padding" Value="3" />
+                <Setter Property="Margin" Value="0,30,0,0" />
+                <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
+                <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+            </Style>
+
             <Style TargetType="TextBlock" x:Key="TextBlockDark">
                 <Setter Property="Background" Value="{StaticResource ContrastingBackground}" />
                 <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
@@ -266,7 +274,8 @@
             <SolidColorBrush x:Key="ComboBox.Pressed.Editable.Button.Background" Color="#FF569DE5"/>
             <SolidColorBrush x:Key="ComboBox.Pressed.Editable.Button.Border" Color="#FF569DE5"/>
             <SolidColorBrush x:Key="ComboBox.Disabled.Glyph" Color="#FFBFBFBF"/>
-            <SolidColorBrush x:Key="ComboBox.Disabled.Background" Color="#FF101AEC"/>
+            <SolidColorBrush x:Key="ComboBox.Disabled.Background" Color="#3c3a3b"/>
+            <!-- Normal background (was #FF101AEC) -->
             <SolidColorBrush x:Key="ComboBox.Disabled.Border" Color="#FFD9D9D9"/>
             <SolidColorBrush x:Key="ComboBox.Disabled.Editable.Background" Color="#FFC91355"/>
             <SolidColorBrush x:Key="ComboBox.Disabled.Editable.Border" Color="#FFBFBFBF"/>

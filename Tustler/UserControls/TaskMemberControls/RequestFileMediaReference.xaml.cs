@@ -17,15 +17,23 @@ namespace Tustler.UserControls.TaskMemberControls
     {
         #region IsButtonEnabled DependencyProperty
         public static readonly DependencyProperty IsButtonEnabledProperty =
-            DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(TaskContinue), new PropertyMetadata(true, PropertyChangedCallback));
+            DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(RequestFileMediaReference), new PropertyMetadata(true, PropertyChangedCallback));
 
         private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
         {
-            if (dependencyObject is TaskContinue ctrl)
+            if (dependencyObject is RequestFileMediaReference ctrl)
             {
                 if (dependencyPropertyChangedEventArgs.NewValue != null)
                 {
                     var newState = (bool)dependencyPropertyChangedEventArgs.NewValue;
+                    ctrl.tbFilePath.IsEnabled = newState;
+                    ctrl.btnFilePicker.IsEnabled = newState;
+                    ctrl.lblMimeTypeLabel.IsEnabled = newState;
+                    ctrl.lblExtensionLabel.IsEnabled = newState;
+                    ctrl.lblFileExistsLabel.IsEnabled = newState;
+                    ctrl.lblMimeType.IsEnabled = newState;
+                    ctrl.lblExtension.IsEnabled = newState;
+                    ctrl.lblFileExists.IsEnabled = newState;
                     ctrl.btnContinue.IsEnabled = newState;
                 }
             }
@@ -161,54 +169,22 @@ namespace Tustler.UserControls.TaskMemberControls
             InitializeComponent();
         }
 
-        private bool CheckAddExtension(string filePath)
-        {
-            string? extension = Path.GetExtension(filePath);
-            if (string.IsNullOrEmpty(extension))
-            {
-                if (string.IsNullOrEmpty(this.Extension))
-                {
-                    // extension cannot be inferred
-                    MessageBoxResult result = MessageBox.Show($"No file extension was supplied and the extension cannot be inferred. Select OK to upload the file without an extension, or Cancel to add your own extension.", "Proceed without an extension", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
-                    var proceed = (result) switch
-                    {
-                        MessageBoxResult.OK => true,
-                        MessageBoxResult.Cancel => false,
-                        _ => false
-                    };
-
-                    return proceed;
-                }
-                else
-                {
-                    MessageBoxResult result = MessageBox.Show($"The inferred mimetype is {Mimetype} with extension {Extension}. Select Yes to upload the file with this extension, or No to add your own extension.", "Add a file extension", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                    switch (result)
-                    {
-                        case MessageBoxResult.Yes:
-                            tbFilePath.Text = Path.ChangeExtension(tbFilePath.Text, Extension);
-                            return true;
-                        case MessageBoxResult.No:
-                            return false;
-                        default:
-                            return false;
-                    }
-                }
-            }
-            else
-            {
-                return true;
-            }
-        }
-
         private void UpdateMimetype(string path)
         {
             if (string.IsNullOrEmpty(path) || (path.Length < 3))
             {
+                lblFileExists.Content = false;
+
                 this.Mimetype = null;
+                lblMimeType.Content = null;
                 this.Extension = null;
+                lblExtension.Content = null;
             }
             else {
-                string? mimetype = File.Exists(path) ? Helpers.FileServices.GetMimeType(path) : null;
+                var exists = File.Exists(path);
+                lblFileExists.Content = exists;
+
+                string? mimetype = exists ? Helpers.FileServices.GetMimeType(path) : null;
                 string? extension = Path.GetExtension(path);
 
                 if (string.IsNullOrEmpty(extension))
@@ -221,7 +197,9 @@ namespace Tustler.UserControls.TaskMemberControls
                 }
 
                 this.Mimetype = mimetype;
+                lblMimeType.Content = mimetype;
                 this.Extension = extension;
+                lblExtension.Content = extension ?? "Needs an extension";
             }
         }
 
@@ -265,23 +243,20 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             UpdateMimetype(tbFilePath.Text);
 
-            e.CanExecute = IsFileTyped;
+            e.CanExecute = File.Exists(tbFilePath.Text) && IsFileTyped;
         }
 
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            if (CheckAddExtension(tbFilePath.Text))
+            var fileMediaReference = new FileMediaReference(tbFilePath.Text, this.Mimetype, this.Extension);
+
+            CommandParameter = new MiniTaskArguments()
             {
-                var fileMediaReference = new FileMediaReference(tbFilePath.Text, this.Mimetype, this.Extension);
+                Mode = MiniTaskMode.Select,
+                TaskArguments = new MiniTaskArgument[] { MiniTaskArgument.NewFileMediaReference(fileMediaReference) }
+            };
 
-                CommandParameter = new MiniTaskArguments()
-                {
-                    Mode = MiniTaskMode.Select,
-                    TaskArguments = new MiniTaskArgument[] { MiniTaskArgument.NewFileMediaReference(fileMediaReference) }
-                };
-
-                ExecuteCommand();
-            }
+            ExecuteCommand();
         }
     }
 

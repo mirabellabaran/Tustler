@@ -203,6 +203,18 @@
         <DataTemplate x:Key="BucketRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <uctask:RequestS3Bucket Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
+
+        <DataTemplate x:Key="TranscriptionLanguageCodeRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <uctask:RequestLanguageCode Command="{x:Static uc:TaskCommands.UIResponse}" LanguageCodesViewModelType="Transcription" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="TranslationLanguageCodeRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <uctask:RequestLanguageCode Command="{x:Static uc:TaskCommands.UIResponse}" LanguageCodesViewModelType="Translation" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="VocabularyNameRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <uctask:RequestVocabularyName Command="{x:Static uc:TaskCommands.UIResponse}" />
+        </DataTemplate>
     </UserControl.Resources>
     
     <DockPanel Margin="20">

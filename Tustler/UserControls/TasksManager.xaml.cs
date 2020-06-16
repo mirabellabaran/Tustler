@@ -225,6 +225,7 @@ namespace Tustler.UserControls
                     case TaskResponse.BucketItemsModel _:
                     case TaskResponse.BucketsModel _:
                     case TaskResponse.TranscriptionJobsModel _:
+                    case TaskResponse.FileUploadSuccess _:
                         events.Add(TaskEvent.NewSetArgument(response));
                         break;
 
@@ -469,6 +470,15 @@ namespace Tustler.UserControls
                     case RequestS3MediaReference ctrl:
                         ctrl.IsButtonEnabled = false;
                         break;
+                    case RequestS3Bucket ctrl:
+                        ctrl.IsButtonEnabled = false;
+                        break;
+                    case RequestLanguageCode ctrl:
+                        ctrl.IsButtonEnabled = false;
+                        break;
+                    case RequestVocabularyName ctrl:
+                        ctrl.IsButtonEnabled = false;
+                        break;
                 }
 
                 // the user has selected an item that sets an argument
@@ -519,6 +529,18 @@ namespace Tustler.UserControls
                     case MiniTaskArgument.FileMediaReference mediaReferenceArg:
                         var mediaReference = mediaReferenceArg.Item;
                         events.Add(TaskEvent.NewSetArgument(TaskResponse.NewFileMediaReference(mediaReference)));
+                        break;
+                    case MiniTaskArgument.TranscriptionLanguageCode transcriptionLanguageCodeArg:
+                        var transcriptionLanguageCode = transcriptionLanguageCodeArg.Item;
+                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewTranscriptionLanguageCode(transcriptionLanguageCode)));
+                        break;
+                    case MiniTaskArgument.TranslationLanguageCode translationLanguageCodeArg:
+                        var translationLanguageCode = translationLanguageCodeArg.Item;
+                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewTranscriptionLanguageCode(translationLanguageCode)));
+                        break;
+                    case MiniTaskArgument.VocabularyName vocabularyNameArg:
+                        var vocabularyName = vocabularyNameArg.Item;
+                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewVocabularyName(vocabularyName)));
                         break;
                     default:
                         throw new ArgumentException($"RunSelectBucketMiniTask: Unknown argument type");
@@ -572,7 +594,7 @@ namespace Tustler.UserControls
                 await RunTask().ConfigureAwait(true);
             }
 
-            async Task RunUIResponseContinue(MiniTaskArguments parameterInfo)
+            async Task RunUIResponseContinue()
             {
                 // disable the Continue button and restart the task
                 if (e.OriginalSource is TaskContinue ctrl) ctrl.IsButtonEnabled = false;
@@ -609,7 +631,7 @@ namespace Tustler.UserControls
                     await RunUIResponseSelect(parameterInfo).ConfigureAwait(true);
                     break;
                 case MiniTaskMode.Tags.Continue:
-                    await RunUIResponseContinue(parameterInfo).ConfigureAwait(true);
+                    await RunUIResponseContinue().ConfigureAwait(true);
                     break;
                 case MiniTaskMode.Tags.AutoContinue:
                     await RunUIResponseAutoContinue(parameterInfo).ConfigureAwait(true);

@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows;
@@ -11,31 +10,31 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using TustlerAWSLib;
 using TustlerFSharpPlatform;
 using TustlerModels;
-using TustlerServicesLib;
+using static TustlerFSharpPlatform.TaskArguments;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
     /// <summary>
-    /// RequestS3Bucket has no TaskResponse binding expectations but requires dependency injection of AWS call parameters (see constructor)
-    /// Interaction logic for RequestS3Bucket.xaml
+    /// Interaction logic for RequestLanguageCode.xaml
+    /// Used for BOTH Transcription and Translation (use LanguageCodesViewModelType property)
     /// </summary>
-    public partial class RequestS3Bucket : UserControl, ICommandSource
+    public partial class RequestLanguageCode : UserControl, ICommandSource
     {
         #region IsButtonEnabled DependencyProperty
         public static readonly DependencyProperty IsButtonEnabledProperty =
-            DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(RequestS3Bucket), new PropertyMetadata(true, PropertyChangedCallback));
+            DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(RequestLanguageCode), new PropertyMetadata(true, PropertyChangedCallback));
 
         private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
         {
-            if (dependencyObject is RequestS3Bucket ctrl)
+            if (dependencyObject is RequestLanguageCode ctrl)
             {
                 if (dependencyPropertyChangedEventArgs.NewValue != null)
                 {
                     var newState = (bool)dependencyPropertyChangedEventArgs.NewValue;
-                    ctrl.icBuckets.IsEnabled = newState;
+                    ctrl.cbLanguage.IsEnabled = newState;
+                    ctrl.btnContinue.IsEnabled = newState;
                 }
             }
         }
@@ -49,6 +48,59 @@ namespace Tustler.UserControls.TaskMemberControls
             set { SetValue(IsButtonEnabledProperty, value); }
         }
         #endregion
+
+        #region LanguageCodesViewModelType
+
+        public static readonly DependencyProperty LanguageCodesViewModelTypeProperty =
+            DependencyProperty.Register(
+                "LanguageCodesViewModelType",
+                typeof(LanguageCodesViewModelType),
+                typeof(RequestLanguageCode));
+
+        public LanguageCodesViewModelType LanguageCodesViewModelType
+        {
+            get
+            {
+                return (LanguageCodesViewModelType)GetValue(LanguageCodesViewModelTypeProperty);
+            }
+            set
+            {
+                SetValue(LanguageCodesViewModelTypeProperty, value);
+            }
+        }
+
+        #endregion
+
+        public RequestLanguageCode()
+        {
+            InitializeComponent();
+        }
+
+        private void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            // bind the view model
+            LanguageCodesViewModel model = LanguageCodesViewModelType switch
+            {
+                LanguageCodesViewModelType.Transcription => new TranscriptionLanguageCodesViewModel(),
+                LanguageCodesViewModelType.Translation => new TranslationLanguageCodesViewModel(),
+                _ => throw new NotImplementedException(),
+            };
+
+            Binding myBinding = new Binding("LanguageCodes")
+            {
+                Source = model
+            };
+
+            cbLanguage.SetBinding(ComboBox.ItemsSourceProperty, myBinding);
+
+            // set the default item
+            cbLanguage.SelectedValue = LanguageCodesViewModelType switch
+            {
+                LanguageCodesViewModelType.Transcription => "en-US",
+                LanguageCodesViewModelType.Translation => "en",
+                _ => throw new ArgumentException("Language Code Task Member received an unknown language viewmodel type"),
+            };
+        }
 
         #region ICommandSource
 
@@ -89,9 +141,10 @@ namespace Tustler.UserControls.TaskMemberControls
         private void AddCommand(ICommand newCommand)
         {
             EventHandler handler = new EventHandler(CanExecuteChanged);
-
+            //canExecuteChangedHandler = handler;
             if (newCommand != null)
             {
+                //newCommand.CanExecuteChanged += canExecuteChangedHandler;
                 newCommand.CanExecuteChanged += handler;
             }
         }
@@ -131,19 +184,16 @@ namespace Tustler.UserControls.TaskMemberControls
             DependencyProperty.Register(
                 "Command",
                 typeof(ICommand),
-                typeof(RequestS3Bucket),
+                typeof(RequestLanguageCode),
                 new PropertyMetadata((ICommand)null,
                 new PropertyChangedCallback(CommandChanged)));
 
         private static void CommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            RequestS3Bucket ctrl = (RequestS3Bucket)d;
+            RequestLanguageCode ctrl = (RequestLanguageCode) d;
             ctrl.HookUpCommand((ICommand)e.OldValue, (ICommand)e.NewValue);
         }
 
-        /// <summary>
-        /// Set to the selected bucket
-        /// </summary>
         public object CommandParameter
         {
             get;
@@ -151,35 +201,6 @@ namespace Tustler.UserControls.TaskMemberControls
         }
 
         #endregion
-
-        private readonly AmazonWebServiceInterface awsInterface;
-        private readonly NotificationsList notifications;
-
-        public RequestS3Bucket()
-        {
-            InitializeComponent();
-
-            var serviceProvider = (Application.Current as App).ServiceProvider;
-
-            this.awsInterface = serviceProvider.GetRequiredService<AmazonWebServiceInterface>();
-            this.notifications = this.FindResource("applicationNotifications") as NotificationsList;
-        }
-
-        private async void UserControl_Loaded(object sender, RoutedEventArgs e)
-        {
-            BucketViewModel bucketViewModel = this.FindResource("bucketsInstance") as BucketViewModel;
-
-            try
-            {
-                Mouse.OverrideCursor = Cursors.Wait;
-
-                await bucketViewModel.Refresh(awsInterface, false, notifications).ConfigureAwait(true);
-            }
-            finally
-            {
-                Mouse.OverrideCursor = null;
-            }
-        }
 
         private void ExecuteCommand()
         {
@@ -196,36 +217,40 @@ namespace Tustler.UserControls.TaskMemberControls
             }
         }
 
-        private void Select_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        private void Continue_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = true;
+            e.CanExecute = cbLanguage.SelectedItem is TustlerModels.LanguageCode _;
         }
 
-        private void Select_Executed(object sender, ExecutedRoutedEventArgs e)
+        private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var context = (e.OriginalSource as Button).DataContext as Bucket;
-
-            var parameterData = new MiniTaskArgument?[] {
-                MiniTaskArgument.NewBucket(context)
-            };
-
-            CommandParameter = new MiniTaskArguments()
+            if (cbLanguage.SelectedItem is TustlerModels.LanguageCode languageCode)
             {
-                Mode = MiniTaskMode.Select,
-                TaskArguments = parameterData
-            };
+                var arg = LanguageCodesViewModelType switch
+                {
+                    LanguageCodesViewModelType.Transcription => MiniTaskArgument.NewTranscriptionLanguageCode(languageCode.Code),
+                    LanguageCodesViewModelType.Translation => MiniTaskArgument.NewTranslationLanguageCode(languageCode.Code),
+                    _ => null
+                };
 
-            ExecuteCommand();
+                CommandParameter = new MiniTaskArguments()
+                {
+                    Mode = MiniTaskMode.Select,
+                    TaskArguments = new MiniTaskArgument[] { arg }
+                };
+
+                ExecuteCommand();
+            }
         }
     }
 
-    public static class RequestS3BucketCommands
+    public static class LanguageCodeCommands
     {
-        public static readonly RoutedUICommand Select = new RoutedUICommand
+        public static readonly RoutedUICommand Continue = new RoutedUICommand
             (
-                "Select",
-                "Select",
-                typeof(RequestS3BucketCommands),
+                "Continue",
+                "Continue",
+                typeof(LanguageCodeCommands),
                 null
             );
     }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows;
@@ -10,68 +11,73 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using TustlerAWSLib;
+using TustlerFSharpPlatform;
 using TustlerModels;
+using TustlerServicesLib;
 using static TustlerFSharpPlatform.TaskArguments;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
     /// <summary>
-    /// Interaction logic for TranscriptionLanguageCode.xaml
+    /// Interaction logic for RequestVocabularyName.xaml
     /// </summary>
-    public partial class LanguageCode : UserControl, ICommandSource
+    public partial class RequestVocabularyName : UserControl
     {
-        public LanguageCode()
+        private readonly AmazonWebServiceInterface awsInterface;
+        private readonly NotificationsList notifications;
+
+        #region IsButtonEnabled DependencyProperty
+        public static readonly DependencyProperty IsButtonEnabledProperty =
+            DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(RequestVocabularyName), new PropertyMetadata(true, PropertyChangedCallback));
+
+        private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
+        {
+            if (dependencyObject is RequestVocabularyName ctrl)
+            {
+                if (dependencyPropertyChangedEventArgs.NewValue != null)
+                {
+                    var newState = (bool)dependencyPropertyChangedEventArgs.NewValue;
+                    ctrl.cbVocabularyName.IsEnabled = newState;
+                    ctrl.btnContinue.IsEnabled = newState;
+                }
+            }
+        }
+
+        /// <summary>
+        ///  Enables or disables the Continue button
+        /// </summary>
+        public bool IsButtonEnabled
+        {
+            get { return (bool)GetValue(IsButtonEnabledProperty); }
+            set { SetValue(IsButtonEnabledProperty, value); }
+        }
+        #endregion
+
+        public RequestVocabularyName()
         {
             InitializeComponent();
+
+            var serviceProvider = (Application.Current as App).ServiceProvider;
+
+            this.awsInterface = serviceProvider.GetRequiredService<AmazonWebServiceInterface>();
+            this.notifications = this.FindResource("applicationNotifications") as NotificationsList;
         }
 
-        private void UserControl_Loaded(object sender, RoutedEventArgs e)
+        private async void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
-            // set the default item
-            cbLanguage.SelectedValue = LanguageCodesViewModel switch
+            try
             {
-                TranscriptionLanguageCodesViewModel _ => "en-US",
-                TranslationLanguageCodesViewModel _ => "en",
-                _ => throw new ArgumentException("Language Code Task Member received an unknown language viewmodel"),
-            };
-        }
+                Mouse.OverrideCursor = Cursors.Wait;
 
-        #region LanguageCodesViewModel
-
-        public static readonly DependencyProperty LanguageCodesViewModelProperty =
-            DependencyProperty.Register(
-                "LanguageCodesViewModel",
-                typeof(LanguageCodesViewModel),
-                typeof(LanguageCode),
-                new PropertyMetadata((LanguageCodesViewModel)null,
-                new PropertyChangedCallback(LanguageCodesViewModelChanged)));
-
-        public LanguageCodesViewModel LanguageCodesViewModel
-        {
-            get
-            {
-                return (LanguageCodesViewModel)GetValue(LanguageCodesViewModelProperty);
+                var vocabulariesInstance = this.FindResource("vocabulariesInstance") as TranscriptionVocabulariesViewModel;
+                await vocabulariesInstance.Refresh(awsInterface, notifications).ConfigureAwait(true);
             }
-            set
+            finally
             {
-                SetValue(LanguageCodesViewModelProperty, value);
+                Mouse.OverrideCursor = null;
             }
         }
-
-        private static void LanguageCodesViewModelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-        {
-            LanguageCode ctrl = (LanguageCode) d;
-            var model = e.NewValue as LanguageCodesViewModel;
-
-            Binding myBinding = new Binding("LanguageCodes")
-            {
-                Source = model
-            };
-
-            ctrl.cbLanguage.SetBinding(ComboBox.ItemsSourceProperty, myBinding);
-        }
-
-        #endregion
 
         #region ICommandSource
 
@@ -155,40 +161,25 @@ namespace Tustler.UserControls.TaskMemberControls
             DependencyProperty.Register(
                 "Command",
                 typeof(ICommand),
-                typeof(LanguageCode),
+                typeof(RequestVocabularyName),
                 new PropertyMetadata((ICommand)null,
                 new PropertyChangedCallback(CommandChanged)));
 
         private static void CommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            LanguageCode ctrl = (LanguageCode) d;
+            RequestVocabularyName ctrl = (RequestVocabularyName)d;
             ctrl.HookUpCommand((ICommand)e.OldValue, (ICommand)e.NewValue);
         }
 
         public object CommandParameter
         {
-            get
-            {
-                if (cbLanguage.SelectedItem is TustlerModels.LanguageCode languageCode) {
-                    var member = LanguageCodesViewModel switch
-                    {
-                        TranscriptionLanguageCodesViewModel _ => TaskArgumentMember.NewTranscriptionLanguageCode(languageCode.Code),
-                        TranslationLanguageCodesViewModel _ => TaskArgumentMember.NewTranslationLanguageCode(languageCode.Code),
-                        _ => null
-                    };
-
-                    return member;
-                }
-                else
-                {
-                    return null;
-                }
-            }
+            get;
+            internal set;
         }
 
         #endregion
 
-        private void LanguageCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ExecuteCommand()
         {
             if (this.Command != null)
             {
@@ -202,5 +193,35 @@ namespace Tustler.UserControls.TaskMemberControls
                 }
             }
         }
+
+        private void Continue_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = cbVocabularyName.SelectedItem is TustlerModels.Vocabulary _;
+        }
+
+        private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            if (cbVocabularyName.SelectedItem is TustlerModels.Vocabulary vocabulary)
+            {
+                CommandParameter = new MiniTaskArguments()
+                {
+                    Mode = MiniTaskMode.Select,
+                    TaskArguments = new MiniTaskArgument[] { MiniTaskArgument.NewVocabularyName(vocabulary.VocabularyName) }
+                };
+
+                ExecuteCommand();
+            }
+        }
+    }
+
+    public static class VocabularyNameCommands
+    {
+        public static readonly RoutedUICommand Continue = new RoutedUICommand
+            (
+                "Continue",
+                "Continue",
+                typeof(VocabularyNameCommands),
+                null
+            );
     }
 }

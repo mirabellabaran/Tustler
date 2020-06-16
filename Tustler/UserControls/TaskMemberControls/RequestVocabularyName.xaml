@@ -1,0 +1,38 @@
+﻿<UserControl x:Class="Tustler.UserControls.TaskMemberControls.RequestVocabularyName"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:uc="clr-namespace:Tustler.UserControls.TaskMemberControls"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
+    <UserControl.CommandBindings>
+        <CommandBinding Command="{x:Static uc:VocabularyNameCommands.Continue}" CanExecute="Continue_CanExecute" Executed="Continue_Executed" />
+    </UserControl.CommandBindings>
+
+    <UserControl.Resources>
+        <Style x:Key="textBlockStyles" TargetType="TextBlock">
+            <Setter Property="TextAlignment" Value="Left" />
+            <Setter Property="Foreground" Value="{StaticResource {x:Static SystemColors.ControlTextBrushKey}}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0, 0, 0, 5" />
+        </Style>
+        <Style x:Key="comboBoxStyles" TargetType="ComboBox" BasedOn="{StaticResource ComboBoxStyleCustom}">
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Width" Value="130" />
+        </Style>
+        <DataTemplate x:Key="comboBoxItemTempate">
+            <TextBlock Text="{Binding Path=VocabularyName}" />
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <StackPanel Orientation="Vertical">
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Select a vocabulary name" Style="{StaticResource TextBlockPrompt}" />
+        <Border BorderBrush="BlanchedAlmond" BorderThickness="5" CornerRadius="10" Margin="10" Padding="10">
+            <DockPanel>
+                <ComboBox x:Name="cbVocabularyName" Height="30" Style="{StaticResource comboBoxStyles}" ItemsSource="{Binding Source={StaticResource vocabulariesInstance}, Path=TranscriptionVocabularies}" ItemTemplate="{StaticResource comboBoxItemTempate}" SelectedValuePath="VocabularyName" />
+                <Button x:Name="btnContinue" Content="Continue" Height="30" Width="80" Command="{x:Static uc:VocabularyNameCommands.Continue}" Style="{StaticResource ButtonDarkFlat}" />
+            </DockPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

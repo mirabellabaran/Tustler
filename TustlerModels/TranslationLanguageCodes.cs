@@ -74,6 +74,12 @@ namespace TustlerModels
         }
     }
 
+    public enum LanguageCodesViewModelType
+    {
+        Translation,
+        Transcription
+    }
+
     public abstract class LanguageCodesViewModel
     {
         public abstract ObservableCollection<LanguageCode> LanguageCodes { get; set; }
