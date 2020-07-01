@@ -133,6 +133,26 @@
             <Label Foreground="#637074" Background="#BDD4E7" FontWeight="Bold" Margin="10" Content="{Binding Path=Item}" />
         </DataTemplate>
 
+        <DataTemplate x:Key="TaskSequenceTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <StackPanel>
+                <Label Foreground="#637074" Background="#BDD4AA" FontWeight="Bold" Margin="1" Content="Sub-tasks:" />
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Path=Item}" Background="{StaticResource NormalBackground}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Label Foreground="#637074" Background="#BDD4E7" FontWeight="Bold" Margin="1" Content="{Binding Path=TaskName}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Vertical" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </ScrollViewer>
+            </StackPanel>
+        </DataTemplate>
+
         <DataTemplate x:Key="TaskMultiSelectTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <uctask:TaskMultiSelect Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
@@ -191,6 +211,25 @@
                 </DataGrid>
             </Border>
         </DataTemplate>
+
+        <DataTemplate x:Key="FileUploadTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <Border BorderBrush="DarkGray" BorderThickness="1" Padding="5" Margin="5">
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="New S3 Object" Style="{StaticResource TextBlockDark}" Margin="5" />
+                    <StackPanel Orientation="Horizontal" Margin="5">
+                        <TextBlock Text="BucketName" Width="100" />
+                        <TextBlock Text="{Binding Path=Item.BucketName}" />
+                        <TextBlock Text="Key" />
+                        <TextBlock Text="{Binding Path=Item.Key}" />
+                        <TextBlock Text="MimeType" />
+                        <TextBlock Text="{Binding Path=Item.MimeType}" />
+                        <TextBlock Text="Extension" />
+                        <TextBlock Text="{Binding Path=Item.Extension}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+        
 
         <DataTemplate x:Key="FileMediaReferenceRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <uctask:RequestFileMediaReference Command="{x:Static uc:TaskCommands.UIResponse}" />

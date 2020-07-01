@@ -39,25 +39,18 @@ namespace Tustler.UserControls
                 if (dependencyPropertyChangedEventArgs.NewValue != null)
                 {
                     var taskName = dependencyPropertyChangedEventArgs.NewValue as string;
-                    switch (taskName)
+                    ctrl.TaskFunction = taskName switch
                     {
-                        case "S3FetchItems":
-                            ctrl.TaskFunction = AWSTasks.S3FetchItems;
-                            break;
-                        case "Cleanup":
-                            ctrl.TaskFunction = AWSTasks.Cleanup;
-                            break;
-                        case "CleanTranscriptionJobHistory":
-                            ctrl.TaskFunction = AWSTasks.CleanTranscriptionJobHistory;
-                            break;
-                        case "SomeSubTask":
-                            ctrl.TaskFunction = AWSTasks.SomeSubTask;
-                            break;
-                        case "TranscribeAudio":
-                            //ctrl.TaskArguments = new TaskArguments.TranscribeAudioArguments(ctrl.awsInterface, new NotificationsList());
-                            ctrl.TaskFunction = AWSTasks.TranscribeAudio;
-                            break;
-                    }
+                        "S3FetchItems" => AWSTasks.S3FetchItems,
+                        "Cleanup" => AWSTasks.Cleanup,
+                        "CleanTranscriptionJobHistory" => AWSTasks.CleanTranscriptionJobHistory,
+                        "SomeSubTask" => AWSTasks.SomeSubTask,
+                        "TranscribeAudio" => AWSTasks.TranscribeAudio,//ctrl.TaskArguments = new TaskArguments.TranscribeAudioArguments(ctrl.awsInterface, new NotificationsList());
+                        "UploadMediaFile" => AWSTasks.UploadMediaFile,
+                        "StartTranscription" => AWSTasks.StartTranscription,
+                        "MonitorTranscription" => AWSTasks.MonitorTranscription,
+                        _ => throw new ArgumentException($"Unknown task name '{taskName}'"),
+                    };
                 }
             }
         }
@@ -204,9 +197,9 @@ namespace Tustler.UserControls
 
         private void PrepareNextTask(SubTaskItem nextTask)
         {
-            events.Add(TaskEvent.ClearArguments);
+            //events.Add(TaskEvent.ClearArguments);             // TODO MG might need this for Cleanup Task
             events.Add(TaskEvent.NewSubTask(nextTask.TaskName));
-            events.Add(TaskEvent.NewSetArgument(TaskResponse.NewTaskItem(nextTask)));
+            //events.Add(TaskEvent.NewSetArgument(TaskResponse.NewTaskItem(nextTask)));     // TODO and this
         }
 
         private async void Collection_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -219,18 +212,22 @@ namespace Tustler.UserControls
             {
                 switch (response)
                 {
-                    // argument responses that return actual values; set an event argument
+                    // argument responses that return values to be passed back via SetArgument event
                     case TaskResponse.Bucket _:
                     //case TaskResponse.BucketItem _:
                     case TaskResponse.BucketItemsModel _:
                     case TaskResponse.BucketsModel _:
-                    case TaskResponse.TranscriptionJobsModel _:
-                    case TaskResponse.FileUploadSuccess _:
+                    case TaskResponse.TranscriptionJobName _:       // note that TranscriptionJobsModel is for UI use only whereas TranscriptionJobName must be passed back
+                    case TaskResponse.FileUpload _:
                         events.Add(TaskEvent.NewSetArgument(response));
                         break;
 
                     case TaskResponse.TaskSelect _:
                         events.Add(TaskEvent.SelectArgument);
+                        break;
+                    case TaskResponse.TaskSequence taskSequence:
+                        var subTasks = new RetainingStack<SubTaskItem>(taskSequence.Item);
+                        events.Add(TaskEvent.NewForEach(subTasks));
                         break;
                     case TaskResponse.TaskComplete _:
                         events.Add(TaskEvent.FunctionCompleted);

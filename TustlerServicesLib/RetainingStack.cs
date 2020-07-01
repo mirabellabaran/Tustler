@@ -18,7 +18,7 @@ namespace TustlerServicesLib
             if (items is null) throw new ArgumentNullException(nameof(items), "Expecting a non-null value");
 
             _array = items.ToImmutableArray();
-            _stack = new Stack<T>(items);
+            _stack = new Stack<T>(items.Reverse());     // reversed so that calling Pop() removes items in _array order
         }
 
         public int Count

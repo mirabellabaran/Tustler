@@ -203,10 +203,13 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             if (cbVocabularyName.SelectedItem is TustlerModels.Vocabulary vocabulary)
             {
+                // handle special case of 'None'
+                var vocabularyName = (vocabulary.VocabularyName == "None" && vocabulary.LanguageCode is null) ? null : vocabulary.VocabularyName;
+
                 CommandParameter = new MiniTaskArguments()
                 {
                     Mode = MiniTaskMode.Select,
-                    TaskArguments = new MiniTaskArgument[] { MiniTaskArgument.NewVocabularyName(vocabulary.VocabularyName) }
+                    TaskArguments = new MiniTaskArgument[] { MiniTaskArgument.NewVocabularyName(vocabularyName) }
                 };
 
                 ExecuteCommand();

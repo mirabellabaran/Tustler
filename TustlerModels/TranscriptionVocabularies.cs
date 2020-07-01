@@ -18,6 +18,17 @@ namespace TustlerModels
             private set;
         }
 
+        /// <summary>
+        /// Includes all vocabulary names plus a special 'None' vocabulary name
+        /// </summary>
+        /// <remarks>This may be bound independantly of the TranscriptionVocabularies collection above
+        /// and is synched with this collection in the Refresh method</remarks>
+        public ObservableCollection<Vocabulary> TranscriptionVocabulariesWithNone
+        {
+            get;
+            private set;
+        }
+
         public bool NeedsRefresh
         {
             get;
@@ -27,6 +38,7 @@ namespace TustlerModels
         public TranscriptionVocabulariesViewModel()
         {
             this.TranscriptionVocabularies = new ObservableCollection<Vocabulary>();
+            this.TranscriptionVocabulariesWithNone = new ObservableCollection<Vocabulary>();
             this.NeedsRefresh = true;
         }
 
@@ -36,6 +48,20 @@ namespace TustlerModels
             {
                 var vocabularies = await awsInterface.Transcribe.ListVocabularies().ConfigureAwait(true);
                 ProcessVocabularies(notifications, vocabularies);
+
+                // resync the other observable collection
+                this.TranscriptionVocabulariesWithNone.Clear();
+                foreach (var item in this.TranscriptionVocabularies)
+                {
+                    this.TranscriptionVocabulariesWithNone.Add(item);
+                }
+                this.TranscriptionVocabulariesWithNone.Add(new Vocabulary
+                {
+                    VocabularyName = "None",
+                    VocabularyState = Amazon.TranscribeService.VocabularyState.READY,
+                    LanguageCode = null,
+                    LastModifiedTime = DateTime.Now
+                });
             }
         }
 
