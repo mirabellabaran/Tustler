@@ -12,12 +12,16 @@
             <Setter Property="Foreground" Value="DarkGreen" />
             <Setter Property="Background" Value="LightGreen" />
             <Style.Triggers>
-                <!-- Tag values: Next=0; Specify the content -->
+                <!-- Tag values: Continue=0; Specify the content -->
                 <DataTrigger Binding="{Binding Path=Item.Tag}" Value="0">
+                    <Setter Property="Content" Value="{Binding Path=Item}" />
+                </DataTrigger>
+                <!-- Tag values: Next=1; Specify the content -->
+                <DataTrigger Binding="{Binding Path=Item.Tag}" Value="1">
                     <Setter Property="Content" Value="Next Task" />
                 </DataTrigger>
-                <!-- Tag value: None=1; Don't show anything -->
-                <DataTrigger Binding="{Binding Path=Item.Tag}" Value="1">
+                <!-- Tag value: None=2; Don't show anything -->
+                <DataTrigger Binding="{Binding Path=Item.Tag}" Value="2">
                     <Setter Property="Content" Value="" />
                     <Setter Property="Background" Value="{StaticResource NormalBackground}" />
                 </DataTrigger>

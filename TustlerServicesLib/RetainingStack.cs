@@ -10,15 +10,35 @@ namespace TustlerServicesLib
     /// </summary>
     public class RetainingStack<T>
     {
+        /// <summary>
+        /// Specifies whether stack items such as tasks are independant or sequentially dependant
+        /// </summary>
+        public enum ItemOrdering
+        {
+            Independant,    // execution of each item is independant of that of its peers
+            Sequential      // items are executed sequentially with sequential dependancies
+        }
+
         private readonly Stack<T> _stack;
         private readonly ImmutableArray<T> _array;
+        private readonly ItemOrdering _ordering;
 
-        public RetainingStack(IEnumerable<T> items)
+        public RetainingStack(IEnumerable<T> items, ItemOrdering ordering)
         {
             if (items is null) throw new ArgumentNullException(nameof(items), "Expecting a non-null value");
 
             _array = items.ToImmutableArray();
             _stack = new Stack<T>(items.Reverse());     // reversed so that calling Pop() removes items in _array order
+
+            _ordering = ordering;
+        }
+
+        public ItemOrdering Ordering
+        {
+            get
+            {
+                return _ordering;
+            }
         }
 
         public int Count

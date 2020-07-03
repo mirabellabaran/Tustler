@@ -154,7 +154,7 @@ namespace Tustler.UserControls.TaskMemberControls
 
             CommandParameter = new MiniTaskArguments()
             {
-                Mode = MiniTaskMode.ForEach,
+                Mode = MiniTaskMode.ForEachIndependantTask,
                 TaskArguments = parameterData
             };
 

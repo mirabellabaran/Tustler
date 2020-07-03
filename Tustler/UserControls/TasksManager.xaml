@@ -212,6 +212,13 @@
             </Border>
         </DataTemplate>
 
+        <DataTemplate x:Key="TranscriptionJobNameTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <UniformGrid Rows="1" Columns="2">
+                <TextBlock Foreground="LimeGreen" Text="Transcription Job Name:" Margin="10,0,0,0" />
+                <TextBlock Foreground="LimeGreen" Text="{Binding Path=Item}" Margin="10,0,0,0" />
+            </UniformGrid>
+        </DataTemplate>
+
         <DataTemplate x:Key="FileUploadTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <Border BorderBrush="DarkGray" BorderThickness="1" Padding="5" Margin="5">
                 <StackPanel Orientation="Vertical">

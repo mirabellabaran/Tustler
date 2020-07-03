@@ -17,7 +17,8 @@ type HideFromUI() = inherit System.Attribute()
 
 [<RequireQualifiedAccess>]
 type ContinueWithArgument =
-    | Next
+    | Continue of string    // auto-continue displaying a string message
+    | Next                  // auto-continue to next task (default message)
     | None
 
 type SubTaskItem = {
@@ -27,7 +28,6 @@ type SubTaskItem = {
 
 [<RequireQualifiedAccess>]
 type TaskResponse =
-    //| StringArgument of string
     | TaskInfo of string
     | TaskComplete of string
     | TaskPrompt of string                  // prompt the user to continue (a single Continue button is displayed along with the prompt message)
@@ -36,21 +36,27 @@ type TaskResponse =
     | TaskItem of SubTaskItem                           // the current subtask function name and description (one of the user-selected items from the MultiSelect list)
     | TaskSequence of IEnumerable<SubTaskItem>          // a sequence of tasks that flow from one to the next without any intervening UI
     | TaskContinueWith of ContinueWithArgument
+
     | Notification of Notification
     | DelaySequence of int
-    //| BucketItem of BucketItem
-    | Bucket of Bucket                      // selected a bucket
-    | BucketsModel of BucketViewModel
-    | BucketItemsModel of BucketItemViewModel
-    //| S3MediaReference of S3MediaReference
-    | FileMediaReference of FileMediaReference
-    | FilePath of string
-    | FileUpload of S3MediaReference
-    | TranscriptionJobName of string
-    | TranscriptionJobsModel of TranscriptionJobsViewModel
-    | TranscriptionLanguageCode of string
-    | TranslationLanguageCode of string
-    | VocabularyName of string
+
+    // Values for UI display only
+    | ShowTranscriptionJobsSummary of TranscriptionJobsViewModel
+
+    // Values that are set on the events stack (as TaskEvent SetArgument)
+    | SetBucket of Bucket                           // set an argument on the events stack for the selected bucket
+    | SetBucketsModel of BucketViewModel            // set an argument on the events stack for the available buckets
+    | SetBucketItemsModel of BucketItemViewModel    // set an argument on the events stack for the selected bucket item
+    | SetFileUpload of S3MediaReference                // set an argument on the events stack for the file upload details
+    | SetTranscriptionJobName of string             // set an argument on the events stack for the name of the new transcription job
+    | SetTranscriptionJobsModel of TranscriptionJobsViewModel      // set an argument on the events stack for the new transcription job
+    | SetFilePath of string
+    | SetFileMediaReference of FileMediaReference
+    | SetTranscriptionLanguageCode of string
+    | SetTranslationLanguageCode of string
+    | SetVocabularyName of string
+
+    // Values that are sent as requests to the user
     | BucketRequest
     | FileMediaReferenceRequest
     | S3MediaReferenceRequest
@@ -108,12 +114,12 @@ type TranscribeAudioArgs with
         | _ -> invalidArg "index" "Sub task index out of range"
     member x.Update response =
         match response with
-        | TaskResponse.Bucket bucket -> { x with S3BucketName = Some(bucket.Name) }
-        | TaskResponse.FileMediaReference media -> { x with FileMediaReference = Some(media) }
-        | TaskResponse.TranscriptionLanguageCode code -> { x with TranscriptionLanguageCode = Some(code) }
-        | TaskResponse.VocabularyName name -> { x with VocabularyName = Some(name) }
-        | TaskResponse.FileUpload media -> { x with S3MediaReference = Some(media) }
-        | TaskResponse.TranscriptionJobName transcriptionJobName -> { x with TranscriptionJobName = Some(transcriptionJobName) }
+        | TaskResponse.SetBucket bucket -> { x with S3BucketName = Some(bucket.Name) }
+        | TaskResponse.SetFileMediaReference media -> { x with FileMediaReference = Some(media) }
+        | TaskResponse.SetTranscriptionLanguageCode code -> { x with TranscriptionLanguageCode = Some(code) }
+        | TaskResponse.SetVocabularyName name -> { x with VocabularyName = Some(name) }
+        | TaskResponse.SetFileUpload media -> { x with S3MediaReference = Some(media) }
+        | TaskResponse.SetTranscriptionJobName transcriptionJobName -> { x with TranscriptionJobName = Some(transcriptionJobName) }
         | _ -> invalidArg "response" "Unexpected type"
 
 
@@ -175,7 +181,7 @@ type MiniTaskMode =
     | Select
     | Continue
     | AutoContinue
-    | ForEach
+    | ForEachIndependantTask
 
 [<RequireQualifiedAccess>]
 type MiniTaskArgument =
@@ -213,7 +219,7 @@ module public MiniTasks =
     let Delete awsInterface (notifications: NotificationsList) (context:TaskResponse) (args:MiniTaskArgument[]) =
         if args.Length >= 2 then
             match context with
-            | TaskResponse.BucketItemsModel _ ->
+            | TaskResponse.SetBucketItemsModel _ ->
                 let (bucketName, key) =
                     match (args.[0], args.[1]) with
                     | (MiniTaskArgument.String a, MiniTaskArgument.String b) -> (a, b)
@@ -226,7 +232,7 @@ module public MiniTasks =
     let Download awsInterface (notifications: NotificationsList) (context:TaskResponse) (args:MiniTaskArgument[]) =
         if args.Length >= 3 then
             match context with
-            | TaskResponse.BucketItemsModel _ ->
+            | TaskResponse.SetBucketItemsModel _ ->
                 let (bucketName, key, filePath) =
                     match (args.[0], args.[1], args.[2]) with
                     | (MiniTaskArgument.String a, MiniTaskArgument.String b, MiniTaskArgument.String c) -> (a, b, c)
@@ -334,10 +340,10 @@ module public Tasks =
 
         let argChecker index tr =
             match (index, tr) with
-            | 0, TaskResponse.BucketsModel _ -> ()
-            | 1, TaskResponse.Bucket _ -> ()
-            | 2, TaskResponse.BucketItemsModel _ -> ()
-            | _ -> invalidArg "tr" "S3FetchItems: Expecting three arguments: BucketsModel, Bucket, BucketItemsModel" 
+            | 0, TaskResponse.SetBucketsModel _ -> ()
+            | 1, TaskResponse.SetBucket _ -> ()
+            | 2, TaskResponse.SetBucketItemsModel _ -> ()
+            | _ -> invalidArg "tr" "S3FetchItems: Expecting three arguments: SetBucketsModel, SetBucket, SetBucketItemsModel" 
 
         let awsInterface = (arguments :?> NotificationsOnlyArguments).AWSInterface
         let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
@@ -351,7 +357,7 @@ module public Tasks =
                 yield! getNotificationResponse notifications
                 if model.Buckets.Count > 0 then
                     yield TaskResponse.TaskSelect "Choose a bucket:"
-                    yield TaskResponse.BucketsModel model
+                    yield TaskResponse.SetBucketsModel model
 
             // is SelectedBucket set?   (SelectedBucket is set via UI selection; see TaskSelect above)
             let selectedBucket = args.Pop()
@@ -360,14 +366,14 @@ module public Tasks =
             if selectedBucket.IsSet && args.Pop().IsNotSet then
                 let bucketName =
                     match selectedBucket.Value with
-                    | TaskResponse.Bucket bucket -> bucket.Name
+                    | TaskResponse.SetBucket bucket -> bucket.Name
                     | _ -> invalidArg "SelectedBucket" "Expecting a Bucket" 
 
                 yield TaskResponse.TaskInfo (sprintf "Retrieving bucket items from %s..." bucketName)
 
                 let model = S3.getBucketItems awsInterface notifications bucketName |> Async.RunSynchronously
                 yield! getNotificationResponse notifications
-                yield TaskResponse.BucketItemsModel model
+                yield TaskResponse.SetBucketItemsModel model
 
                 yield TaskResponse.TaskComplete "Finished"
         }
@@ -399,8 +405,8 @@ module public Tasks =
         let argChecker index tr =
             match (index, tr) with
             | 0, TaskResponse.TaskItem _ -> ()
-            | 1, TaskResponse.TranscriptionJobsModel _ -> ()
-            | _ -> invalidArg "tr" "Cleanup: Expecting two arguments: TaskItem and TranscriptionJobsModel"
+            | 1, TaskResponse.SetTranscriptionJobsModel _ -> ()
+            | _ -> invalidArg "tr" "Cleanup: Expecting two arguments: TaskItem and SetTranscriptionJobsModel"
 
         let awsInterface = (arguments :?> NotificationsOnlyArguments).AWSInterface
         let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
@@ -419,13 +425,13 @@ module public Tasks =
 
                 let model = Transcribe.listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
                 yield! getNotificationResponse notifications
-                yield TaskResponse.TranscriptionJobsModel model
+                yield TaskResponse.SetTranscriptionJobsModel model
                 yield TaskResponse.TaskPrompt "Delete all completed transcription jobs?"
 
             if modelResponse.IsSet then
                 let model =
                     match modelResponse.Value with
-                    | TaskResponse.TranscriptionJobsModel jm -> jm
+                    | TaskResponse.SetTranscriptionJobsModel jm -> jm
                     | _ -> invalidArg "modelResponse" "Expecting a TranscriptionJobsModel" 
 
                 if hasDeleteableJobs model then
@@ -434,7 +440,7 @@ module public Tasks =
 
                     let model = Transcribe.listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
                     yield! getNotificationResponse notifications
-                    yield TaskResponse.TranscriptionJobsModel model
+                    yield TaskResponse.ShowTranscriptionJobsSummary model
                 else
                     yield TaskResponse.TaskInfo "No transcription jobs to delete"
 
@@ -480,7 +486,7 @@ module public Tasks =
             seq {
                 yield! getNotificationResponse notifications
                 if success then
-                    yield TaskResponse.FileUpload (S3MediaReference(bucketName, newKey, media.MimeType, media.Extension))
+                    yield TaskResponse.SetFileUpload (S3MediaReference(bucketName, newKey, media.MimeType, media.Extension))
                 yield TaskResponse.TaskComplete "Uploaded media file"
             }
 
@@ -513,8 +519,8 @@ module public Tasks =
 
             seq {
                 yield! getNotificationResponse notifications
-                yield TaskResponse.TranscriptionJobName jobName
-                yield TaskResponse.TranscriptionJobsModel jobsModel
+                yield TaskResponse.SetTranscriptionJobName jobName
+                yield TaskResponse.ShowTranscriptionJobsSummary jobsModel
                 yield TaskResponse.TaskComplete "Transcription started"
             }
 
@@ -549,7 +555,7 @@ module public Tasks =
                     if isComplete then
                         yield TaskResponse.TaskComplete "Transcription Job Completed"
                     else
-                        yield TaskResponse.TaskContinueWith ContinueWithArgument.Next
+                        yield TaskResponse.TaskContinueWith (ContinueWithArgument.Continue "Querying job status")
             }
 
         seq {

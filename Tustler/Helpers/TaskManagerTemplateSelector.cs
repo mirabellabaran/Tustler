@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows;
@@ -11,12 +12,10 @@ namespace Tustler.Helpers
 {
     public class TaskManagerDataTemplateSelector : DataTemplateSelector
     {
-        public override DataTemplate SelectTemplate(object item, DependencyObject container)
+        public override DataTemplate? SelectTemplate(object item, DependencyObject container)
         {
-            if (container is FrameworkElement element && item != null && item is TaskResponse)
+            if (container is FrameworkElement element && item is TaskResponse response)
             {
-                TaskResponse response = item as TaskResponse;
-
                 DataTemplate? GetErrorTemplate(TaskResponse.Notification note)
                 {
                     return note.Item switch
@@ -41,6 +40,8 @@ namespace Tustler.Helpers
                     };
                 }
 
+                // Note that ShowTranscriptionJobsSummary and SetTranscriptionJobsModel share a template as both display the same data type
+                // (the latter also sets an argument on the events stack)
                 var template = response switch
                 {
                     TaskResponse.Notification note => GetErrorTemplate(note),
@@ -51,12 +52,15 @@ namespace Tustler.Helpers
                     TaskResponse.TaskMultiSelect _ => element.FindResource("TaskMultiSelectTemplate") as DataTemplate,
                     TaskResponse.TaskSequence _ => element.FindResource("TaskSequenceTemplate") as DataTemplate,
                     TaskResponse.TaskContinueWith _ => element.FindResource("TaskContinueWithTemplate") as DataTemplate,
-                    TaskResponse.Bucket _ => element.FindResource("BucketTemplate") as DataTemplate,
-                    //TaskResponse.BucketItem _ => element.FindResource("BucketItemTemplate") as DataTemplate,
-                    TaskResponse.BucketsModel _ => element.FindResource("BucketsModelTemplate") as DataTemplate,
-                    TaskResponse.BucketItemsModel _ => element.FindResource("BucketItemsModelTemplate") as DataTemplate,
-                    TaskResponse.TranscriptionJobsModel _ => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
-                    TaskResponse.FileUpload _ => element.FindResource("FileUploadTemplate") as DataTemplate,
+
+                    TaskResponse.ShowTranscriptionJobsSummary _ => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
+
+                    TaskResponse.SetBucket _ => element.FindResource("BucketTemplate") as DataTemplate,
+                    TaskResponse.SetBucketsModel _ => element.FindResource("BucketsModelTemplate") as DataTemplate,
+                    TaskResponse.SetBucketItemsModel _ => element.FindResource("BucketItemsModelTemplate") as DataTemplate,
+                    TaskResponse.SetTranscriptionJobsModel _ => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
+                    TaskResponse.SetTranscriptionJobName _ => element.FindResource("TranscriptionJobNameTemplate") as DataTemplate,
+                    TaskResponse.SetFileUpload _ => element.FindResource("FileUploadTemplate") as DataTemplate,
                     _ => GetRequestTemplate(response)
                 };
 
@@ -69,9 +73,9 @@ namespace Tustler.Helpers
 
     public class TaskManagerChildDataTemplateSelector : DataTemplateSelector
     {
-        public override DataTemplate SelectTemplate(object item, DependencyObject container)
+        public override DataTemplate? SelectTemplate(object item, DependencyObject container)
         {
-            if (container is FrameworkElement element && item != null)
+            if (container is FrameworkElement element && item is object)
             {
                 var template = item switch
                 {

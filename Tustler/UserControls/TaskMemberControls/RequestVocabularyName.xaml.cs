@@ -77,6 +77,8 @@ namespace Tustler.UserControls.TaskMemberControls
             {
                 Mouse.OverrideCursor = null;
             }
+
+            CommandManager.InvalidateRequerySuggested();
         }
 
         #region ICommandSource

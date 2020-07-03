@@ -57,7 +57,7 @@ namespace TustlerModels
                 }
                 this.TranscriptionVocabulariesWithNone.Add(new Vocabulary
                 {
-                    VocabularyName = "None",
+                    VocabularyName = "[None]",
                     VocabularyState = Amazon.TranscribeService.VocabularyState.READY,
                     LanguageCode = null,
                     LastModifiedTime = DateTime.Now

@@ -174,7 +174,7 @@ namespace Tustler.UserControls
             //}
         }
 
-        private SubTaskItem? IsTaskAvailable()
+        private RetainingStack<SubTaskItem>? GetCurrentLoopStack()
         {
             // get the next item on the ForEach stack (if there is one)
 
@@ -190,35 +190,38 @@ namespace Tustler.UserControls
             // ... and retrieve the next item from its payload
             return lastForeach switch
             {
-                TaskEvent.ForEach items => (items.Item.Count > 0) ? items.Item.Pop() : null,
+                TaskEvent.ForEach items => items.Item,
                 _ => null
             };
         }
 
-        private void PrepareNextTask(SubTaskItem nextTask)
+        /// <summary>
+        /// Check if there is an item available on the ForEach stack (if there is one)
+        /// </summary>
+        /// <returns></returns>
+        private bool IsTaskAvailable()
         {
-            //events.Add(TaskEvent.ClearArguments);             // TODO MG might need this for Cleanup Task
-            events.Add(TaskEvent.NewSubTask(nextTask.TaskName));
-            //events.Add(TaskEvent.NewSetArgument(TaskResponse.NewTaskItem(nextTask)));     // TODO and this
+            var stack = GetCurrentLoopStack();
+            return stack?.Count > 0;
         }
 
         private async void Collection_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             var newItems = e.NewItems as System.Collections.IEnumerable;
-            SubTaskItem? nextTask = null;
+            bool taskAvailable = false;
 
             // add to the bound observable collection (can only add on the Dispatcher thread)
             foreach (var response in newItems.Cast<TaskResponse>())
             {
                 switch (response)
                 {
-                    // argument responses that return values to be passed back via SetArgument event
-                    case TaskResponse.Bucket _:
-                    //case TaskResponse.BucketItem _:
-                    case TaskResponse.BucketItemsModel _:
-                    case TaskResponse.BucketsModel _:
-                    case TaskResponse.TranscriptionJobName _:       // note that TranscriptionJobsModel is for UI use only whereas TranscriptionJobName must be passed back
-                    case TaskResponse.FileUpload _:
+                    // argument responses that return values to be passed back via the SetArgument event
+                    case TaskResponse.SetBucket _:
+                    case TaskResponse.SetBucketsModel _:
+                    case TaskResponse.SetBucketItemsModel _:
+                    case TaskResponse.SetFileUpload _:
+                    case TaskResponse.SetTranscriptionJobName _:
+                    case TaskResponse.SetTranscriptionJobsModel _:
                         events.Add(TaskEvent.NewSetArgument(response));
                         break;
 
@@ -226,14 +229,14 @@ namespace Tustler.UserControls
                         events.Add(TaskEvent.SelectArgument);
                         break;
                     case TaskResponse.TaskSequence taskSequence:
-                        var subTasks = new RetainingStack<SubTaskItem>(taskSequence.Item);
+                        var subTasks = new RetainingStack<SubTaskItem>(taskSequence.Item, RetainingStack<SubTaskItem>.ItemOrdering.Sequential);
                         events.Add(TaskEvent.NewForEach(subTasks));
                         break;
                     case TaskResponse.TaskComplete _:
                         events.Add(TaskEvent.FunctionCompleted);
 
                         // check for a next sub-task (if there is one)
-                        nextTask = IsTaskAvailable();
+                        taskAvailable = IsTaskAvailable();
                         break;
                 }
 
@@ -244,15 +247,31 @@ namespace Tustler.UserControls
                 });
             }
 
-            // if looping over sub-tasks then dispatch a ContinueWith Next response
-            if (nextTask is object)
+            // if looping over sub-tasks then dispatch a ContinueWith response
+            if (taskAvailable)
             {
-                PrepareNextTask(nextTask);
-
-                await Dispatcher.InvokeAsync(() =>
+                var stack = GetCurrentLoopStack();
+                if (stack is object && stack.Count > 0)
                 {
-                    taskResponses.Add(TaskResponse.NewTaskContinueWith(ContinueWithArgument.Next));
-                });
+                    var nextTask = stack.Pop();
+
+                    bool independantTasks = stack.Ordering == RetainingStack<SubTaskItem>.ItemOrdering.Independant;
+
+                    if (independantTasks)
+                        events.Add(TaskEvent.ClearArguments);
+
+                    events.Add(TaskEvent.NewSubTask(nextTask.TaskName));
+
+                    if (independantTasks)
+                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewTaskItem(nextTask)));
+
+                    ContinueWithArgument arg = independantTasks? ContinueWithArgument.Next : ContinueWithArgument.None;
+
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        taskResponses.Add(TaskResponse.NewTaskContinueWith(arg));
+                    });
+                }
             }
 
 
@@ -370,7 +389,7 @@ namespace Tustler.UserControls
             {
                 return context switch
                 {
-                    TaskResponse.BucketItemsModel bucketItemsModel => bucketItemsModel.Item as T,
+                    TaskResponse.SetBucketItemsModel bucketItemsModel => bucketItemsModel.Item as T,
                     _ => null
                 };
             }
@@ -412,7 +431,7 @@ namespace Tustler.UserControls
                     // deletion from the remote source was successful; now delete from the local view model
                     var deleteItemInterface = dataContext switch
                     {
-                        TaskResponse.BucketItemsModel bucketItemsModel => bucketItemsModel.Item as IDeletableViewModelItem,
+                        TaskResponse.SetBucketItemsModel bucketItemsModel => bucketItemsModel.Item as IDeletableViewModelItem,
                         _ => null
                     };
 
@@ -517,27 +536,27 @@ namespace Tustler.UserControls
                 {
                     case MiniTaskArgument.Bucket bucketArg:
                         var bucket = bucketArg.Item;
-                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewBucket(bucket)));
+                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewSetBucket(bucket)));
                         break;
                     case MiniTaskArgument.FilePath filePathArg:
                         var filePath = filePathArg.Item;
-                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewFilePath(filePath)));
+                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewSetFilePath(filePath)));
                         break;
                     case MiniTaskArgument.FileMediaReference mediaReferenceArg:
                         var mediaReference = mediaReferenceArg.Item;
-                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewFileMediaReference(mediaReference)));
+                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewSetFileMediaReference(mediaReference)));
                         break;
                     case MiniTaskArgument.TranscriptionLanguageCode transcriptionLanguageCodeArg:
                         var transcriptionLanguageCode = transcriptionLanguageCodeArg.Item;
-                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewTranscriptionLanguageCode(transcriptionLanguageCode)));
+                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewSetTranscriptionLanguageCode(transcriptionLanguageCode)));
                         break;
                     case MiniTaskArgument.TranslationLanguageCode translationLanguageCodeArg:
                         var translationLanguageCode = translationLanguageCodeArg.Item;
-                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewTranscriptionLanguageCode(translationLanguageCode)));
+                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewSetTranslationLanguageCode(translationLanguageCode)));
                         break;
                     case MiniTaskArgument.VocabularyName vocabularyNameArg:
                         var vocabularyName = vocabularyNameArg.Item;
-                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewVocabularyName(vocabularyName)));
+                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewSetVocabularyName(vocabularyName)));
                         break;
                     default:
                         throw new ArgumentException($"RunSelectBucketMiniTask: Unknown argument type");
@@ -548,45 +567,48 @@ namespace Tustler.UserControls
 
             async Task RunUIResponseAutoContinue(MiniTaskArguments parameterInfo)
             {
-                static bool IsContinueWithNext(MiniTaskArgument arg)
-                {
-                    static bool CheckIfNext(ContinueWithArgument arg)
+                //static bool IsContinueWithNext(MiniTaskArgument arg)
+                //{
+                //    static bool CheckIfNextOrContinue(ContinueWithArgument arg)
+                //    {
+                //        return arg.Tag switch
+                //        {
+                //            ContinueWithArgument.Tags.Continue => true,
+                //            ContinueWithArgument.Tags.Next => true,
+                //            ContinueWithArgument.Tags.None => false,
+                //            _ => throw new NotImplementedException()
+                //        };
+                //    }
+
+                //    var continueWithArg = arg switch
+                //    {
+                //        MiniTaskArgument.ContinueWithArgument x => x.Item,
+                //        _ => throw new ArgumentException($"Unknown argument type")
+                //    };
+
+                //    return CheckIfNextOrContinue(continueWithArg);
+                //}
+
+                //if (IsContinueWithNext(parameterInfo.TaskArguments.First()))
+                //{
+
+                // find the last SubTask event
+                var subTaskEvent = events.FindLast(evt =>
+                    evt switch
                     {
-                        return arg.Tag switch
-                        {
-                            ContinueWithArgument.Tags.Next => true,
-                            ContinueWithArgument.Tags.None => false,
-                            _ => throw new NotImplementedException()
-                        };
+                        TaskEvent.SubTask _ => true,
+                        _ => false
                     }
+                );
 
-                    var continueWithArg = arg switch
-                    {
-                        MiniTaskArgument.ContinueWithArgument x => x.Item,
-                        _ => throw new ArgumentException($"Unknown argument type")
-                    };
-
-                    return CheckIfNext(continueWithArg);
-                }
-
-                if (IsContinueWithNext(parameterInfo.TaskArguments.First()))
+                // and set the task name
+                this.TaskName = subTaskEvent switch
                 {
-                    // find the last SubTask event
-                    var subTaskEvent = events.FindLast(evt =>
-                        evt switch
-                        {
-                            TaskEvent.SubTask _ => true,
-                            _ => false
-                        }
-                    );
+                    TaskEvent.SubTask name => name.Item,
+                    _ => throw new ArgumentException("Expecting a sub-task event in the events list"),
+                };
 
-                    // and set the task name
-                    this.TaskName = subTaskEvent switch
-                    {
-                        TaskEvent.SubTask name => name.Item,
-                        _ => throw new ArgumentException("Expecting a sub-task event in the events list"),
-                    };
-                }
+                //}
 
                 await RunTask().ConfigureAwait(true);
             }
@@ -598,12 +620,12 @@ namespace Tustler.UserControls
                 await RunTask().ConfigureAwait(true);
             }
 
-            void RunUIResponseForEach(MiniTaskArguments parameterInfo)
+            void RunUIResponseForEachIndependantTask(MiniTaskArguments parameterInfo)
             {
                 // expecting a single argument (an IEnumerable<MultiSelectArgument>)
                 var subtasks = parameterInfo.TaskArguments.First() switch
                 {
-                    MiniTaskArgument.ForEach args => new RetainingStack<SubTaskItem>(args.Item),
+                    MiniTaskArgument.ForEach args => new RetainingStack<SubTaskItem>(args.Item, RetainingStack<SubTaskItem>.ItemOrdering.Independant),
                     _ => throw new ArgumentException($"Unknown argument type")
                 };
 
@@ -615,7 +637,11 @@ namespace Tustler.UserControls
                 {
                     // go to the first sub-task
                     var taskItem = subtasks.Pop();
-                    PrepareNextTask(taskItem);
+
+                    events.Add(TaskEvent.ClearArguments);
+                    events.Add(TaskEvent.NewSubTask(taskItem.TaskName));
+                    events.Add(TaskEvent.NewSetArgument(TaskResponse.NewTaskItem(taskItem)));     // TODO and this
+
                     taskResponses.Add(TaskResponse.NewTaskContinueWith(ContinueWithArgument.Next));
                 }
             }
@@ -633,8 +659,8 @@ namespace Tustler.UserControls
                 case MiniTaskMode.Tags.AutoContinue:
                     await RunUIResponseAutoContinue(parameterInfo).ConfigureAwait(true);
                     break;
-                case MiniTaskMode.Tags.ForEach:
-                    RunUIResponseForEach(parameterInfo);
+                case MiniTaskMode.Tags.ForEachIndependantTask:
+                    RunUIResponseForEachIndependantTask(parameterInfo);
                     break;
                 default:
                     throw new ArgumentException($"UIResponse_Executed: unknown mode for parameterInfo");

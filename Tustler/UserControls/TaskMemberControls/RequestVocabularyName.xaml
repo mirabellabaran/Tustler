@@ -30,7 +30,7 @@
         <TextBlock Grid.Row="0" Grid.Column="0" Text="Select a vocabulary name" Style="{StaticResource TextBlockPrompt}" />
         <Border BorderBrush="BlanchedAlmond" BorderThickness="5" CornerRadius="10" Margin="10" Padding="10">
             <DockPanel>
-                <ComboBox x:Name="cbVocabularyName" Height="30" Style="{StaticResource comboBoxStyles}" ItemsSource="{Binding Source={StaticResource vocabulariesInstance}, Path=TranscriptionVocabulariesWithNone}" ItemTemplate="{StaticResource comboBoxItemTempate}" SelectedValuePath="VocabularyName" />
+                <ComboBox x:Name="cbVocabularyName" Height="30" Style="{StaticResource comboBoxStyles}" ItemsSource="{Binding Source={StaticResource vocabulariesInstance}, Path=TranscriptionVocabulariesWithNone}" ItemTemplate="{StaticResource comboBoxItemTempate}" SelectedValuePath="VocabularyName" SelectedValue="[None]" />
                 <Button x:Name="btnContinue" Content="Continue" Height="30" Width="80" Command="{x:Static uc:VocabularyNameCommands.Continue}" Style="{StaticResource ButtonDarkFlat}" />
             </DockPanel>
         </Border>
