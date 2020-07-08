@@ -54,7 +54,7 @@ namespace Tustler
             InitializeComponent();
 
             this.awsInterface = awsInterface;
-            this.IsMocked = options.IsMocked;
+            this.IsMocked = (options is object) ? options.IsMocked : false;
 
             this.isCollapsed = false;
         }
@@ -70,7 +70,7 @@ namespace Tustler
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
             // look for status changes in the notifications listbox so that it can scroll new items into view
-            lbNotifications.ItemContainerGenerator.ItemsChanged += lbNotifications_ItemsChanged;
+            lbNotifications.ItemContainerGenerator.ItemsChanged += Notifications_ItemsChanged;
 
             tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "S3 Management", Tag = "s3management", HasChildren = false }));
             tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "Settings", Tag = "settings", HasChildren = true }));
@@ -90,6 +90,9 @@ namespace Tustler
                 SwitchTo("credentials");    // show credentials editor
             }
 
+            // TODO remove MG temporarily enable mocking by default
+            ToggleMockingMode(true);
+
             // check if the FFmpeg library can be loaded
             try
             {
@@ -105,7 +108,7 @@ namespace Tustler
             }
         }
 
-        private void lbNotifications_ItemsChanged(object sender, ItemsChangedEventArgs e)
+        private void Notifications_ItemsChanged(object sender, ItemsChangedEventArgs e)
         {
             if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
             {
@@ -181,6 +184,7 @@ namespace Tustler
                 {
                     ApplicationErrorInfo errorInfo => $"{errorInfo.Context}\n{errorInfo.Message}\nInner: {errorInfo.Exception.Message}\n{errorInfo.Exception.StackTrace}",
                     ApplicationMessageInfo messageInfo => $"{messageInfo.Message}\n{messageInfo.Detail}",
+                    _ => throw new ArgumentException($"Unknown notification type: {notification}")
                 };
                 Clipboard.SetText(content, TextDataFormat.Text);
             }

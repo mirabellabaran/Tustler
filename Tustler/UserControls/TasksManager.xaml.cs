@@ -1,9 +1,13 @@
 ﻿#nullable enable
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,6 +17,7 @@ using Tustler.UserControls.TaskMemberControls;
 using TustlerAWSLib;
 using TustlerFSharpPlatform;
 using TustlerInterfaces;
+using TustlerModels;
 using TustlerServicesLib;
 using static TustlerFSharpPlatform.TaskArguments;
 using AWSMiniTasks = TustlerFSharpPlatform.MiniTasks;
@@ -25,6 +30,8 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class TasksManager : UserControl
     {
+        private const string EventStackArgumentRestorePath = "defaultargs.json";
+
         private readonly AmazonWebServiceInterface awsInterface;
 
         private readonly List<TaskEvent> events;    // ground truth for the events generated in a given session (start task to TaskResponse.TaskComplete)
@@ -205,6 +212,103 @@ namespace Tustler.UserControls
             return stack?.Count > 0;
         }
 
+        /// <summary>
+        /// Serialize all arguments set on the event stack for later restore
+        /// </summary>
+        private void SaveArguments()
+        {
+            var taskFolderPath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.TaskName);
+            if (!Directory.Exists(taskFolderPath))
+            {
+                Directory.CreateDirectory(taskFolderPath);
+            }
+
+            var options = new JsonWriterOptions
+            {
+                Indented = true
+            };
+
+            using var stream = new MemoryStream();
+            using (var writer = new Utf8JsonWriter(stream, options))
+            {
+                writer.WriteStartObject();
+                foreach (var evt in events)
+                {
+                    if (evt is TaskEvent.SetArgument arg)
+                    {
+                        var response = arg.Item;
+                        switch (response)
+                        {
+                            case TaskResponse.SetBucket bucket:
+                                writer.WritePropertyName("SetBucket");
+                                JsonSerializer.Serialize<Bucket>(writer, bucket.Item);
+                                break;
+                            case TaskResponse.SetBucketsModel bucketViewModel:
+                                writer.WritePropertyName("SetBucketsModel");
+                                JsonSerializer.Serialize<BucketViewModel>(writer, bucketViewModel.Item);
+                                break;
+                            case TaskResponse.SetBucketItemsModel bucketItemViewModel:
+                                writer.WritePropertyName("SetBucketItemsModel");
+                                JsonSerializer.Serialize<BucketItemViewModel>(writer, bucketItemViewModel.Item);
+                                break;
+                            case TaskResponse.SetFileUpload s3MediaReference:
+                                writer.WritePropertyName("SetFileUpload");
+                                JsonSerializer.Serialize<S3MediaReference>(writer, s3MediaReference.Item);
+                                break;
+                            case TaskResponse.SetTranscriptionJobName str:
+                                writer.WritePropertyName("SetTranscriptionJobName");
+                                JsonSerializer.Serialize<string>(writer, str.Item);
+                                break;
+                            case TaskResponse.SetTranscriptionJobsModel transcriptionJobsViewModel:
+                                writer.WritePropertyName("SetTranscriptionJobsModel");
+                                JsonSerializer.Serialize<TranscriptionJobsViewModel>(writer, transcriptionJobsViewModel.Item);
+                                break;
+                            case TaskResponse.SetFilePath str:
+                                writer.WritePropertyName("SetFilePath");
+                                JsonSerializer.Serialize<string>(writer, str.Item);
+                                break;
+                            case TaskResponse.SetFileMediaReference fileMediaReference:
+                                writer.WritePropertyName("SetFileMediaReference");
+                                JsonSerializer.Serialize<FileMediaReference>(writer, fileMediaReference.Item);
+                                break;
+                            case TaskResponse.SetTranscriptionLanguageCode str:
+                                writer.WritePropertyName("SetTranscriptionLanguageCode");
+                                JsonSerializer.Serialize<string>(writer, str.Item);
+                                break;
+                            case TaskResponse.SetTranslationLanguageCode str:
+                                writer.WritePropertyName("SetTranslationLanguageCode");
+                                JsonSerializer.Serialize<string>(writer, str.Item);
+                                break;
+                            case TaskResponse.SetVocabularyName str:
+                                writer.WritePropertyName("SetVocabularyName");
+                                JsonSerializer.Serialize<string>(writer, str.Item);
+                                break;
+                            default:
+                                throw new ArgumentException($"Unknown event stack argument type: {response}");
+                        }
+                    }
+                }
+                writer.WriteEndObject();
+            }
+
+            // compare current version (if any)
+            var newData = stream.ToArray();
+            var serializedDataPath = Path.Combine(taskFolderPath, EventStackArgumentRestorePath);
+            if (File.Exists(serializedDataPath))
+            {
+                var oldData = File.ReadAllBytes(serializedDataPath);
+
+                bool unchanged = (oldData.Length == newData.Length) && (oldData.Zip(newData).All(item => item.First == item.Second));
+
+                if (!unchanged)
+                    File.WriteAllBytes(serializedDataPath, newData);
+            }
+            else
+            {
+                File.WriteAllBytes(serializedDataPath, newData);
+            }
+        }
+
         private async void Collection_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             var newItems = e.NewItems as System.Collections.IEnumerable;
@@ -237,6 +341,17 @@ namespace Tustler.UserControls
 
                         // check for a next sub-task (if there is one)
                         taskAvailable = IsTaskAvailable();
+                        break;
+                    default:
+                        switch (response.Tag)
+                        {
+                            case TaskResponse.Tags.TaskArgumentSave:
+                                await Dispatcher.InvokeAsync(() =>
+                                {
+                                    SaveArguments();
+                                });
+                                break;
+                        }
                         break;
                 }
 
@@ -313,11 +428,45 @@ namespace Tustler.UserControls
 
         private async void StartTask_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            //if (TaskArguments.IsComplete())
-
             try
             {
                 Mouse.OverrideCursor = Cursors.Wait;
+
+                // attempt to restore event stack arguments from a previous session
+                var taskFolderPath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.TaskName);
+                if (Directory.Exists(taskFolderPath))
+                {
+                    var serializedDataPath = Path.Combine(taskFolderPath, EventStackArgumentRestorePath);
+                    if (File.Exists(serializedDataPath))
+                    {
+                        var options = new JsonDocumentOptions
+                        {
+                            AllowTrailingCommas = true
+                        };
+
+                        using var stream = File.OpenRead(serializedDataPath);
+                        using JsonDocument document = JsonDocument.Parse(stream, options);
+                        foreach (var property in document.RootElement.EnumerateObject())
+                        {
+                            TaskResponse response = property.Name switch
+                            {
+                                "SetBucket" => TaskResponse.NewSetBucket(JsonSerializer.Deserialize<Bucket>(property.Value.GetRawText())),
+                                "SetBucketsModel" => TaskResponse.NewSetBucketsModel(JsonSerializer.Deserialize<BucketViewModel>(property.Value.GetRawText())),
+                                "SetBucketItemsModel" => TaskResponse.NewSetBucketItemsModel(JsonSerializer.Deserialize<BucketItemViewModel>(property.Value.GetRawText())),
+                                "SetFileUpload" => TaskResponse.NewSetFileUpload(JsonSerializer.Deserialize<S3MediaReference>(property.Value.GetRawText())),
+                                "SetTranscriptionJobName" => TaskResponse.NewSetTranscriptionJobName(JsonSerializer.Deserialize<string>(property.Value.GetRawText())),
+                                "SetTranscriptionJobsModel" => TaskResponse.NewSetTranscriptionJobsModel(JsonSerializer.Deserialize<TranscriptionJobsViewModel>(property.Value.GetRawText())),
+                                "SetFilePath" => TaskResponse.NewSetFilePath(JsonSerializer.Deserialize<string>(property.Value.GetRawText())),
+                                "SetFileMediaReference" => TaskResponse.NewSetFileMediaReference(JsonSerializer.Deserialize<FileMediaReference>(property.Value.GetRawText())),
+                                "SetTranscriptionLanguageCode" => TaskResponse.NewSetTranscriptionLanguageCode(JsonSerializer.Deserialize<string>(property.Value.GetRawText())),
+                                "SetTranslationLanguageCode" => TaskResponse.NewSetTranslationLanguageCode(JsonSerializer.Deserialize<string>(property.Value.GetRawText())),
+                                "SetVocabularyName" => TaskResponse.NewSetVocabularyName(JsonSerializer.Deserialize<string>(property.Value.GetRawText())),
+                                _ => throw new ArgumentException($"Unknown JSON property name: {property.Name}")
+                            };
+                            events.Add(TaskEvent.NewSetArgument(response));
+                        }
+                    }
+                }
 
                 await RunTask().ConfigureAwait(true);
             }
@@ -565,7 +714,7 @@ namespace Tustler.UserControls
                 await RunTask().ConfigureAwait(true);
             }
 
-            async Task RunUIResponseAutoContinue(MiniTaskArguments parameterInfo)
+            async Task RunUIResponseAutoContinue(MiniTaskArguments _parameterInfo)
             {
                 //static bool IsContinueWithNext(MiniTaskArgument arg)
                 //{

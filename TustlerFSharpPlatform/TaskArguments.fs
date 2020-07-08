@@ -75,16 +75,29 @@ module public TaskArguments =
 
     /// A reference to a media file item stored in an S3 Bucket
     type S3MediaReference(bucketName: string, key: string, mimeType: string, extension: string) =
-        member val BucketName = bucketName
-        member val Key = key
-        member val MimeType = mimeType
-        member val Extension = extension
+        let mutable _bucketName = bucketName
+        let mutable _key = key
+        let mutable _mimeType = mimeType
+        let mutable _extension = extension
+
+        member this.BucketName with get() = _bucketName and set(value) = _bucketName <- value
+        member this.Key with get() = _key and set(value) = _key <- value
+        member this.MimeType with get() = _mimeType and set(value) = _mimeType <- value
+        member this.Extension with get() = _extension and set(value) = _extension <- value
+
+        new() = S3MediaReference(null, null, null, null)
 
     /// A reference to a media file stored locally (normally a file to be uploaded to S3)
     type FileMediaReference(filePath: string, mimeType: string, extension: string) =
-        member val FilePath = filePath
-        member val MimeType = mimeType
-        member val Extension = extension
+        let mutable _filePath = filePath
+        let mutable _mimeType = mimeType
+        let mutable _extension = extension
+
+        member this.FilePath with get() = _filePath and set(value) = _filePath <- value
+        member this.MimeType with get() = _mimeType and set(value) = _mimeType <- value
+        member this.Extension with get() = _extension and set(value) = _extension <- value
+
+        new() = FileMediaReference(null, null, null)
 
     type TaskArgumentMember =
         | TaskName of string

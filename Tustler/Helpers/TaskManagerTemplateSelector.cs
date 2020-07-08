@@ -30,12 +30,12 @@ namespace Tustler.Helpers
                 {
                     return response.Tag switch
                     {
-                        TaskResponse.Tags.FileMediaReferenceRequest => element.FindResource("FileMediaReferenceRequestTemplate") as DataTemplate,
-                        TaskResponse.Tags.S3MediaReferenceRequest => element.FindResource("S3MediaReferenceRequestTemplate") as DataTemplate,
-                        TaskResponse.Tags.BucketRequest => element.FindResource("BucketRequestTemplate") as DataTemplate,
-                        TaskResponse.Tags.TranscriptionLanguageCodeRequest => element.FindResource("TranscriptionLanguageCodeRequestTemplate") as DataTemplate,
-                        TaskResponse.Tags.TranslationLanguageCodeRequest => element.FindResource("TranslationLanguageCodeRequestTemplate") as DataTemplate,
-                        TaskResponse.Tags.VocabularyNameRequest => element.FindResource("VocabularyNameRequestTemplate") as DataTemplate,
+                        TaskResponse.Tags.RequestFileMediaReference => element.FindResource("FileMediaReferenceRequestTemplate") as DataTemplate,
+                        TaskResponse.Tags.RequestS3MediaReference => element.FindResource("S3MediaReferenceRequestTemplate") as DataTemplate,
+                        TaskResponse.Tags.RequestBucket => element.FindResource("BucketRequestTemplate") as DataTemplate,
+                        TaskResponse.Tags.RequestTranscriptionLanguageCode => element.FindResource("TranscriptionLanguageCodeRequestTemplate") as DataTemplate,
+                        TaskResponse.Tags.RequestTranslationLanguageCode => element.FindResource("TranslationLanguageCodeRequestTemplate") as DataTemplate,
+                        TaskResponse.Tags.RequestVocabularyName => element.FindResource("VocabularyNameRequestTemplate") as DataTemplate,
                         _ => null
                     };
                 }

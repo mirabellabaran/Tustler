@@ -20,6 +20,11 @@ type ContinueWithArgument =
     | Continue of string    // auto-continue displaying a string message
     | Next                  // auto-continue to next task (default message)
     | None
+    override x.ToString() =
+        match x with
+        | Continue str -> str
+        | Next -> "Next"
+        | None -> ""
 
 type SubTaskItem = {
     TaskName: string;           // the task function name of the sub-task
@@ -35,7 +40,8 @@ type TaskResponse =
     | TaskMultiSelect of IEnumerable<SubTaskItem>       // user selects zero or more sub-tasks to perform
     | TaskItem of SubTaskItem                           // the current subtask function name and description (one of the user-selected items from the MultiSelect list)
     | TaskSequence of IEnumerable<SubTaskItem>          // a sequence of tasks that flow from one to the next without any intervening UI
-    | TaskContinueWith of ContinueWithArgument
+    | TaskContinueWith of ContinueWithArgument          // re-call the current function (depending on the type of ContinueWithArgument, some UI may be displayed)
+    | TaskArgumentSave                                  // save any arguments set on the event stack for subsequent sessions
 
     | Notification of Notification
     | DelaySequence of int
@@ -57,12 +63,12 @@ type TaskResponse =
     | SetVocabularyName of string
 
     // Values that are sent as requests to the user
-    | BucketRequest
-    | FileMediaReferenceRequest
-    | S3MediaReferenceRequest
-    | TranscriptionLanguageCodeRequest
-    | TranslationLanguageCodeRequest
-    | VocabularyNameRequest
+    | RequestBucket
+    | RequestFileMediaReference
+    | RequestS3MediaReference
+    | RequestTranscriptionLanguageCode
+    | RequestTranslationLanguageCode
+    | RequestVocabularyName
 
 [<RequireQualifiedAccess>]
 type TaskEvent =
@@ -550,7 +556,6 @@ module public Tasks =
             seq {
                 yield! getNotificationResponse notifications
                 if jobsModel.IsSome then
-                    yield TaskResponse.TaskInfo "."
                     let isComplete = (jobsModel.Value.TranscriptionJobStatus = "COMPLETED") //Amazon.TranscribeService.TranscriptionJobStatus.COMPLETED)
                     if isComplete then
                         yield TaskResponse.TaskComplete "Transcription Job Completed"
@@ -567,73 +572,20 @@ module public Tasks =
 
     /// Upload and transcribe some audio
     /// The function is called multiple times from the UI until all arguments are resolved
-    let TranscribeAudio (common_arguments: ITaskArgumentCollection) (resolvable_arguments: InfiniteList<MaybeResponse>) =
-
-        //let isTranscriptionComplete (jobName: string) (jobs: ObservableCollection<TranscriptionJob>) =
-        //    let currentJob = jobs |> Seq.find (fun job -> job.TranscriptionJobName = jobName)
-        //    currentJob.TranscriptionJobStatus = "COMPLETED"
-
-        //let awsInterface = (common_arguments :?> NotificationsOnlyArguments).AWSInterface
-        //let notifications = (common_arguments :?> NotificationsOnlyArguments).Notifications
-        //validateArgs 2 argChecker args
+    let TranscribeAudio (_common_arguments: ITaskArgumentCollection) (resolvable_arguments: InfiniteList<MaybeResponse>) =
         
         seq {
-            yield! resolveByRequest resolvable_arguments [| TaskResponse.VocabularyNameRequest; TaskResponse.TranscriptionLanguageCodeRequest; TaskResponse.FileMediaReferenceRequest; TaskResponse.BucketRequest |]
-
             let defaultArgs = TaskArgumentRecord.TranscribeAudio (TranscribeAudioArgs.Init ())
             let transcribeAudioArgs = integrateUIRequestArguments resolvable_arguments defaultArgs
-            if transcribeAudioArgs.AllRequestsSet then                
+
+            if transcribeAudioArgs.AllRequestsSet then  // restored from a previous session OR resolved by request to the UI
+                yield TaskResponse.TaskArgumentSave     // save the resolved arguments (if not already saved)
                 yield TaskResponse.TaskSequence ([|
                     { TaskName = "UploadMediaFile"; Description = "Upload a media file to transcribe" };
                     { TaskName = "StartTranscription"; Description = "Start a transcription job" };
                     { TaskName = "MonitorTranscription"; Description = "Monitor the transcription job" }
                 |])
                 yield TaskResponse.TaskComplete ""
-
-            //// is MediaReference set?
-            //let mediaReferenceResponse = args.Pop()
-
-            //if mediaReferenceResponse.IsNotSet then
-            //    yield TaskResponse.MediaReferenceRequest
-            //else
-            //    let mediaReference =
-            //        match mediaReferenceResponse.Value with
-            //        | TaskResponse.MediaReference media -> media
-            //        | _ -> invalidArg "mediaReferenceResponse" "Expecting a MediaReference" 
-
-            //    // is FilePath set?
-            //    let filePathResponse = args.Pop()
-
-            //    if filePathResponse.IsNotSet then
-            //        yield TaskResponse.FilePathRequest
-            //    else
-            //        let filePath =
-            //            match filePathResponse.Value with
-            //            | TaskResponse.FilePath path -> path
-            //            | _ -> invalidArg "filePathResponse" "Expecting a FilePath" 
-
-            //        // note: the task name may be used as the new S3 key
-            //        let success = S3.uploadBucketItem awsInterface notifications mediaReference.BucketName mediaReference.Key filePath mediaReference.MimeType mediaReference.Extension |> Async.RunSynchronously
-            //        yield! getNotificationResponse notifications
-
-            //        if success then
-
-            //            // note: task name used as job name and as S3 media key (from upload)
-            //            let jobsModel = Transcribe.startTranscriptionJob awsInterface notifications args.TaskName mediaReference.BucketName mediaReference.Key args.TranscriptionLanguageCode args.VocabularyName |> Async.RunSynchronously
-
-            //            //let transcribeTasks = startTranscriptionJob args |> Async.RunSynchronously
-            //            //yield! getNotificationResponse notifications
-            //            //yield! Seq.map (fun item -> TaskResponse.TranscriptionJob item) transcribeTasks
-
-            //            let waitOnCompletionSeq =
-            //                0 // try ten times from zero
-            //                |> Seq.unfold (fun i ->
-            //                    Task.Delay(1000) |> Async.AwaitTask |> Async.RunSynchronously
-            //                    let model = Transcribe.listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
-            //                    if i > 9 || isTranscriptionComplete args.TaskName model.TranscriptionJobs then
-            //                        None
-            //                    else
-            //                        Some( TaskResponse.DelaySequence i, i + 1))
-            //            yield! waitOnCompletionSeq
-            //            yield  TaskResponse.TaskComplete "Finished"
+            else
+                yield! resolveByRequest resolvable_arguments [| TaskResponse.RequestVocabularyName; TaskResponse.RequestTranscriptionLanguageCode; TaskResponse.RequestFileMediaReference; TaskResponse.RequestBucket |]
         }

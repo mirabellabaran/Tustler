@@ -9,16 +9,18 @@
              d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
     <UserControl.Resources>
         <Style x:Key="ContinueWithArgumentStyle" TargetType="Label" BasedOn="{StaticResource LabelDark}">
-            <Setter Property="Foreground" Value="DarkGreen" />
-            <Setter Property="Background" Value="LightGreen" />
             <Style.Triggers>
                 <!-- Tag values: Continue=0; Specify the content -->
                 <DataTrigger Binding="{Binding Path=Item.Tag}" Value="0">
                     <Setter Property="Content" Value="{Binding Path=Item}" />
+                    <Setter Property="Foreground" Value="DarkGreen" />
+                    <Setter Property="Background" Value="{StaticResource NormalBackground}" />
                 </DataTrigger>
                 <!-- Tag values: Next=1; Specify the content -->
                 <DataTrigger Binding="{Binding Path=Item.Tag}" Value="1">
                     <Setter Property="Content" Value="Next Task" />
+                    <Setter Property="Foreground" Value="DarkGreen" />
+                    <Setter Property="Background" Value="LightGreen" />
                 </DataTrigger>
                 <!-- Tag value: None=2; Don't show anything -->
                 <DataTrigger Binding="{Binding Path=Item.Tag}" Value="2">
