@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using TustlerFSharpPlatform;
+using static TustlerFSharpPlatform.MiniTasks;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
 
 namespace Tustler.UserControls.TaskMemberControls

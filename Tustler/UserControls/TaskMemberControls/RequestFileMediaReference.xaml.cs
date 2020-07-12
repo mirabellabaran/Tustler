@@ -250,10 +250,10 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             var fileMediaReference = new FileMediaReference(tbFilePath.Text, this.Mimetype, this.Extension);
 
-            CommandParameter = new MiniTaskArguments()
+            CommandParameter = new UITaskArguments()
             {
-                Mode = MiniTaskMode.Select,
-                TaskArguments = new MiniTaskArgument[] { MiniTaskArgument.NewFileMediaReference(fileMediaReference) }
+                Mode = UITaskMode.Select,
+                TaskArguments = new UITaskArgument[] { UITaskArgument.NewFileMediaReference(fileMediaReference) }
             };
 
             ExecuteCommand();

@@ -150,11 +150,11 @@ namespace Tustler.UserControls.TaskMemberControls
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             var selectedSubTasks = lbTasks.SelectedItems.Cast<SubTaskItem>();
-            var parameterData = new MiniTaskArgument[] { MiniTaskArgument.NewForEach(selectedSubTasks) };
+            var parameterData = new UITaskArgument[] { UITaskArgument.NewForEach(selectedSubTasks) };
 
-            CommandParameter = new MiniTaskArguments()
+            CommandParameter = new UITaskArguments()
             {
-                Mode = MiniTaskMode.ForEachIndependantTask,
+                Mode = UITaskMode.ForEachIndependantTask,
                 TaskArguments = parameterData
             };
 

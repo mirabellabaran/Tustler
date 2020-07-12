@@ -248,10 +248,10 @@ namespace Tustler.UserControls.TaskMemberControls
             {
                 var mediaReference = new S3MediaReference(bucket.Name, bucketItem.Key, bucketItem.MimeType, bucketItem.Extension);
 
-                CommandParameter = new MiniTaskArguments()
+                CommandParameter = new UITaskArguments()
                 {
-                    Mode = MiniTaskMode.Select,
-                    TaskArguments = new MiniTaskArgument[] { MiniTaskArgument.NewS3MediaReference(mediaReference) }
+                    Mode = UITaskMode.Select,
+                    TaskArguments = new UITaskArgument[] { UITaskArgument.NewS3MediaReference(mediaReference) }
                 };
 
                 ExecuteCommand();

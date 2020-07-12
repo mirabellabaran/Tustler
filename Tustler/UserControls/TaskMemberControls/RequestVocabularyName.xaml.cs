@@ -208,10 +208,10 @@ namespace Tustler.UserControls.TaskMemberControls
                 // handle special case of 'None'
                 var vocabularyName = (vocabulary.VocabularyName == "None" && vocabulary.LanguageCode is null) ? null : vocabulary.VocabularyName;
 
-                CommandParameter = new MiniTaskArguments()
+                CommandParameter = new UITaskArguments()
                 {
-                    Mode = MiniTaskMode.Select,
-                    TaskArguments = new MiniTaskArgument[] { MiniTaskArgument.NewVocabularyName(vocabularyName) }
+                    Mode = UITaskMode.Select,
+                    TaskArguments = new UITaskArgument[] { UITaskArgument.NewVocabularyName(vocabularyName) }
                 };
 
                 ExecuteCommand();

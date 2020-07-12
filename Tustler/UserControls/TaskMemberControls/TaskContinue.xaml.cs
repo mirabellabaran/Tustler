@@ -171,10 +171,10 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            CommandParameter = new MiniTaskArguments()
+            CommandParameter = new UITaskArguments()
             {
-                Mode = MiniTaskMode.Continue,
-                TaskArguments = Array.Empty<MiniTaskArgument?>()
+                Mode = UITaskMode.Continue,
+                TaskArguments = Array.Empty<UITaskArgument?>()
             };
 
             ExecuteCommand();

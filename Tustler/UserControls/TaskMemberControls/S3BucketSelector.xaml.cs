@@ -152,13 +152,13 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             var context = (e.OriginalSource as Button).DataContext as Bucket;
 
-            var parameterData = new MiniTaskArgument?[] {
-                MiniTaskArgument.NewBucket(context)
+            var parameterData = new UITaskArgument?[] {
+                UITaskArgument.NewBucket(context)
             };
 
-            CommandParameter = new MiniTaskArguments()
+            CommandParameter = new UITaskArguments()
             {
-                Mode = MiniTaskMode.Select,
+                Mode = UITaskMode.Select,
                 TaskArguments = parameterData
             };
 

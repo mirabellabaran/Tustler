@@ -228,15 +228,15 @@ namespace Tustler.UserControls.TaskMemberControls
             {
                 var arg = LanguageCodesViewModelType switch
                 {
-                    LanguageCodesViewModelType.Transcription => MiniTaskArgument.NewTranscriptionLanguageCode(languageCode.Code),
-                    LanguageCodesViewModelType.Translation => MiniTaskArgument.NewTranslationLanguageCode(languageCode.Code),
+                    LanguageCodesViewModelType.Transcription => UITaskArgument.NewTranscriptionLanguageCode(languageCode.Code),
+                    LanguageCodesViewModelType.Translation => UITaskArgument.NewTranslationLanguageCode(languageCode.Code),
                     _ => null
                 };
 
-                CommandParameter = new MiniTaskArguments()
+                CommandParameter = new UITaskArguments()
                 {
-                    Mode = MiniTaskMode.Select,
-                    TaskArguments = new MiniTaskArgument[] { arg }
+                    Mode = UITaskMode.Select,
+                    TaskArguments = new UITaskArgument[] { arg }
                 };
 
                 ExecuteCommand();

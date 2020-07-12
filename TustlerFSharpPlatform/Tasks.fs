@@ -1,30 +1,27 @@
 ﻿namespace TustlerFSharpPlatform
 
-open System.Threading.Tasks
+open System
+open System.Runtime.InteropServices
 open TustlerServicesLib
 open AWSInterface
 open TaskArguments
 open TustlerModels
-open System.Collections.ObjectModel
-open TustlerInterfaces
 open TustlerAWSLib
 open System.Collections.Generic
-open System
-open System.Runtime.InteropServices
 
 // an attribute to tell the UI not to show certain task functions (those that are called as sub-tasks)
 type HideFromUI() = inherit System.Attribute()
 
-[<RequireQualifiedAccess>]
-type ContinueWithArgument =
-    | Continue of string    // auto-continue displaying a string message
-    | Next                  // auto-continue to next task (default message)
-    | None
-    override x.ToString() =
-        match x with
-        | Continue str -> str
-        | Next -> "Next"
-        | None -> ""
+//[<RequireQualifiedAccess>]
+//type ContinueWithArgument =
+//    | Continue of string    // auto-continue displaying a string message
+//    | Next                  // auto-continue to next task (default message)
+//    | None                  // auto-continue with no message
+//    override x.ToString() =
+//        match x with
+//        | Continue str -> str
+//        | Next -> "Next"
+//        | None -> ""
 
 type SubTaskItem = {
     TaskName: string;           // the task function name of the sub-task
@@ -40,7 +37,7 @@ type TaskResponse =
     | TaskMultiSelect of IEnumerable<SubTaskItem>       // user selects zero or more sub-tasks to perform
     | TaskItem of SubTaskItem                           // the current subtask function name and description (one of the user-selected items from the MultiSelect list)
     | TaskSequence of IEnumerable<SubTaskItem>          // a sequence of tasks that flow from one to the next without any intervening UI
-    | TaskContinueWith of ContinueWithArgument          // re-call the current function (depending on the type of ContinueWithArgument, some UI may be displayed)
+    | TaskContinue                                      // re-invoke the current function
     | TaskArgumentSave                                  // save any arguments set on the event stack for subsequent sessions
 
     | Notification of Notification
@@ -156,72 +153,90 @@ type LocalResolverFunction = (TaskArgumentRecord -> AmazonWebServiceInterface ->
 
 
 
-[<RequireQualifiedAccess>]
-type TaskUpdate =
-    | DeleteBucketItem of NotificationsList * bool * string                 // returns success flag and the deleted key
-    | DownloadBucketItem of NotificationsList * bool * string * string      // returns success flag, the key of the downloaded item and the download file path
-
-type TaskUpdate with
-    member x.Deconstruct([<Out>] notifications : byref<NotificationsList>, [<Out>] success : byref<bool>, [<Out>] key : byref<string>) =
-        match x with
-        | TaskUpdate.DeleteBucketItem (a, b, c) ->
-            notifications <- a
-            success <- b
-            key <- c
-        | _ -> invalidArg "DeleteBucketItem" "TaskUpdate.Deconstruct: unknown type"
-
-    member x.Deconstruct([<Out>] notifications : byref<NotificationsList>, [<Out>] success : byref<bool>, [<Out>] key : byref<string>, [<Out>] filePath : byref<string>) =
-        match x with
-        | TaskUpdate.DownloadBucketItem (a, b, c, d) ->
-            notifications <- a
-            success <- b
-            key <- c
-            filePath <- d
-        | _ -> invalidArg "DownloadBucketItem" "TaskUpdate.Deconstruct: unknown type"
 
 [<RequireQualifiedAccess>]
-type MiniTaskMode =
+type UITaskMode =
     | Unknown
-    | Delete
-    | Download
     | Select
     | Continue
-    | AutoContinue
     | ForEachIndependantTask
 
 [<RequireQualifiedAccess>]
-type MiniTaskArgument =
-    | Bool of bool
-    | String of string
-    | Int of int
+type UITaskArgument =
     | Bucket of Bucket
     | FilePath of string
     | ForEach of IEnumerable<SubTaskItem>
-    | ContinueWithArgument of ContinueWithArgument
     | S3MediaReference of S3MediaReference
     | FileMediaReference of FileMediaReference
     | TranscriptionLanguageCode of string
     | TranslationLanguageCode of string
     | VocabularyName of string
 
-/// Collects MiniTask arguments (used by user control command source objects)
-type MiniTaskArguments () =
-    let mutable mode = MiniTaskMode.Unknown
-    let mutable arguments: MiniTaskArgument[] = Array.empty
+/// Collects arguments used by user control command source objects
+type UITaskArguments () =
+    let mutable mode = UITaskMode.Unknown
+    let mutable arguments: UITaskArgument[] = Array.empty
 
     member this.Mode with get () = mode and set _mode = mode <- _mode
     member this.TaskArguments
         with get() = Seq.ofArray arguments
         and set args = arguments <- Seq.toArray args
 
-[<RequireQualifiedAccess>]
-type TaskFunction =
-    | GetBuckets of (AmazonWebServiceInterface -> NotificationsList -> Async<ObservableCollection<Bucket>>)
-    | GetBucketItems of (AmazonWebServiceInterface -> NotificationsList -> string -> Async<BucketItemsCollection>)
-    | StartTranscriptionJob of (TranscribeAudioArguments -> Async<ObservableCollection<TranscriptionJob>>)
+//[<RequireQualifiedAccess>]
+//type TaskFunction =
+//    | GetBuckets of (AmazonWebServiceInterface -> NotificationsList -> Async<ObservableCollection<Bucket>>)
+//    | GetBucketItems of (AmazonWebServiceInterface -> NotificationsList -> string -> Async<BucketItemsCollection>)
+//    | StartTranscriptionJob of (TranscribeAudioArguments -> Async<ObservableCollection<TranscriptionJob>>)
 
 module public MiniTasks =
 
+    [<RequireQualifiedAccess>]
+    type MiniTaskArgument =
+        | Bool of bool
+        | String of string
+        | Int of int
+
+    type MiniTaskMode =
+        | Unknown
+        | Delete
+        | Download
+        //| Select
+        //| Continue
+        //| AutoContinue
+        //| ForEachIndependantTask
+    
+    type MiniTaskArguments () =
+        let mutable mode = MiniTaskMode.Unknown
+        let mutable arguments: MiniTaskArgument[] = Array.empty
+    
+        member this.Mode with get () = mode and set _mode = mode <- _mode
+        member this.TaskArguments
+            with get() = Seq.ofArray arguments
+            and set args = arguments <- Seq.toArray args
+    
+    [<RequireQualifiedAccess>]
+    type TaskUpdate =
+        | DeleteBucketItem of NotificationsList * bool * string                 // returns success flag and the deleted key
+        | DownloadBucketItem of NotificationsList * bool * string * string      // returns success flag, the key of the downloaded item and the download file path
+    
+    type TaskUpdate with
+        member x.Deconstruct([<Out>] notifications : byref<NotificationsList>, [<Out>] success : byref<bool>, [<Out>] key : byref<string>) =
+            match x with
+            | TaskUpdate.DeleteBucketItem (a, b, c) ->
+                notifications <- a
+                success <- b
+                key <- c
+            | _ -> invalidArg "DeleteBucketItem" "TaskUpdate.Deconstruct: unknown type"
+    
+        member x.Deconstruct([<Out>] notifications : byref<NotificationsList>, [<Out>] success : byref<bool>, [<Out>] key : byref<string>, [<Out>] filePath : byref<string>) =
+            match x with
+            | TaskUpdate.DownloadBucketItem (a, b, c, d) ->
+                notifications <- a
+                success <- b
+                key <- c
+                filePath <- d
+            | _ -> invalidArg "DownloadBucketItem" "TaskUpdate.Deconstruct: unknown type"
+    
     let Delete awsInterface (notifications: NotificationsList) (context:TaskResponse) (args:MiniTaskArgument[]) =
         if args.Length >= 2 then
             match context with
@@ -296,23 +311,23 @@ module public Tasks =
     let private getNotificationResponse (notifications: NotificationsList) =
         Seq.map (fun note -> TaskResponse.Notification note) notifications.Notifications
         
-    let private checkTaskFolder taskName = ()
+    //let private checkTaskFolder taskName = ()
 
-    let private CheckFileExistsReplaceWithFilePath (fn:TaskFunction) = fn
+    //let private CheckFileExistsReplaceWithFilePath (fn:TaskFunction) = fn
 
-    let private CheckFileExistsReplaceWithContents (fn:TaskFunction) = fn
+    //let private CheckFileExistsReplaceWithContents (fn:TaskFunction) = fn
 
-    let private ReplaceWithConstant (fn:TaskFunction) =
-        match fn with
-        | TaskFunction.GetBuckets _ ->
-            let bucket = Bucket(Name="Poop", CreationDate=System.DateTime.Now)
-            (TaskFunction.GetBuckets (fun s3Interface notifications -> async { return new ObservableCollection<Bucket>( seq { bucket } ) }))
-        | TaskFunction.GetBucketItems _ ->
-            let bucketItems = [|
-                BucketItem(Key="AAA", Size=33L, LastModified=System.DateTime.Now, Owner="Me")
-                BucketItem(Key="BBB", Size=44L, LastModified=System.DateTime.Now, Owner="Me")
-            |]
-            (TaskFunction.GetBucketItems (fun s3Interface notifications string -> async { return new BucketItemsCollection( bucketItems ) }))
+    //let private ReplaceWithConstant (fn:TaskFunction) =
+    //    match fn with
+    //    | TaskFunction.GetBuckets _ ->
+    //        let bucket = Bucket(Name="Poop", CreationDate=System.DateTime.Now)
+    //        (TaskFunction.GetBuckets (fun s3Interface notifications -> async { return new ObservableCollection<Bucket>( seq { bucket } ) }))
+    //    | TaskFunction.GetBucketItems _ ->
+    //        let bucketItems = [|
+    //            BucketItem(Key="AAA", Size=33L, LastModified=System.DateTime.Now, Owner="Me")
+    //            BucketItem(Key="BBB", Size=44L, LastModified=System.DateTime.Now, Owner="Me")
+    //        |]
+    //        (TaskFunction.GetBucketItems (fun s3Interface notifications string -> async { return new BucketItemsCollection( bucketItems ) }))
 
 
     //let AAA (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =
@@ -560,7 +575,8 @@ module public Tasks =
                     if isComplete then
                         yield TaskResponse.TaskComplete "Transcription Job Completed"
                     else
-                        yield TaskResponse.TaskContinueWith (ContinueWithArgument.Continue "Querying job status")
+                        yield TaskResponse.TaskInfo "Querying job status"
+                        yield TaskResponse.TaskContinue
             }
 
         seq {

@@ -51,7 +51,6 @@ namespace Tustler.Helpers
                     TaskResponse.TaskSelect _ => element.FindResource("TaskSelectTemplate") as DataTemplate,
                     TaskResponse.TaskMultiSelect _ => element.FindResource("TaskMultiSelectTemplate") as DataTemplate,
                     TaskResponse.TaskSequence _ => element.FindResource("TaskSequenceTemplate") as DataTemplate,
-                    TaskResponse.TaskContinueWith _ => element.FindResource("TaskContinueWithTemplate") as DataTemplate,
 
                     TaskResponse.ShowTranscriptionJobsSummary _ => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
 
