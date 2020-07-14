@@ -12,7 +12,6 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using TustlerFSharpPlatform;
 using TustlerModels;
-using static TustlerFSharpPlatform.TaskArguments;
 
 namespace Tustler.UserControls.TaskMemberControls
 {

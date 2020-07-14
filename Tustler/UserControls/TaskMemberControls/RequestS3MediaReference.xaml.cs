@@ -17,7 +17,6 @@ using TustlerFSharpPlatform;
 using TustlerInterfaces;
 using TustlerModels;
 using TustlerServicesLib;
-using static TustlerFSharpPlatform.TaskArguments;
 
 namespace Tustler.UserControls.TaskMemberControls
 {

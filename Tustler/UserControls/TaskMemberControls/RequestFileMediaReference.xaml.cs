@@ -5,7 +5,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using TustlerFSharpPlatform;
-using static TustlerFSharpPlatform.TaskArguments;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
 
 namespace Tustler.UserControls.TaskMemberControls

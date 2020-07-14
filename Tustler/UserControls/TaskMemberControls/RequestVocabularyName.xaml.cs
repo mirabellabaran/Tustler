@@ -15,7 +15,6 @@ using TustlerAWSLib;
 using TustlerFSharpPlatform;
 using TustlerModels;
 using TustlerServicesLib;
-using static TustlerFSharpPlatform.TaskArguments;
 
 namespace Tustler.UserControls.TaskMemberControls
 {

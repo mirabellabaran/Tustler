@@ -19,7 +19,6 @@ using TustlerFSharpPlatform;
 using TustlerInterfaces;
 using TustlerModels;
 using TustlerServicesLib;
-using static TustlerFSharpPlatform.TaskArguments;
 using AWSMiniTasks = TustlerFSharpPlatform.MiniTasks;
 using AWSTasks = TustlerFSharpPlatform.Tasks;
 
@@ -32,6 +31,7 @@ namespace Tustler.UserControls
     {
         private const string EventStackArgumentRestorePath = "defaultargs.json";
 
+        private readonly NotificationsList notificationsList;
         private readonly AmazonWebServiceInterface awsInterface;
 
         private readonly List<TaskEvent> events;    // ground truth for the events generated in a given session (start task to TaskResponse.TaskComplete)
@@ -52,7 +52,7 @@ namespace Tustler.UserControls
                         "Cleanup" => AWSTasks.Cleanup,
                         "CleanTranscriptionJobHistory" => AWSTasks.CleanTranscriptionJobHistory,
                         "SomeSubTask" => AWSTasks.SomeSubTask,
-                        "TranscribeAudio" => AWSTasks.TranscribeAudio,//ctrl.TaskArguments = new TaskArguments.TranscribeAudioArguments(ctrl.awsInterface, new NotificationsList());
+                        "TranscribeAudio" => AWSTasks.TranscribeAudio,
                         "UploadMediaFile" => AWSTasks.UploadMediaFile,
                         "StartTranscription" => AWSTasks.StartTranscription,
                         "MonitorTranscription" => AWSTasks.MonitorTranscription,
@@ -74,7 +74,7 @@ namespace Tustler.UserControls
         //    internal set;
         //}
 
-        public Func<ITaskArgumentCollection, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> TaskFunction
+        public Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> TaskFunction
         {
             get;
             internal set;
@@ -85,6 +85,7 @@ namespace Tustler.UserControls
             InitializeComponent();
 
             this.awsInterface = awsInterface;
+            this.notificationsList = new NotificationsList();
 
             this.events = new List<TaskEvent>();
             this.taskResponses = new ObservableCollection<TaskResponse>();
@@ -283,6 +284,12 @@ namespace Tustler.UserControls
                                 writer.WritePropertyName("SetVocabularyName");
                                 JsonSerializer.Serialize<string>(writer, str.Item);
                                 break;
+
+                            // don't serialize the following
+                            case TaskResponse.SetNotificationsList _:
+                            case TaskResponse.SetAWSInterface _:
+                                break;
+
                             default:
                                 throw new ArgumentException($"Unknown event stack argument type: {response}");
                         }
@@ -389,12 +396,17 @@ namespace Tustler.UserControls
                     bool independantTasks = stack.Ordering == RetainingStack<SubTaskItem>.ItemOrdering.Independant;
 
                     if (independantTasks)
+                    {
+                        // independant tasks cannot share arguments; clear all arguments and add back the common arguments
                         events.Add(TaskEvent.ClearArguments);
+                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewSetNotificationsList(notificationsList)));
+                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewSetAWSInterface(awsInterface)));
+                    }
 
                     events.Add(TaskEvent.NewSubTask(nextTask.TaskName));
 
                     if (independantTasks)
-                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewTaskItem(nextTask)));
+                        events.Add(TaskEvent.NewSetArgument(TaskResponse.NewSetTaskItem(nextTask)));
 
                     //ContinueWithArgument arg = independantTasks? ContinueWithArgument.Next : ContinueWithArgument.None;
 
@@ -438,6 +450,10 @@ namespace Tustler.UserControls
             try
             {
                 Mouse.OverrideCursor = Cursors.Wait;
+
+                // add common arguments to the event stack
+                events.Add(TaskEvent.NewSetArgument(TaskResponse.NewSetNotificationsList(notificationsList)));
+                events.Add(TaskEvent.NewSetArgument(TaskResponse.NewSetAWSInterface(awsInterface)));
 
                 // attempt to restore event stack arguments from a previous session
                 var taskFolderPath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.TaskName);
@@ -501,8 +517,9 @@ namespace Tustler.UserControls
                 }
             }
 
+            notificationsList.Clear();      // cleared for each function invocation
             events.Add(TaskEvent.InvokingFunction);
-            var responseStream = TaskFunction(new TaskArguments.NotificationsOnlyArguments(awsInterface, new NotificationsList()), args);
+            var responseStream = TaskFunction(args);
             lbTaskResponses.ItemsSource = taskResponses;
 
             var collection = new ObservableCollection<TaskResponse>();
@@ -657,8 +674,10 @@ namespace Tustler.UserControls
                 // first check if the task is complete
                 if (events.Last().IsFunctionCompleted)
                 {
-                    // if so then add a ClearArguments to the events stack before adding SetArgument below
+                    // if so then add a ClearArguments to the events stack (plus common arguments) before adding SetArgument below
                     events.Add(TaskEvent.ClearArguments);
+                    events.Add(TaskEvent.NewSetArgument(TaskResponse.NewSetNotificationsList(notificationsList)));
+                    events.Add(TaskEvent.NewSetArgument(TaskResponse.NewSetAWSInterface(awsInterface)));
 
                     // and prune the ObservableCollection back to the last TaskSelect
                     var tempStack = new Stack<TaskResponse>(taskResponses);
@@ -795,8 +814,11 @@ namespace Tustler.UserControls
                     var taskItem = subtasks.Pop();
 
                     events.Add(TaskEvent.ClearArguments);
+                    events.Add(TaskEvent.NewSetArgument(TaskResponse.NewSetNotificationsList(notificationsList)));
+                    events.Add(TaskEvent.NewSetArgument(TaskResponse.NewSetAWSInterface(awsInterface)));
+
                     events.Add(TaskEvent.NewSubTask(taskItem.TaskName));
-                    events.Add(TaskEvent.NewSetArgument(TaskResponse.NewTaskItem(taskItem)));     // TODO and this
+                    events.Add(TaskEvent.NewSetArgument(TaskResponse.NewSetTaskItem(taskItem)));
 
                     await Dispatcher.InvokeAsync(async () =>
                     {
