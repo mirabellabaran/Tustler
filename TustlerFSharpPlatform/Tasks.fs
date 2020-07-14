@@ -398,18 +398,18 @@ module public Tasks =
 
             let jobName = argsRecord.TranscriptionJobName.Value
 
-            // note: the task name may be used as the output S3 key
-            let jobsModel = Transcribe.getTranscriptionJobByName awsInterface notifications jobName |> Async.RunSynchronously
-
             seq {
+                // note: the task name may be used as the output S3 key
+                let jobsModel = Transcribe.getTranscriptionJobByName awsInterface notifications jobName |> Async.RunSynchronously
                 yield! getNotificationResponse notifications
+
                 if jobsModel.IsSome then
                     let isComplete = (jobsModel.Value.TranscriptionJobStatus = "COMPLETED") //Amazon.TranscribeService.TranscriptionJobStatus.COMPLETED)
                     if isComplete then
                         yield TaskResponse.TaskComplete "Transcription Job Completed"
                     else
                         yield TaskResponse.TaskInfo "Querying job status"
-                        yield TaskResponse.TaskContinue
+                        yield TaskResponse.TaskContinue 3000
             }
 
         seq {

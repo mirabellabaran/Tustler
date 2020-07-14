@@ -345,6 +345,14 @@ namespace Tustler.UserControls
                         var subTasks = new RetainingStack<SubTaskItem>(taskSequence.Item, RetainingStack<SubTaskItem>.ItemOrdering.Sequential);
                         events.Add(TaskEvent.NewForEach(subTasks));
                         break;
+                    case TaskResponse.TaskContinue delayMilliseconds:
+                        await Task.Delay(delayMilliseconds.Item).ConfigureAwait(true);
+                        await Dispatcher.InvokeAsync<Task>(async () =>
+                        {
+                            await RunLastSubTask().ConfigureAwait(false);
+                        });
+                        passToUI = false;
+                        break;
                     case TaskResponse.TaskComplete _:
                         events.Add(TaskEvent.FunctionCompleted);
 
@@ -361,13 +369,6 @@ namespace Tustler.UserControls
                                     // by the time this is invoked, the events stack may be in the process of being modified via new incoming responses
                                     // therefore pass a copy to iterate over
                                     SaveArguments(eventsCopy);
-                                });
-                                passToUI = false;
-                                break;
-                            case TaskResponse.Tags.TaskContinue:
-                                await Dispatcher.InvokeAsync<Task>(async () =>
-                                {
-                                    await RunLastSubTask().ConfigureAwait(false);
                                 });
                                 passToUI = false;
                                 break;
@@ -408,11 +409,8 @@ namespace Tustler.UserControls
                     if (independantTasks)
                         events.Add(TaskEvent.NewSetArgument(TaskResponse.NewSetTaskItem(nextTask)));
 
-                    //ContinueWithArgument arg = independantTasks? ContinueWithArgument.Next : ContinueWithArgument.None;
-
                     await Dispatcher.InvokeAsync(async () =>
                     {
-                        //taskResponses.Add(TaskResponse.NewTaskContinueWith(arg));
                         await RunLastSubTask().ConfigureAwait(false);
                     });
                 }

@@ -106,7 +106,7 @@ namespace TustlerAWSLib.Mocks
             // after a delay, set the job to complete
             await Task.Factory.StartNew(async () =>
             {
-                await Task.Delay(10000);
+                await Task.Delay(12000);
 
                 // add a new 'file' to MockS3, and set the task as complete
                 var mockS3 = awsInterface.S3 as MockS3;

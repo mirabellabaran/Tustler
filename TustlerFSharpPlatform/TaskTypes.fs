@@ -90,11 +90,11 @@ open System.Collections.Generic
         | TaskSelect of string                  // prompt the user to select an item (this is also a truncation point for subsequent reselection)
         | TaskMultiSelect of IEnumerable<SubTaskItem>       // user selects zero or more sub-tasks to perform
         | TaskSequence of IEnumerable<SubTaskItem>          // a sequence of tasks that flow from one to the next without any intervening UI
-        | TaskContinue                                      // re-invoke the current function
+        //| TaskDelay of int                                  // delay re-calling the task for the specified number of milliseconds
+        | TaskContinue of int                               // re-invoke the current function after the specified number of milliseconds
         | TaskArgumentSave                                  // save any arguments set on the event stack for subsequent sessions
     
         | Notification of Notification
-        //| DelaySequence of int
     
         // Values for UI display only
         | ShowTranscriptionJobsSummary of TranscriptionJobsViewModel
