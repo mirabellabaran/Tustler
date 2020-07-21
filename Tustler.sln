@@ -23,9 +23,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TustlerServicesLib.Test", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TustlerInterfaces", "TustlerInterfaces\TustlerInterfaces.csproj", "{974CFD92-2F80-41B9-8041-E048D177A0B8}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TustlerFSharpPlatform", "TustlerFSharpPlatform\TustlerFSharpPlatform.fsproj", "{DB2A4791-8B90-48CA-9701-BB09887C721D}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TustlerFSharpPlatform", "TustlerFSharpPlatform\TustlerFSharpPlatform.fsproj", "{DB2A4791-8B90-48CA-9701-BB09887C721D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TustlerModels", "TustlerModels\TustlerModels.csproj", "{EF05B5B2-D418-41A9-839E-5777A848B3E8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TustlerModels", "TustlerModels\TustlerModels.csproj", "{EF05B5B2-D418-41A9-839E-5777A848B3E8}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "CloudWeaver.Agent", "CloudWeaver.Agent\CloudWeaver.Agent.fsproj", "{C2C55EC4-4176-4AC9-88B7-AD6F3115A6E2}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "CloudWeaver.Types", "CloudWeaver.Types\CloudWeaver.Types.fsproj", "{D469D296-9296-414F-8935-FC3CF58FDBE2}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "CloudWeaver.AWS", "CloudWeaver.AWS\CloudWeaver.AWS.fsproj", "{6B362ABB-6724-4407-AF0C-2B69F5E2B942}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -65,6 +71,18 @@ Global
 		{EF05B5B2-D418-41A9-839E-5777A848B3E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EF05B5B2-D418-41A9-839E-5777A848B3E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EF05B5B2-D418-41A9-839E-5777A848B3E8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C2C55EC4-4176-4AC9-88B7-AD6F3115A6E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C2C55EC4-4176-4AC9-88B7-AD6F3115A6E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C2C55EC4-4176-4AC9-88B7-AD6F3115A6E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C2C55EC4-4176-4AC9-88B7-AD6F3115A6E2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D469D296-9296-414F-8935-FC3CF58FDBE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D469D296-9296-414F-8935-FC3CF58FDBE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D469D296-9296-414F-8935-FC3CF58FDBE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D469D296-9296-414F-8935-FC3CF58FDBE2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6B362ABB-6724-4407-AF0C-2B69F5E2B942}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B362ABB-6724-4407-AF0C-2B69F5E2B942}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B362ABB-6724-4407-AF0C-2B69F5E2B942}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B362ABB-6724-4407-AF0C-2B69F5E2B942}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

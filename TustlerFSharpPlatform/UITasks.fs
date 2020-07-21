@@ -2,6 +2,7 @@
 
 open TustlerModels
 open System.Collections.Generic
+open CloudWeaver.Types
 
 [<RequireQualifiedAccess>]
 type UITaskMode =

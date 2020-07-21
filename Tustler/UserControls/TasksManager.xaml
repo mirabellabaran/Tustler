@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:TustlerModels;assembly=TustlerModels"
-             xmlns:fsharp="clr-namespace:TustlerFSharpPlatform;assembly=TustlerFSharpPlatform"
+             xmlns:fsharp="clr-namespace:CloudWeaver.Types;assembly=CloudWeaver.Types"
              xmlns:services="clr-namespace:TustlerServicesLib;assembly=TustlerServicesLib"
              xmlns:helpers="clr-namespace:Tustler.Helpers"
              xmlns:uc="clr-namespace:Tustler.UserControls"

@@ -1,4 +1,5 @@
-﻿using FFmpeg.AutoGen;
+﻿using CloudWeaver.Types;
+using FFmpeg.AutoGen;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -104,8 +105,8 @@ namespace Tustler
 
         private static IEnumerable<(string name, string tag)> GetTaskNames()
         {
-            var asm = Assembly.Load("TustlerFSharpPlatform");
-            var tasksModule = asm.GetType("TustlerFSharpPlatform.Tasks");
+            var asm = Assembly.Load("CloudWeaver.AWS");
+            var tasksModule = asm.GetType("CloudWeaver.AWS.Tasks");
             var methods = tasksModule.GetMethods(BindingFlags.Public | BindingFlags.Static);
 
             return methods.Where(mi => !Attribute.IsDefined(mi, typeof(HideFromUI))).Select(mi => (mi.Name, mi.Name));

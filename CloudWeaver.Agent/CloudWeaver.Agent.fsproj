@@ -2,28 +2,17 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <OutputType>Exe</OutputType>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="AWSInterface.fs" />
-    <Compile Include="TaskTypes.fs" />
-    <Compile Include="UITasks.fs" />
-    <Compile Include="Tasks.fs" />
-    <Compile Include="TaskQueue.fs" />
+    <Compile Include="CloudWeaver.Agent.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CloudWeaver.AWS\CloudWeaver.AWS.fsproj" />
     <ProjectReference Include="..\CloudWeaver.Types\CloudWeaver.Types.fsproj" />
     <ProjectReference Include="..\TustlerAWSLib\TustlerAWSLib.csproj" />
-    <ProjectReference Include="..\TustlerInterfaces\TustlerInterfaces.csproj" />
     <ProjectReference Include="..\TustlerModels\TustlerModels.csproj" />
     <ProjectReference Include="..\TustlerServicesLib\TustlerServicesLib.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="4.7.1" />
   </ItemGroup>
 
 </Project>

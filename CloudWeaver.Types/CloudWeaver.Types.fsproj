@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="CloudWeaver.Types.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TustlerAWSLib\TustlerAWSLib.csproj" />
+    <ProjectReference Include="..\TustlerModels\TustlerModels.csproj" />
+    <ProjectReference Include="..\TustlerServicesLib\TustlerServicesLib.csproj" />
+  </ItemGroup>
+
+</Project>
