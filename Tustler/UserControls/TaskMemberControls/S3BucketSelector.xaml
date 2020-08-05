@@ -41,7 +41,7 @@
     </UserControl.Resources>
 
     <Grid>
-        <ItemsControl ItemsSource="{Binding Item.Buckets}">
+        <ItemsControl ItemsSource="{Binding Item.Argument.Item.Buckets}">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                     <StackPanel Orientation="Horizontal" />

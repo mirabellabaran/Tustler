@@ -42,13 +42,15 @@
                 <Setter Property="Width" Value="90" />
             </Style>
 
-            <!-- Note this data template uses a different data context from the containing grid (see Context dependency property) -->
+            <!-- Note this data template uses a different data context from the containing grid which is bound to the underlying user control by default -->
+            <!-- See the Context dependency property which is bound to the data model wrapped in TaskResponse.SetArgument (see TaskManager.xaml @ <uctask:S3ItemManagement.../>) -->
             <DataTemplate x:Key="StandardMode">
                 <ListBox x:Name="bucketItemNotifications" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-                         Background="{StaticResource ContrastingBackground}" ItemsSource="{Binding Path=Context.Item.NotificationsList}"
+                         Background="{StaticResource ContrastingBackground}" ItemsSource="{Binding Path=Context.NotificationsList}"
                          helpers:ScrollToLastItemBehavior.Items="{Binding ElementName=bucketItemNotifications, Path=Items}" />
             </DataTemplate>
 
+            <!-- All bindings on this template are to child controls of this user control (ie Binding ElementName= ...) -->
             <DataTemplate x:Key="DownloadPromptMode">
                 <Border Background="{StaticResource ContrastingBackground}" BorderBrush="{x:Static SystemColors.ControlBrush}" BorderThickness="1" Margin="1">
                     <DockPanel LastChildFill="True">
@@ -77,6 +79,7 @@
                 </Border>
             </DataTemplate>
 
+            <!-- All bindings on this template are to child controls of this user control (ie Binding Path=SelectedItem.Key, ...) -->
             <DataTemplate x:Key="ConfirmDeleteMode">
                 <Border Background="{StaticResource ContrastingBackground}" BorderBrush="{x:Static SystemColors.ControlBrush}" BorderThickness="1" Margin="1">
                     <DockPanel>
@@ -94,6 +97,8 @@
                 </Border>
             </DataTemplate>
 
+
+            <!-- All bindings on this style sheet are to a property on this user control (ie Binding Path=Mode) -->
             <Style x:Key="childSelectingStyle" TargetType="ContentPresenter">
                 <Setter Property="ContentTemplate" Value="{StaticResource StandardMode}"/>
                 <Style.Triggers>
@@ -111,6 +116,7 @@
 
         <Button Grid.Row="1" Grid.Column="1" Content="Delete" ToolTip="Delete this file" CommandParameter="ConfirmDelete" Command="{x:Static uc:S3ItemManagementCommands.ChangeMode}" Style="{StaticResource buttonStyles}" />
 
+        <!-- Bound to this user control -->
         <ContentPresenter Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource childSelectingStyle}" Content="{Binding}" />
     </Grid>
 

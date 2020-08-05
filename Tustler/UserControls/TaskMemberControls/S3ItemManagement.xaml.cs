@@ -7,8 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using TustlerFSharpPlatform;
-using static TustlerFSharpPlatform.MiniTasks;
+using static CloudWeaver.AWS.MiniTasks;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
 
 namespace Tustler.UserControls.TaskMemberControls

@@ -1,4 +1,5 @@
-﻿using CloudWeaver.Types;
+﻿using CloudWeaver.AWS;
+using CloudWeaver.Types;
 using Microsoft.Win32;
 using System;
 using System.IO;

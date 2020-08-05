@@ -164,7 +164,7 @@
         <DataTemplate x:Key="BucketItemsModelTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <Border Name="border" BorderBrush="{StaticResource ContrastingBackground}" Height="200" BorderThickness="10" Padding="5" Margin="5">
                 <DockPanel LastChildFill="True">
-                    <DataGrid x:Name="dgBucketItemsModelTemplate" DockPanel.Dock="Left" AutoGenerateColumns="False" CanUserAddRows="false" ItemsSource="{Binding Item.BucketItems}">
+                    <DataGrid x:Name="dgBucketItemsModelTemplate" DockPanel.Dock="Left" AutoGenerateColumns="False" CanUserAddRows="false" ItemsSource="{Binding Item.Argument.Item.BucketItems}">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Item Name" Width="280" IsReadOnly="True" Binding="{Binding Path=Key}" />
                         </DataGrid.Columns>
@@ -185,7 +185,7 @@
                                 ContentTemplateSelector="{StaticResource taskManagerChildDataTemplateSelector}"
                                 Content="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" />
 
-                            <uctask:S3ItemManagement Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Grid.RowSpan="2" Context="{Binding}" SelectedItem="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" Command="{x:Static uc:TaskCommands.StartMiniTask}" />
+                            <uctask:S3ItemManagement Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Grid.RowSpan="2" Context="{Binding Item.Argument.Item}" SelectedItem="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" Command="{x:Static uc:TaskCommands.StartMiniTask}" />
                         </Grid>
                     </Border>
                 </DockPanel>
@@ -197,10 +197,10 @@
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Transcription Jobs Summary:" Style="{StaticResource TaskInfoTextStyle}" Margin="5" />
-                        <TextBlock Text="{Binding Path=Item.TranscriptionJobs.Count, StringFormat=(Jobs: {0})}" Style="{StaticResource TaskInfoTextStyle}" Margin="5" />
+                        <TextBlock Text="{Binding Path=Item.Argument.Item.TranscriptionJobs.Count, StringFormat=(Jobs: {0})}" Style="{StaticResource TaskInfoTextStyle}" Margin="5" />
                     </StackPanel>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <ItemsControl Margin="20, 10, 20, 10" Background="{StaticResource NormalBackground}" ItemsSource="{Binding Path=Item.TranscriptionJobs}" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ItemsControl Margin="20, 10, 20, 10" Background="{StaticResource NormalBackground}" ItemsSource="{Binding Path=Item.Argument.Item.TranscriptionJobs}" ScrollViewer.VerticalScrollBarVisibility="Auto">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Margin="5">
@@ -239,43 +239,115 @@
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="TranscriptionJobNameTemplate" DataType="{x:Type fsharp:TaskResponse}">
-            <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
-                <UniformGrid Margin="5">
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="Transcription Job Name:" Style="{StaticResource TaskInfoLabelStyle}" />
-                        <TextBlock Text="{Binding Path=Item}" Style="{StaticResource TaskInfoTextStyle}" />
-                    </StackPanel>
-                </UniformGrid>
-            </Border>
-        </DataTemplate>
-
-        <DataTemplate x:Key="FileUploadTemplate" DataType="{x:Type fsharp:TaskResponse}">
+        <DataTemplate x:Key="TranscriptionJobTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
                 <StackPanel Orientation="Vertical">
-                    <TextBlock Text="Created New S3 Object:" Style="{StaticResource TaskInfoTextStyle}" Margin="5" />
-                    <UniformGrid Margin="5">
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="BucketName:" Style="{StaticResource TaskInfoLabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.BucketName}" Style="{StaticResource TaskInfoTextStyle}" />
+                    <TextBlock Text="Completed Transcription Job:" Style="{StaticResource TaskInfoTextStyle}" Margin="5" />
+                    <UniformGrid Margin="5" Columns="1">
+                        <UniformGrid.Resources>
+                            <Style x:Key="transcriptionJobLabelStyle" TargetType="Label" BasedOn="{StaticResource TaskInfoLabelStyle}">
+                                <Setter Property="Width" Value="100" />
+                            </Style>
+                        </UniformGrid.Resources>
+
+                        <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
+                            <Label Content="Job Name:" Style="{StaticResource transcriptionJobLabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.TranscriptionJobName}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="Key:" Style="{StaticResource TaskInfoLabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Key}" Style="{StaticResource TaskInfoTextStyle}" />
+                        <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0">
+                            <Label Content="Job Status:" Style="{StaticResource transcriptionJobLabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.TranscriptionJobStatus}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="MimeType:" Style="{StaticResource TaskInfoLabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.MimeType}" Style="{StaticResource TaskInfoTextStyle}" />
+                        <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.Column="0">
+                            <Label Content="Created:" Style="{StaticResource transcriptionJobLabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.CreationTime, StringFormat=at {0:MMMM dd HH:mm}}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="Extension:" Style="{StaticResource TaskInfoLabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Extension}" Style="{StaticResource TaskInfoTextStyle}" />
+                        <StackPanel Orientation="Horizontal" Grid.Row="3" Grid.Column="0">
+                            <Label Content="Started:" Style="{StaticResource transcriptionJobLabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.StartTime, StringFormat=at {0:MMMM dd HH:mm}}" Style="{StaticResource TaskInfoTextStyle}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Grid.Row="4" Grid.Column="0">
+                            <Label Content="Completed:" Style="{StaticResource transcriptionJobLabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.CompletionTime, StringFormat=at {0:MMMM dd HH:mm}}" Style="{StaticResource TaskInfoTextStyle}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2">
+                            <Label Content="Language Code:" Style="{StaticResource transcriptionJobLabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.LanguageCode}" Style="{StaticResource TaskInfoTextStyle}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2">
+                            <Label Content="Failure Reason:" Style="{StaticResource transcriptionJobLabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.FailureReason}" Style="{StaticResource TaskInfoTextStyle}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2">
+                            <Label Content="Media Format:" Style="{StaticResource transcriptionJobLabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.MediaFormat}" Style="{StaticResource TaskInfoTextStyle}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2">
+                            <Label Content="Media Sample Rate (Hz):" Style="{StaticResource transcriptionJobLabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.MediaSampleRateHertz}" Style="{StaticResource TaskInfoTextStyle}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2">
+                            <Label Content="Output URI:" Style="{StaticResource transcriptionJobLabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.OutputURI}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                     </UniformGrid>
                 </StackPanel>
             </Border>
         </DataTemplate>
-        
+                      
+        <DataTemplate x:Key="TranscriptionJobNameTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
+                <UniformGrid Margin="5">
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="Transcription Job Name:" Style="{StaticResource TaskInfoLabelStyle}" />
+                        <TextBlock Text="{Binding Path=Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
+                    </StackPanel>
+                </UniformGrid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="TranscriptURITemplate"  DataType="{x:Type fsharp:TaskResponse}">
+            <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
+                <UniformGrid Margin="5">
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="Transcript URI:" Style="{StaticResource TaskInfoLabelStyle}" />
+                        <TextBlock Text="{Binding Path=Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
+                    </StackPanel>
+                </UniformGrid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="S3MediaReferenceTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="Created New S3 Object:" Style="{StaticResource TaskInfoTextStyle}" Margin="5" />
+                    <UniformGrid Margin="5">
+                        <UniformGrid.Resources>
+                            <Style x:Key="s3LabelStyle" TargetType="Label" BasedOn="{StaticResource TaskInfoLabelStyle}">
+                                <Setter Property="Width" Value="100" />
+                            </Style>
+                        </UniformGrid.Resources>
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="BucketName:" Style="{StaticResource s3LabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.BucketName}" Style="{StaticResource TaskInfoTextStyle}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="Key:" Style="{StaticResource s3LabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.Key}" Style="{StaticResource TaskInfoTextStyle}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="MimeType:" Style="{StaticResource s3LabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.MimeType}" Style="{StaticResource TaskInfoTextStyle}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="Extension:" Style="{StaticResource s3LabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.Extension}" Style="{StaticResource TaskInfoTextStyle}" />
+                        </StackPanel>
+                    </UniformGrid>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
 
         <DataTemplate x:Key="FileMediaReferenceRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <uctask:RequestFileMediaReference Command="{x:Static uc:TaskCommands.UIResponse}" />

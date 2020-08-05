@@ -1,166 +1,209 @@
 ﻿namespace CloudWeaver.Types
 
 open TustlerServicesLib
-open TustlerAWSLib
 open TustlerModels
 open System.Collections.Generic
+open Microsoft.FSharp.Reflection
+open System.Text.Json
+open System.IO
 
-    // an attribute to tell the UI not to show certain task functions (those that are called as sub-tasks)
-    type HideFromUI() = inherit System.Attribute()
+// an attribute to mark CloudWeaver modules that contain Task Functions
+type CloudWeaverTaskFunctionModule() = inherit System.Attribute()
 
-    /// A sub task in the overall task sequence (subtasks may be sequentially dependant or independant)
-    type SubTaskItem = {
-        TaskName: string;           // the task function name of the sub-task
-        Description: string;
-    }
+// an attribute to tell the UI not to show certain task functions (those that are called as sub-tasks)
+type HideFromUI() = inherit System.Attribute()
 
-    /// A reference to a media file item stored in an S3 Bucket
-    type S3MediaReference(bucketName: string, key: string, mimeType: string, extension: string) =
-        let mutable _bucketName = bucketName
-        let mutable _key = key
-        let mutable _mimeType = mimeType
-        let mutable _extension = extension
+module CommonUtilities =
 
-        member this.BucketName with get() = _bucketName and set(value) = _bucketName <- value
-        member this.Key with get() = _key and set(value) = _key <- value
-        member this.MimeType with get() = _mimeType and set(value) = _mimeType <- value
-        member this.Extension with get() = _extension and set(value) = _extension <- value
+    // extract the name of a discrimated union field as a string
+    let toString (x:'a) = 
+        match FSharpValue.GetUnionFields(x, typeof<'a>) with
+        | case, _ -> case.Name
 
-        new() = S3MediaReference(null, null, null, null)
+    let fromString<'a> (s:string) =
+        match FSharpType.GetUnionCases typeof<'a> |> Array.filter (fun case -> case.Name = s) with
+        |[|case|] -> Some(FSharpValue.MakeUnion(case,[||]) :?> 'a)
+        |_ -> None
 
-    /// A reference to a media file stored locally (normally a file to be uploaded to S3)
-    type FileMediaReference(filePath: string, mimeType: string, extension: string) =
-        let mutable _filePath = filePath
-        let mutable _mimeType = mimeType
-        let mutable _extension = extension
+type ModuleIdentifier =
+    | Identifier of string
+    with
+    member x.AsString() = match x with | Identifier str -> str
 
-        member this.FilePath with get() = _filePath and set(value) = _filePath <- value
-        member this.MimeType with get() = _mimeType and set(value) = _mimeType <- value
-        member this.Extension with get() = _extension and set(value) = _extension <- value
+type IShareIntraModule =
+    abstract member Identifier : ModuleIdentifier with get
+    abstract member AsBytes : unit -> byte[]
+    abstract member Serialize : Utf8JsonWriter -> unit
 
-        new() = FileMediaReference(null, null, null)
+type IShareInterModule =
+    abstract member Identifier : ModuleIdentifier with get
+    abstract member AsBytes : unit -> byte[]
+    abstract member Serialize : Utf8JsonWriter -> unit
 
-    /// Tasks and subtasks return a sequence of responses as defined here
-    [<RequireQualifiedAccess>]
-    type TaskResponse =
-        | TaskInfo of string
-        | TaskComplete of string
-        | TaskPrompt of string                  // prompt the user to continue (a single Continue button is displayed along with the prompt message)
-        | TaskSelect of string                  // prompt the user to select an item (this is also a truncation point for subsequent reselection)
-        | TaskMultiSelect of IEnumerable<SubTaskItem>       // user selects zero or more sub-tasks to perform
-        | TaskSequence of IEnumerable<SubTaskItem>          // a sequence of tasks that flow from one to the next without any intervening UI
-        //| TaskDelay of int                                  // delay re-calling the task for the specified number of milliseconds
-        | TaskContinue of int                               // re-invoke the current function after the specified number of milliseconds
-        | TaskArgumentSave                                  // save any arguments set on the event stack for subsequent sessions
+type IRequestIntraModule =
+    inherit System.IComparable
+    abstract member Identifier: ModuleIdentifier with get
+
+type IShowValue =
+    abstract member Identifier: ModuleIdentifier with get
+
+/// A task in the overall task sequence (tasks may be sequentially dependant or independant)
+type TaskItem = {
+    ModuleName: string          // the fully qualified name of the type containing the task function
+    TaskName: string;           // the task function name of the task
+    Description: string;
+}
+
+/// Responses returned by Task Functions
+[<RequireQualifiedAccess>]
+type TaskResponse =
+    | TaskInfo of string
+    | TaskComplete of string
+    | TaskPrompt of string                  // prompt the user to continue (a single Continue button is displayed along with the prompt message)
+    | TaskSelect of string                  // prompt the user to select an item (this is also a truncation point for subsequent reselection)
+    | TaskMultiSelect of IEnumerable<TaskItem>       // user selects zero or more sub-tasks to perform
+    | TaskSequence of IEnumerable<TaskItem>          // a sequence of tasks that flow from one to the next without any intervening UI
+    | TaskContinue of int                               // re-invoke the current function after the specified number of milliseconds
+    | TaskArgumentSave                                  // save any arguments set on the event stack for subsequent sessions
     
-        | Notification of Notification
+    | Notification of Notification
     
-        // Values for UI display only
-        | ShowTranscriptionJobsSummary of TranscriptionJobsViewModel
+    // Values for UI display only
+    | ShowValue of IShowValue
+
+    | SetArgument of IShareIntraModule
+    | SetBoundaryArgument of IShareInterModule
     
-        // Values that are set on the events stack (as TaskEvent SetArgument)
-        | SetNotificationsList of NotificationsList
-        | SetAWSInterface of AmazonWebServiceInterface
-        | SetTaskItem of SubTaskItem                    // the current subtask function name and description (one of the user-selected items from the MultiSelect list)
-        | SetBucket of Bucket                           // set an argument on the events stack for the selected bucket
-        | SetBucketsModel of BucketViewModel            // set an argument on the events stack for the available buckets
-        | SetBucketItemsModel of BucketItemViewModel    // set an argument on the events stack for the selected bucket item
-        | SetFileUpload of S3MediaReference                // set an argument on the events stack for the file upload details
-        | SetTranscriptionJobName of string             // set an argument on the events stack for the name of the new transcription job
-        | SetTranscriptionJobsModel of TranscriptionJobsViewModel      // set an argument on the events stack for the new transcription job
-        | SetFilePath of string
-        | SetFileMediaReference of FileMediaReference
-        | SetTranscriptionLanguageCode of string
-        | SetTranslationLanguageCode of string
-        | SetVocabularyName of string
+    // Values that are sent as requests to the user
+    | RequestArgument of IRequestIntraModule
     
-        // Values that are sent as requests to the user
-        | RequestBucket
-        | RequestFileMediaReference
-        | RequestS3MediaReference
-        | RequestTranscriptionLanguageCode
-        | RequestTranslationLanguageCode
-        | RequestVocabularyName
+/// The event types allowed on the event stack
+[<RequireQualifiedAccess>]
+type TaskEvent =
+    | InvokingFunction
+    | SetArgument of TaskResponse
+    | ForEach of RetainingStack<TaskItem>
+    | Task of TaskItem     // the name and description of the task
+    | SelectArgument
+    | ClearArguments
+    | FunctionCompleted
+
+/// A simpler option type for use in C# space
+[<RequireQualifiedAccess>]
+type MaybeResponse =
+    | Just of TaskResponse
+    | Nothing
+type MaybeResponse with
+    member x.IsSet = match x with MaybeResponse.Just _ -> true | MaybeResponse.Nothing -> false
+    member x.IsNotSet = match x with MaybeResponse.Nothing -> true | MaybeResponse.Just _ -> false
+    member x.Value = match x with MaybeResponse.Nothing -> invalidArg "MaybeResponse.Value" "Value not set" | MaybeResponse.Just tr -> tr
+
+/// Interface for arguments that have assigned values prior to executing a task function
+// examples: the TaskItem for the current task function; the notifications list; the backend interface such as AWSInterface
+type IKnownArguments =
+    abstract member KnownRequests : seq<IRequestIntraModule> with get            // the module-specific requests that this module can respond to
+    abstract member GetKnownArgument : request:IRequestIntraModule -> TaskEvent
+
+// the collection of types supplied by different modules that are containers for known arguments
+type KnownArgumentsCollection () =
+    let mutable knownArgumentsMap = Map.empty
+
+    member x.AddModule (knownArgumentsContainer: IKnownArguments) =
+        knownArgumentsMap <-
+            knownArgumentsContainer.KnownRequests
+            |> Seq.fold (fun (knownArgumentsMap:Map<_, _>) request -> knownArgumentsMap.Add (request.Identifier, knownArgumentsContainer)) knownArgumentsMap
+    member x.IsKnownArgument (request: IRequestIntraModule) = knownArgumentsMap.ContainsKey request.Identifier
+    member x.GetKnownArgument (request: IRequestIntraModule) =
+        let knownArgumentsContainer = knownArgumentsMap.[request.Identifier]
+        knownArgumentsContainer.GetKnownArgument(request)
+
+/// Requests common to all modules
+type StandardRequest =
+    | RequestNotifications      // the location for writing any generated notifications
+    | RequestTaskItem           // the current task function name and description (one of the user-selected items from the MultiSelect list)
+    | RequestWorkingDirectory   // the filesystem folder where values specific to the current task function can be written and read
+
+/// Arguments common to all modules
+type StandardArgument =
+    | SetNotificationsList of NotificationsList
+    | SetTaskItem of TaskItem option
+    | SetWorkingDirectory of DirectoryInfo option
+    with
+    member this.toTaskResponse() = TaskResponse.SetArgument (StandardShareIntraModule(this))
+    member this.toTaskEvent() = TaskEvent.SetArgument(this.toTaskResponse());
+
+/// Wraps standard argument types
+and StandardShareIntraModule(arg: StandardArgument) =
+    interface IShareIntraModule with
+        member this.Identifier with get() = Identifier (CommonUtilities.toString arg)
+        member this.AsBytes () =
+            JsonSerializer.SerializeToUtf8Bytes(arg)
+        member this.Serialize writer =
+            match arg with
+            | SetNotificationsList _notificationsList -> ()     // don't serialize
+            | SetTaskItem _taskItem -> ()                       // don't serialize
+            | SetWorkingDirectory _dir -> ()                    // don't serialize
+
+    member this.Argument with get() = arg
+
+/// Wraps standard request types
+type StandardRequestIntraModule(stdRequest: StandardRequest) =
     
-    /// The event stack is composed of the following event type
-    [<RequireQualifiedAccess>]
-    type TaskEvent =
-        | InvokingFunction
-        | SetArgument of TaskResponse
-        | ForEach of RetainingStack<SubTaskItem>
-        | SubTask of string     // the name of the sub-task
-        | SelectArgument
-        | ClearArguments
-        | FunctionCompleted
+    interface IRequestIntraModule with
+        member this.CompareTo(obj: obj): int = 
+            let str1 = (this :> IRequestIntraModule).Identifier.AsString()
+            let str2 = (obj :?> IRequestIntraModule).Identifier.AsString()
+            System.String.Compare(str1, str2)
+        member this.Identifier with get() = Identifier (CommonUtilities.toString stdRequest)
 
-    /// A simpler option type for use in C# space
-    [<RequireQualifiedAccess>]
-    type MaybeResponse =
-        | Just of TaskResponse
-        | Nothing
-    type MaybeResponse with
-        member x.IsSet = match x with MaybeResponse.Just _ -> true | MaybeResponse.Nothing -> false
-        member x.IsNotSet = match x with MaybeResponse.Nothing -> true | MaybeResponse.Just _ -> false
-        member x.Value = match x with MaybeResponse.Nothing -> invalidArg "MaybeResponse.Value" "Value not set" | MaybeResponse.Just tr -> tr
+    member this.Request with get() = stdRequest
 
-    /// The set of all possible argument types (passed to Task functions)
-    type TaskArgumentRecord = {
-        // common arguments required by many Task functions
-        Notifications: NotificationsList option                 // notifications (informational or error messages) generated by function calls
-        AWSInterface: AmazonWebServiceInterface option          // an interface to all defined AWS functions (including mocked versions)
+/// Arguments whose values are known in advance (and are shared across task function modules)
+type StandardKnownArguments(notificationsList) =
 
-        // arguments that normally requiring user resolution (via TaskResponse.Request*)
-        S3Bucket: Bucket option
-        S3BucketModel: BucketViewModel option
-        FileMediaReference: FileMediaReference option           // a reference to a media file to be uploaded
-        TranscriptionLanguageCode: string option                // a transcription language code
-        VocabularyName: string option                           // the name of an optional transcription vocabulary
-
-        // arguments generated in response to proevious Task function calls
-        SubTaskItem: SubTaskItem option
-        S3MediaReference: S3MediaReference option               // a reference to an uploaded media file
-        TranscriptionJobName: string option                     // job name used when starting a new transcription job
-        TranscriptionJobsModel: TranscriptionJobsViewModel option   // the state of all transcription jobs, running or completed
-    }
-    type TaskArgumentRecord with
-        static member Init () =
-            {
-                Notifications = None;
-                AWSInterface = None;
-                
-                S3Bucket = None;
-                S3BucketModel = None;
-                FileMediaReference = None;
-                TranscriptionLanguageCode = None;
-                VocabularyName = None;
-
-                SubTaskItem = None;
-                S3MediaReference = None;
-                TranscriptionJobName = None;
-                TranscriptionJobsModel = None;
+    interface IKnownArguments with
+        member this.KnownRequests with get() =
+            seq {
+                StandardRequestIntraModule(StandardRequest.RequestNotifications)
             }
-        member x.AllRequestsSet =  x.S3Bucket.IsSome && x.FileMediaReference.IsSome && x.TranscriptionLanguageCode.IsSome && x.VocabularyName.IsSome
-        member x.InitialArgs = 4
-        member x.ReadyForSubTask index =
-            match index with
-            | 0 -> x.S3Bucket.IsSome && x.FileMediaReference.IsSome
-            | 1 -> x.S3MediaReference.IsSome && x.TranscriptionLanguageCode.IsSome && x.VocabularyName.IsSome
-            | 2 -> x.TranscriptionJobName.IsSome
-            | _ -> invalidArg "index" "Sub task index out of range"
-        member x.Update response =
-            match response with
-            | TaskResponse.SetNotificationsList notifications -> { x with Notifications = Some(notifications) }
-            | TaskResponse.SetAWSInterface awsInterface -> { x with AWSInterface = Some(awsInterface) }
+        member this.GetKnownArgument(request: IRequestIntraModule) =
+            let unWrapRequest (request:IRequestIntraModule) =
+                match request with
+                | :? StandardRequestIntraModule as stdRequestIntraModule -> stdRequestIntraModule.Request
+                | _ -> invalidArg "request" "The request is not of type StandardRequestIntraModule"
+            match (unWrapRequest request) with
+            | RequestNotifications -> StandardArgument.SetNotificationsList(notificationsList).toTaskEvent()
+            | _ -> invalidArg "request" "Unexpected request type (do you mean to use StandardVariables?)"
 
-            | TaskResponse.SetBucket bucket -> { x with S3Bucket = Some(bucket) }
-            | TaskResponse.SetBucketsModel buckets -> { x with S3BucketModel = Some(buckets) }
-            | TaskResponse.SetFileMediaReference media -> { x with FileMediaReference = Some(media) }
-            | TaskResponse.SetTranscriptionLanguageCode code -> { x with TranscriptionLanguageCode = Some(code) }
-            | TaskResponse.SetVocabularyName name -> { x with VocabularyName = Some(name) }
+/// Runtime modifiable values
+type StandardVariables() =
+    let mutable taskItemArgument = StandardArgument.SetTaskItem(None)
+    let mutable workingDirectoryArgument = StandardArgument.SetWorkingDirectory(None)
 
-            | TaskResponse.SetTaskItem subTaskItem -> { x with SubTaskItem = Some(subTaskItem) }
-            | TaskResponse.SetFileUpload media -> { x with S3MediaReference = Some(media) }
-            | TaskResponse.SetTranscriptionJobName transcriptionJobName -> { x with TranscriptionJobName = Some(transcriptionJobName) }
-            | TaskResponse.SetTranscriptionJobsModel transcriptionJobs -> { x with TranscriptionJobsModel = Some(transcriptionJobs) }
+    interface IKnownArguments with
+        member this.KnownRequests with get() =
+            seq {
+                StandardRequestIntraModule(StandardRequest.RequestTaskItem);
+                StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory);
+            }
+        member this.GetKnownArgument(request: IRequestIntraModule) =
+            let unWrapRequest (request:IRequestIntraModule) =
+                match request with
+                | :? StandardRequestIntraModule as stdRequestIntraModule -> stdRequestIntraModule.Request
+                | _ -> invalidArg "request" "The request is not of type StandardRequestIntraModule"
+            match (unWrapRequest request) with
+            | RequestTaskItem -> taskItemArgument.toTaskEvent()
+            | RequestWorkingDirectory -> workingDirectoryArgument.toTaskEvent()
+            | _ -> invalidArg "request" "Unexpected request type (do you mean to use StandardKnownArguments?)"
 
-            | _ -> invalidArg "response" "Unexpected type"
+    member this.SetValue(request, value:obj) =
+        match request with
+        | RequestTaskItem ->
+            match value with
+            | :? TaskItem -> taskItemArgument <- StandardArgument.SetTaskItem(Some(value :?> TaskItem))
+            | _ -> invalidArg "value" (sprintf "%A is not an expected value" value)
+        | RequestWorkingDirectory ->
+            match value with
+            | :? DirectoryInfo -> workingDirectoryArgument <- StandardArgument.SetWorkingDirectory(Some(value :?> DirectoryInfo))
+            | _ -> invalidArg "value" (sprintf "%A is not an expected value" value)
+        | _ -> invalidArg "request" (sprintf "%A is not a runtime modifiable value" request)

@@ -3,6 +3,7 @@
 open TustlerModels
 open System.Collections.Generic
 open CloudWeaver.Types
+open CloudWeaver.AWS
 
 [<RequireQualifiedAccess>]
 type UITaskMode =
@@ -15,7 +16,7 @@ type UITaskMode =
 type UITaskArgument =
     | Bucket of Bucket
     | FilePath of string
-    | ForEach of IEnumerable<SubTaskItem>
+    | ForEach of IEnumerable<TaskItem>
     | S3MediaReference of S3MediaReference
     | FileMediaReference of FileMediaReference
     | TranscriptionLanguageCode of string

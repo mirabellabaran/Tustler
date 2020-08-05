@@ -7,22 +7,20 @@ open System.Collections.Concurrent
 open System.Threading.Tasks
 open CloudWeaver.Types
 
-type public Agent(awsInterface, notificationsList) =
+type public Agent(knownArguments:KnownArgumentsCollection) =
 
-    let taskNameChangedEvent = new Event<EventHandler<_>, _>()
+    let standardVariables = StandardVariables()
+    let callTaskEvent = new Event<EventHandler<_>, _>()
+    let recallTaskEvent = new Event<EventHandler<_>, _>()
     let newUIResponseEvent = new Event<EventHandler<_>, _>()
     let saveArgumentsEvent = new Event<EventHandler<_>, _>()
     let errorEvent = new Event<EventHandler<_>, _>()
 
+    do
+        knownArguments.AddModule(standardVariables)
+
     // the event stack: ground truth for the events generated in a given session (start task to TaskResponse.TaskComplete)
     let events = new List<TaskEvent>()
-    do
-        // add common arguments to the event stack
-        events.Add(TaskEvent.SetArgument(TaskResponse.SetNotificationsList(notificationsList)));
-        events.Add(TaskEvent.SetArgument(TaskResponse.SetAWSInterface(awsInterface)));
-
-    //let queue = Queue.MailBoxQueue()
-    //do queue.Initialize(collection)
 
     /// Get the last ForEach RetainingStack on the event stack (if there is one)
     let getCurrentLoopStack () =
@@ -43,37 +41,36 @@ type public Agent(awsInterface, notificationsList) =
 
     let restartCurrentTask (self:Agent) =
         // find the last SubTask event
-        let subTaskEvent =
+        let taskEvent =
             events
             |> Seq.tryFindBack (fun evt ->
                 match evt with
-                | TaskEvent.SubTask _ -> true
+                | TaskEvent.Task _ -> true
                 | _ -> false
             )
 
         // and set the task name
-        let taskName =
-            match subTaskEvent with
-            | Some(TaskEvent.SubTask name) -> name
+        let task =
+            match taskEvent with
+            | Some(TaskEvent.Task task) -> task
             | _ -> invalidOp "Expecting a sub-task event in the events list"
 
-        taskNameChangedEvent.Trigger(self, taskName)    // receiver should set the TaskName and call RunTask
+        callTaskEvent.Trigger(self, task)    // receiver should set the TaskName and call RunTask
 
-    let startNewTask (self:Agent) (stack:RetainingStack<SubTaskItem>) =
-        let independantTasks = stack.Ordering = RetainingStack<SubTaskItem>.ItemOrdering.Independant
-        if independantTasks then
-            // independant tasks cannot share arguments; clear all arguments and add back the common arguments
+    let startNewTask (self:Agent) (stack:RetainingStack<TaskItem>) =
+        // check if task is independant
+        let isIndependantTask = stack.Ordering = RetainingStack<TaskItem>.ItemOrdering.Independant
+        if isIndependantTask then
+            // independant tasks cannot share arguments; clear all arguments
             events.Add(TaskEvent.ClearArguments)
-            events.Add(TaskEvent.SetArgument(TaskResponse.SetNotificationsList(notificationsList)))
-            events.Add(TaskEvent.SetArgument(TaskResponse.SetAWSInterface(awsInterface)))
 
         let nextTask = stack.Pop();
-        events.Add(TaskEvent.SubTask(nextTask.TaskName))
+        events.Add(TaskEvent.Task(nextTask))
 
-        if independantTasks then
-            events.Add(TaskEvent.SetArgument(TaskResponse.SetTaskItem(nextTask)))
+        // update task item variable
+        standardVariables.SetValue(StandardRequest.RequestTaskItem, nextTask);
         
-        taskNameChangedEvent.Trigger(self, nextTask.TaskName)
+        callTaskEvent.Trigger(self, nextTask)
 
     let nextTask (self:Agent) =
         events.Add(TaskEvent.FunctionCompleted)
@@ -86,17 +83,18 @@ type public Agent(awsInterface, notificationsList) =
         newUIResponseEvent.Trigger(self, response)
 
     let addSubTaskEvent taskSequence =
-        let subTasks = new RetainingStack<SubTaskItem>(taskSequence, RetainingStack<SubTaskItem>.ItemOrdering.Sequential)
+        let subTasks = new RetainingStack<TaskItem>(taskSequence, RetainingStack<TaskItem>.ItemOrdering.Sequential)
         events.Add(TaskEvent.ForEach(subTasks))
 
     let processResponse self response =
         match response with
-        | TaskResponse.SetBucket _ -> addArgumentEvent self response
-        | TaskResponse.SetBucketsModel _ -> addArgumentEvent self response
-        | TaskResponse.SetBucketItemsModel _ -> addArgumentEvent self response
-        | TaskResponse.SetFileUpload _ -> addArgumentEvent self response
-        | TaskResponse.SetTranscriptionJobName _ -> addArgumentEvent self response
-        | TaskResponse.SetTranscriptionJobsModel _ -> addArgumentEvent self response
+        | TaskResponse.SetArgument _ -> addArgumentEvent self response
+        | TaskResponse.SetBoundaryArgument _ -> addArgumentEvent self response
+        
+        // resolve requests for common arguments immediately (other requests get passed to the UI)
+        | TaskResponse.RequestArgument arg when knownArguments.IsKnownArgument(arg) ->
+            events.Add(knownArguments.GetKnownArgument(arg))
+            recallTaskEvent.Trigger(self, EventArgs())    // receiver should set the TaskName and call RunTask
 
         | TaskResponse.TaskSelect _ ->
             events.Add(TaskEvent.SelectArgument)
@@ -109,15 +107,15 @@ type public Agent(awsInterface, notificationsList) =
             newUIResponseEvent.Trigger(self, response)
             nextTask self
         | TaskResponse.TaskArgumentSave ->
-            // receiver should call Dispatcher.InvokeAsync to invoke a function to save the supplied event stack arguments
-            // by the time this function is invoked, the events stack may be in the process of being modified via new incoming responses
-            // therefore pass a copy to iterate over
+            // the event handler should asynchronously invoke a function to save the supplied event stack arguments
+            // (note that by the time this function is invoked, the events stack may be in the process of being modified via new incoming responses
+            // therefore a copy is passed to iterate over)
             let eventsCopy = events.ToArray()
             saveArgumentsEvent.Trigger(self, eventsCopy)
 
         | _ -> newUIResponseEvent.Trigger(self, response)    // receiver would typically call Dispatcher.InvokeAsync to invoke a function to add the response to the user interface
 
-    let queueWriter self responses =
+    let processor self responses =
         async {
             try
                 responses
@@ -129,7 +127,7 @@ type public Agent(awsInterface, notificationsList) =
         }
 
     let runTask self responses =
-        let writer = queueWriter self responses
+        let writer = processor self responses
         Async.Start writer
 
     member this.PrepareFunctionArguments (args: InfiniteList<MaybeResponse>) =
@@ -146,18 +144,13 @@ type public Agent(awsInterface, notificationsList) =
         events.Add(TaskEvent.InvokingFunction)
         runTask this responses
 
-    //member this.RestartCurrentTask () =
-    //    restartCurrentTask this
-
-    /// start the task at the top of the stack
+    /// Start the task at the top of the stack
     member this.StartNewTask stack =
         startNewTask this stack
 
-    /// a new UI selection has been made
+    /// A new UI selection has been made
     member this.NewSelection response =
         events.Add(TaskEvent.ClearArguments)
-        events.Add(TaskEvent.SetArgument(TaskResponse.SetNotificationsList(notificationsList)))
-        events.Add(TaskEvent.SetArgument(TaskResponse.SetAWSInterface(awsInterface)))
         events.Add(TaskEvent.SelectArgument)
         events.Add(TaskEvent.SetArgument(response))
 
@@ -167,16 +160,16 @@ type public Agent(awsInterface, notificationsList) =
     member this.AddEvent evt =
         events.Add(evt)
 
-    member this.ClearArguments () =
-        events.Add(TaskEvent.ClearArguments)
-
     member this.HasFunctionCompleted () =
         match (Seq.last events) with
         | TaskEvent.FunctionCompleted -> true
         | _ -> false
 
     [<CLIEvent>]
-    member this.TaskNameChanged:IEvent<EventHandler<string>, string> = taskNameChangedEvent.Publish
+    member this.CallTask:IEvent<EventHandler<TaskItem>, TaskItem> = callTaskEvent.Publish
+
+    [<CLIEvent>]
+    member this.RecallTask:IEvent<EventHandler<EventArgs>, EventArgs> = recallTaskEvent.Publish
 
     [<CLIEvent>]
     member this.NewUIResponse:IEvent<EventHandler<TaskResponse>, TaskResponse> = newUIResponseEvent.Publish

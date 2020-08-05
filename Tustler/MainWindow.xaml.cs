@@ -1,9 +1,12 @@
-﻿using System;
+﻿using CloudWeaver.AWS;
+using CloudWeaver.Types;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -31,6 +34,9 @@ namespace Tustler
     /// </summary>
     public partial class MainWindow : Window
     {
+        private const string TaskFunctionModulePrefix = "CloudWeaver*.dll";     // the name prefix of assemblies which can be searched for Task Function modules
+        private (TaskFunctionSpecifier specifier, bool hideFromUI)[] taskFunctions;     // all known task functions (with the HideFromUI attribute status)
+
         private readonly AmazonWebServiceInterface awsInterface;
         private bool isCollapsed;  // true if the notifications area is in a collapsed state
 
@@ -54,6 +60,8 @@ namespace Tustler
             InitializeComponent();
 
             this.awsInterface = awsInterface;
+            this.taskFunctions = null;
+
             this.IsMocked = (options is object) ? options.IsMocked : false;
 
             this.isCollapsed = false;
@@ -72,17 +80,17 @@ namespace Tustler
             // look for status changes in the notifications listbox so that it can scroll new items into view
             lbNotifications.ItemContainerGenerator.ItemsChanged += Notifications_ItemsChanged;
 
-            tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "S3 Management", Tag = "s3management", HasChildren = false }));
-            tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "Settings", Tag = "settings", HasChildren = true }));
+            tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "S3 Management", Tag = new DefaultTag("s3management"), HasChildren = false }));
+            tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "Settings", Tag = new DefaultTag("settings"), HasChildren = true }));
 
-            var functionSubTree = CreateTreeItem(new TreeViewItemData { Name = "Individual Functions", Tag = "functions", HasChildren = true });
+            var functionSubTree = CreateTreeItem(new TreeViewItemData { Name = "Individual Functions", Tag = new DefaultTag("functions"), HasChildren = true });
             tvActions.Items.Add(functionSubTree);
             await CreateSubTree(functionSubTree).ConfigureAwait(true);
             functionSubTree.IsExpanded = true;
 
-            tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "Tasks", Tag = "tasks", HasChildren = true }));
+            tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "Tasks", Tag = new DefaultTag("tasks"), HasChildren = true }));
 
-            menuTasks.Items.Add(CreateMenuItem(new TreeViewItemData { Name = "Tasks", Tag = "tasks", HasChildren = true }));
+            menuTasks.Items.Add(CreateMenuItem(new TreeViewItemData { Name = "Tasks", Tag = new DefaultTag("tasks"), HasChildren = true }));
 
             var credentials = TustlerAWSLib.Credentials.GetCredentials();
             if (credentials is null)
@@ -291,10 +299,57 @@ namespace Tustler
             {
                 item.Items.Clear();
 
-                var tasks = new TasksTreeViewDataModel();
-                await tasks.InitializeAsync().ConfigureAwait(true);
-                AddItems<MenuItem>(CreateMenuItem, item, tasks.TreeViewItemDataCollection);
+                if (taskFunctions is null)
+                {
+                    taskFunctions = await FindAllTaskFunctionModules().ConfigureAwait(true);
+                }
+                var topLevelFunctions = taskFunctions.Where(data => data.hideFromUI == false).Select(data => data.specifier).ToArray();
+                var tasksDataModel = new TasksTreeViewDataModel(topLevelFunctions);
+                AddItems<MenuItem>(CreateMenuItem, item, tasksDataModel.TreeViewItemDataCollection);
             }
+        }
+
+        private static async Task<(TaskFunctionSpecifier, bool)[]> FindAllTaskFunctionModules()
+        {
+            static IEnumerable<(TaskFunctionSpecifier, bool)> GetTaskFunctions(Assembly assembly, Type module)
+            {
+                var methods = module.GetMethods(BindingFlags.Public | BindingFlags.Static);
+
+                return methods
+                    .Select(mi => {
+                        var specifier = new TaskFunctionSpecifier(assembly.GetName().Name, module.FullName, mi.Name);
+                        var hideFromUI = Attribute.IsDefined(mi, typeof(HideFromUI));
+                        return (specifier, hideFromUI);
+                    });
+            }
+
+            static void ScanModules(List<(TaskFunctionSpecifier, bool)> taskFunctions)
+            {
+                var loadedAssemblies = new HashSet<string>(AppDomain.CurrentDomain.GetAssemblies().Select(asm => asm.FullName));
+                var assemblyFiles = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, TaskFunctionModulePrefix, SearchOption.TopDirectoryOnly);
+
+                foreach (var assemblyFile in assemblyFiles)
+                {
+                    var baseAssemblyName = Path.GetFileNameWithoutExtension(assemblyFile);
+                    if (!loadedAssemblies.Any(fullName => fullName.StartsWith(baseAssemblyName, StringComparison.InvariantCulture)))   // skip already loaded assemblies
+                    {
+                        var assembly = Assembly.Load(baseAssemblyName);
+
+                        foreach (var exportedType in assembly.GetExportedTypes())
+                        {
+                            if (Attribute.IsDefined(exportedType, typeof(CloudWeaverTaskFunctionModule)))
+                            {
+                                taskFunctions.AddRange(GetTaskFunctions(assembly, exportedType));
+                            }
+                        }
+                    }
+                }
+            }
+
+            var taskFunctions = new List<(TaskFunctionSpecifier, bool)>();
+            await Task.Run(() => ScanModules(taskFunctions)).ConfigureAwait(true);
+
+            return taskFunctions.ToArray();
         }
 
         private void MenuItem_Click(object sender, RoutedEventArgs e)
@@ -333,16 +388,21 @@ namespace Tustler
             return item;
         }
 
-        private static async Task CreateSubTree(TreeViewItem parentItem)
+        private async Task CreateSubTree(TreeViewItem parentItem)
         {
-            static async Task<ObservableCollection<TreeViewItemData>> GetTasks()
+            async Task<ObservableCollection<TreeViewItemData>> GetTasks()
             {
-                var tasks = new TasksTreeViewDataModel();
-                await tasks.InitializeAsync().ConfigureAwait(true);
-                return tasks.TreeViewItemDataCollection;
+                if (taskFunctions is null)
+                {
+                    taskFunctions = await FindAllTaskFunctionModules().ConfigureAwait(true);
+                }
+                var topLevelFunctions = taskFunctions.Where(data => data.hideFromUI == false).Select(data => data.specifier).ToArray();
+                var tasksDataModel = new TasksTreeViewDataModel(topLevelFunctions);
+                return tasksDataModel.TreeViewItemDataCollection;
             }
 
-            var collection = (parentItem.Tag) switch
+            var elementTag = parentItem.Tag as IElementTag;
+            var collection = (elementTag.TagDescription) switch
             {
                 "settings" => new SettingsTreeViewDataModel().TreeViewItemDataCollection,
                 "functions" => new FunctionsTreeViewDataModel().TreeViewItemDataCollection,
@@ -372,7 +432,8 @@ namespace Tustler
 
         private bool CheckIfHandled(HeaderedItemsControl item)
         {
-            string tag = (item.Tag ?? "do-not-handle") as string;
+            var elementTag = (item.Tag ?? new DefaultTag("do-not-handle")) as IElementTag;
+            string tag = elementTag.TagDescription;
             bool handled = false;
 
             switch (tag)
@@ -395,17 +456,19 @@ namespace Tustler
                     break;
                 case "tasks":   // Tasks parent item
                     break;
-                default:
+                case "taskfunction":
                     // pass the tag to the Tasks user control
-                    SwitchForm("task", tag);
+                    SwitchForm("task", elementTag);
                     handled = true;
+                    break;
+                default:
                     break;
             }
 
             return handled;
         }
 
-        private void SwitchForm(string tag, string arg = null)
+        private void SwitchForm(string tag, IElementTag initial = null)
         {
             try
             {
@@ -433,9 +496,10 @@ namespace Tustler
                         panControlsContainer.Children.Add(new TranscribeFunctions(awsInterface));
                         break;
                     case "task":
-                        var uc = new TasksManager(awsInterface)
+                        var allTaskFunctions = taskFunctions.Select(data => data.specifier).ToArray();
+                        var uc = new TasksManager(allTaskFunctions, awsInterface)
                         {
-                            TaskName = arg
+                            TaskSpecifier = (initial as TaskFunctionSpecifier)
                         };
                         panControlsContainer.Children.Add(uc);
                         break;

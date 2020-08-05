@@ -1,4 +1,5 @@
-﻿using CloudWeaver.Types;
+﻿using CloudWeaver.AWS;
+using CloudWeaver.Types;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;

@@ -24,16 +24,68 @@ namespace Tustler.Helpers
                     };
                 }
 
-                DataTemplate? GetRequestTemplate(TaskResponse response)
+                DataTemplate? GetRequestTemplate(IRequestIntraModule request)
                 {
-                    return response.Tag switch
+                    return request.Identifier.AsString() switch
                     {
-                        TaskResponse.Tags.RequestFileMediaReference => element.FindResource("FileMediaReferenceRequestTemplate") as DataTemplate,
-                        TaskResponse.Tags.RequestS3MediaReference => element.FindResource("S3MediaReferenceRequestTemplate") as DataTemplate,
-                        TaskResponse.Tags.RequestBucket => element.FindResource("BucketRequestTemplate") as DataTemplate,
-                        TaskResponse.Tags.RequestTranscriptionLanguageCode => element.FindResource("TranscriptionLanguageCodeRequestTemplate") as DataTemplate,
-                        TaskResponse.Tags.RequestTranslationLanguageCode => element.FindResource("TranslationLanguageCodeRequestTemplate") as DataTemplate,
-                        TaskResponse.Tags.RequestVocabularyName => element.FindResource("VocabularyNameRequestTemplate") as DataTemplate,
+                        "RequestFileMediaReference" => element.FindResource("FileMediaReferenceRequestTemplate") as DataTemplate,
+                        "RequestS3MediaReference" => element.FindResource("S3MediaReferenceRequestTemplate") as DataTemplate,
+                        "RequestBucket" => element.FindResource("BucketRequestTemplate") as DataTemplate,
+                        "RequestTranscriptionLanguageCode" => element.FindResource("TranscriptionLanguageCodeRequestTemplate") as DataTemplate,
+                        "RequestTranslationLanguageCode" => element.FindResource("TranslationLanguageCodeRequestTemplate") as DataTemplate,
+                        "RequestVocabularyName" => element.FindResource("VocabularyNameRequestTemplate") as DataTemplate,
+                        _ => null
+                    };
+                }
+
+                DataTemplate? GetSetArgumentTemplate(IShareIntraModule arg)
+                {
+                    return arg.Identifier switch
+                    {
+                        ModuleIdentifier id => id.Item switch
+                        {
+                            "SetBucket" => element.FindResource("BucketTemplate") as DataTemplate,
+                            "SetBucketsModel" => element.FindResource("BucketsModelTemplate") as DataTemplate,
+                            "SetTranscriptionJobsModel" => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
+                            "SetTranscriptionJobName" => element.FindResource("TranscriptionJobNameTemplate") as DataTemplate,
+                            "SetS3MediaReference" => element.FindResource("S3MediaReferenceTemplate") as DataTemplate,
+                            "SetTranscriptURI" => element.FindResource("TranscriptURITemplate") as DataTemplate,
+                            _ => throw new ArgumentException("Unknown argument for SetArgument")
+                        },
+                        _ => null
+                    };
+                }
+
+                DataTemplate? GetSetBoundaryArgumentTemplate(IShareInterModule arg)
+                {
+                    return arg.Identifier switch
+                    {
+                        ModuleIdentifier id => id.Item switch
+                        {
+                            //"SetBucket" => element.FindResource("BucketTemplate") as DataTemplate,
+                            //"SetBucketsModel" => element.FindResource("BucketsModelTemplate") as DataTemplate,
+                            //"SetBucketItemsModel" => element.FindResource("BucketItemsModelTemplate") as DataTemplate,
+                            //"SetTranscriptionJobsModel" => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
+                            //"SetTranscriptionJobName" => element.FindResource("TranscriptionJobNameTemplate") as DataTemplate,
+                            //"SetFileUpload" => element.FindResource("FileUploadTemplate") as DataTemplate,
+
+                            _ => throw new ArgumentException("Unknown boundary argument")
+                        },
+                        _ => null
+                    };
+                }
+
+                DataTemplate? GetShowValueTemplate(IShowValue arg)
+                {
+                    return arg.Identifier switch
+                    {
+                        ModuleIdentifier id => id.Item switch
+                        {
+                            "DisplayTranscriptionJobsModel" => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
+                            "DisplayTranscriptionJob" => element.FindResource("TranscriptionJobTemplate") as DataTemplate,
+                            "DisplayBucketItemsModel" => element.FindResource("BucketItemsModelTemplate") as DataTemplate,
+                            _ => throw new ArgumentException("Unknown argument for ShowArgument")
+                        },
                         _ => null
                     };
                 }
@@ -50,15 +102,15 @@ namespace Tustler.Helpers
                     TaskResponse.TaskMultiSelect _ => element.FindResource("TaskMultiSelectTemplate") as DataTemplate,
                     TaskResponse.TaskSequence _ => element.FindResource("TaskSequenceTemplate") as DataTemplate,
 
-                    TaskResponse.ShowTranscriptionJobsSummary _ => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
+                    //TaskResponse.ShowTranscriptionJobsSummary _ => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
 
-                    TaskResponse.SetBucket _ => element.FindResource("BucketTemplate") as DataTemplate,
-                    TaskResponse.SetBucketsModel _ => element.FindResource("BucketsModelTemplate") as DataTemplate,
-                    TaskResponse.SetBucketItemsModel _ => element.FindResource("BucketItemsModelTemplate") as DataTemplate,
-                    TaskResponse.SetTranscriptionJobsModel _ => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
-                    TaskResponse.SetTranscriptionJobName _ => element.FindResource("TranscriptionJobNameTemplate") as DataTemplate,
-                    TaskResponse.SetFileUpload _ => element.FindResource("FileUploadTemplate") as DataTemplate,
-                    _ => GetRequestTemplate(response)
+                    TaskResponse.ShowValue arg => GetShowValueTemplate(arg.Item),
+                    TaskResponse.SetArgument arg => GetSetArgumentTemplate(arg.Item),
+                    TaskResponse.SetBoundaryArgument arg => GetSetBoundaryArgumentTemplate(arg.Item),
+
+                    TaskResponse.RequestArgument arg => GetRequestTemplate(arg.Item),
+
+                    _ => null
                 };
 
                 return template;
@@ -68,6 +120,7 @@ namespace Tustler.Helpers
         }
     }
 
+    // a template selector used by the ContentControl on the BucketItemsModelTemplate DataTemplate of TaskManager.xaml
     public class TaskManagerChildDataTemplateSelector : DataTemplateSelector
     {
         public override DataTemplate? SelectTemplate(object item, DependencyObject container)

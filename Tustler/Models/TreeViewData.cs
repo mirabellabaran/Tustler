@@ -10,8 +10,29 @@ using System.Text;
 using System.Threading.Tasks;
 using TustlerFSharpPlatform;
 
-namespace Tustler
+namespace Tustler.Models
 {
+    public interface IElementTag
+    {
+        public string TagDescription { get; }
+    }
+
+    /// <summary>
+    /// The default tag for menu and treeview items just wraps a string
+    /// </summary>
+    /// <seealso cref="TaskFunctionSpecifier"/>
+    public class DefaultTag : IElementTag
+    {
+        private readonly string description;
+
+        public DefaultTag(string description)
+        {
+            this.description = description;
+        }
+
+        public string TagDescription => description;
+    }
+
     public class TreeViewItemData
     {
         public string Name
@@ -20,7 +41,7 @@ namespace Tustler
             set;
         }
 
-        public string Tag
+        public IElementTag Tag
         {
             get;
             set;
@@ -35,7 +56,7 @@ namespace Tustler
         public ObservableCollection<TreeViewItemData> ChildItemDataCollection
         {
             get;
-            set;
+            //set;
         }
     }
 
@@ -50,7 +71,7 @@ namespace Tustler
         public SettingsTreeViewDataModel()
         {
             var divisions = new (string name, string tag)[] { ("Credentials", "credentials"), ("Application Settings", "appSettings") };
-            var divisionItems = from division in divisions select new TreeViewItemData { Name = division.name, Tag = division.tag, HasChildren = false };
+            var divisionItems = from division in divisions select new TreeViewItemData { Name = division.name, Tag = new DefaultTag(division.tag), HasChildren = false };
 
             this.TreeViewItemDataCollection = new ObservableCollection<TreeViewItemData>(divisionItems);
         }
@@ -67,7 +88,7 @@ namespace Tustler
         public FunctionsTreeViewDataModel()
         {
             var divisions = new (string name, string tag)[] { ("Polly", "polly"), ("Translate", "translate"), ("Transcribe", "transcribe") };
-            var divisionItems = from division in divisions select new TreeViewItemData { Name = division.name, Tag = division.tag, HasChildren = false };
+            var divisionItems = from division in divisions select new TreeViewItemData { Name = division.name, Tag = new DefaultTag(division.tag), HasChildren = false };
 
             this.TreeViewItemDataCollection = new ObservableCollection<TreeViewItemData>(divisionItems);
         }
@@ -81,35 +102,10 @@ namespace Tustler
             private set;
         }
 
-        public TasksTreeViewDataModel()
+        public TasksTreeViewDataModel(TaskFunctionSpecifier[] taskFunctions)
         {
-            TreeViewItemDataCollection = new ObservableCollection<TreeViewItemData>();
-        }
-
-        public async Task InitializeAsync()
-        {
-            var treeViewItems = await FetchTasksAsync().ConfigureAwait(false);
-            foreach (var item in treeViewItems)
-            {
-                TreeViewItemDataCollection.Add(item);
-            }
-        }
-
-        private static async Task<IEnumerable<TreeViewItemData>> FetchTasksAsync()
-        {
-            var tasks = await Task.Run(() => GetTaskNames()).ConfigureAwait(false);
-            var divisionItems = from task in tasks select new TreeViewItemData { Name = task.name, Tag = task.tag, HasChildren = false };
-
-            return divisionItems;
-        }
-
-        private static IEnumerable<(string name, string tag)> GetTaskNames()
-        {
-            var asm = Assembly.Load("CloudWeaver.AWS");
-            var tasksModule = asm.GetType("CloudWeaver.AWS.Tasks");
-            var methods = tasksModule.GetMethods(BindingFlags.Public | BindingFlags.Static);
-
-            return methods.Where(mi => !Attribute.IsDefined(mi, typeof(HideFromUI))).Select(mi => (mi.Name, mi.Name));
+            var divisionItems = from taskFunction in taskFunctions select new TreeViewItemData { Name = taskFunction.TaskName, Tag = taskFunction, HasChildren = false };
+            TreeViewItemDataCollection = new ObservableCollection<TreeViewItemData>(divisionItems);
         }
     }
 }
