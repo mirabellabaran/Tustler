@@ -201,6 +201,8 @@ namespace Tustler.UserControls
                 var taskFolderPath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.TaskSpecifier.TaskName);
                 if (Directory.Exists(taskFolderPath))
                 {
+                    agent.SetWorkingDirectory(new DirectoryInfo(taskFolderPath));
+
                     var serializedDataPath = Path.Combine(taskFolderPath, EventStackArgumentRestorePath);
                     if (File.Exists(serializedDataPath))
                     {
@@ -218,6 +220,19 @@ namespace Tustler.UserControls
                         }
                     }
                 }
+
+                // set a default taskname
+                agent.SetTaskName(new Guid().ToString());
+
+                // set the save flags
+                var saveFlags = new SaveFlags(new ISaveFlagSet[]
+                {
+                    new AWSFlagSet(new AWSFlagItem[] {
+                        AWSFlagItem.TranscribeSaveJSONTranscript,
+                        AWSFlagItem.TranscribeSaveDefaultTranscript
+                    })
+                });
+                agent.SetSaveFlags(saveFlags);
 
                 RunTask();
             }

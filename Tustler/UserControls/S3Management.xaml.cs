@@ -287,7 +287,7 @@ namespace Tustler.UserControls
                 {
                     Mouse.OverrideCursor = Cursors.Wait;
 
-                    var downloadResult = await S3Services.DownloadItem(awsInterface, bucketName, key, filePath).ConfigureAwait(true);
+                    var downloadResult = await S3Services.DownloadItemToFile(awsInterface, bucketName, key, filePath).ConfigureAwait(true);
                     S3Services.ProcessDownloadItemResult(notifications, downloadResult);
                 }
                 finally

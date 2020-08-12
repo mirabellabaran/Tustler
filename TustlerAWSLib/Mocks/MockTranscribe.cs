@@ -110,7 +110,8 @@ namespace TustlerAWSLib.Mocks
 
                 // add a new 'file' to MockS3, and set the task as complete
                 var mockS3 = awsInterface.S3 as MockS3;
-                var key = $"TranscribeTaskOutput-{Guid.NewGuid()}.json";        // actually the output file is just the $"{jobName}.json"
+                //var key = $"TranscribeTaskOutput-{Guid.NewGuid()}.json";        // actually the output file is just the $"{jobName}.json"
+                var key = "d2a8856b-bd9a-49bf-a54a-5d91df4b73f7.json";              // example from a real call to S3 (would normally match $"{jobName}.json")
                 var newKey = mockS3.AddBucketItem(bucketName, key, "application/json", "json");    // key may be modified if it already exists
 
                 var job = transcriptionTaskDictionary[jobName];

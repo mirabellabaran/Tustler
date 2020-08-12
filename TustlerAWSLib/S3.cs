@@ -4,6 +4,7 @@ using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -223,7 +224,7 @@ namespace TustlerAWSLib
         /// <param name="key"></param>
         /// <param name="filePath"></param>
         /// <returns>A pair consisting of a success flag and the filepath</returns>
-        public async Task<AWSResult<(bool?, string)>> DownloadItem(string bucketName, string key, string filePath)
+        public async Task<AWSResult<(bool?, string)>> DownloadItemToFile(string bucketName, string key, string filePath)
         {
             try
             {
@@ -244,17 +245,55 @@ namespace TustlerAWSLib
             }
             catch (HttpRequestException ex)
             {
-                return new AWSResult<(bool?, string)>((null, filePath), new AWSException("DownloadItem", "Not connected.", ex));
+                return new AWSResult<(bool?, string)>((null, filePath), new AWSException("DownloadItemToFile", "Not connected.", ex));
             }
             catch (AmazonS3Exception ex)
             {
-                return new AWSResult<(bool?, string)>((null, filePath), new AWSException("DownloadItem", "S3 Exception.", ex));
+                return new AWSResult<(bool?, string)>((null, filePath), new AWSException("DownloadItemToFile", "S3 Exception.", ex));
             }
             catch (HttpErrorResponseException ex)
             {
-                return new AWSResult<(bool?, string)>((null, filePath), new AWSException("DownloadItem", "Error Response Exception.", ex));
+                return new AWSResult<(bool?, string)>((null, filePath), new AWSException("DownloadItemToFile", "Error Response Exception.", ex));
             }
         }
 
+        /// <summary>
+        /// Open a stream on an S3 bucket item
+        /// </summary>
+        /// <param name="bucketName"></param>
+        /// <param name="key"></param>
+        /// <returns>A pair consisting of a success flag and the filepath</returns>
+        /// <remarks>The caller is responsible for closing the stream</remarks>
+        public async Task<AWSResult<Stream>> DownloadItemAsStream(string bucketName, string key)
+        {
+            try
+            {
+                var streamTransferUtilityRequest = new TransferUtilityOpenStreamRequest
+                {
+                    BucketName = bucketName,
+                    Key = key,
+                };
+
+                using (var client = new AmazonS3Client())
+                {
+                    var fileTransferUtility = new TransferUtility(client);
+
+                    var stream = await fileTransferUtility.OpenStreamAsync(streamTransferUtilityRequest);
+                    return new AWSResult<Stream>(stream, null);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                return new AWSResult<Stream>(null, new AWSException("DownloadItemAsStream", "Not connected.", ex));
+            }
+            catch (AmazonS3Exception ex)
+            {
+                return new AWSResult<Stream>(null, new AWSException("DownloadItemAsStream", "S3 Exception.", ex));
+            }
+            catch (HttpErrorResponseException ex)
+            {
+                return new AWSResult<Stream>(null, new AWSException("DownloadItemAsStream", "Error Response Exception.", ex));
+            }
+        }
     }
 }

@@ -27,11 +27,13 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TustlerFSharpPlatform", "Tu
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TustlerModels", "TustlerModels\TustlerModels.csproj", "{EF05B5B2-D418-41A9-839E-5777A848B3E8}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "CloudWeaver.Agent", "CloudWeaver.Agent\CloudWeaver.Agent.fsproj", "{C2C55EC4-4176-4AC9-88B7-AD6F3115A6E2}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "CloudWeaver.Agent", "CloudWeaver.Agent\CloudWeaver.Agent.fsproj", "{C2C55EC4-4176-4AC9-88B7-AD6F3115A6E2}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "CloudWeaver.Types", "CloudWeaver.Types\CloudWeaver.Types.fsproj", "{D469D296-9296-414F-8935-FC3CF58FDBE2}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "CloudWeaver.Types", "CloudWeaver.Types\CloudWeaver.Types.fsproj", "{D469D296-9296-414F-8935-FC3CF58FDBE2}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "CloudWeaver.AWS", "CloudWeaver.AWS\CloudWeaver.AWS.fsproj", "{6B362ABB-6724-4407-AF0C-2B69F5E2B942}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "CloudWeaver.AWS", "CloudWeaver.AWS\CloudWeaver.AWS.fsproj", "{6B362ABB-6724-4407-AF0C-2B69F5E2B942}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudWeaver.AWS.Test", "CloudWeaver.AWS.Test\CloudWeaver.AWS.Test.csproj", "{78742DA0-2B66-4911-8BEA-A9A55B9EEF85}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -83,6 +85,10 @@ Global
 		{6B362ABB-6724-4407-AF0C-2B69F5E2B942}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6B362ABB-6724-4407-AF0C-2B69F5E2B942}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6B362ABB-6724-4407-AF0C-2B69F5E2B942}.Release|Any CPU.Build.0 = Release|Any CPU
+		{78742DA0-2B66-4911-8BEA-A9A55B9EEF85}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{78742DA0-2B66-4911-8BEA-A9A55B9EEF85}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{78742DA0-2B66-4911-8BEA-A9A55B9EEF85}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{78742DA0-2B66-4911-8BEA-A9A55B9EEF85}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

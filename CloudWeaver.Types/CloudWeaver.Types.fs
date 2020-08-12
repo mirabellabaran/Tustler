@@ -13,18 +13,6 @@ type CloudWeaverTaskFunctionModule() = inherit System.Attribute()
 // an attribute to tell the UI not to show certain task functions (those that are called as sub-tasks)
 type HideFromUI() = inherit System.Attribute()
 
-module CommonUtilities =
-
-    // extract the name of a discrimated union field as a string
-    let toString (x:'a) = 
-        match FSharpValue.GetUnionFields(x, typeof<'a>) with
-        | case, _ -> case.Name
-
-    let fromString<'a> (s:string) =
-        match FSharpType.GetUnionCases typeof<'a> |> Array.filter (fun case -> case.Name = s) with
-        |[|case|] -> Some(FSharpValue.MakeUnion(case,[||]) :?> 'a)
-        |_ -> None
-
 type ModuleIdentifier =
     | Identifier of string
     with
@@ -34,18 +22,22 @@ type IShareIntraModule =
     abstract member Identifier : ModuleIdentifier with get
     abstract member AsBytes : unit -> byte[]
     abstract member Serialize : Utf8JsonWriter -> unit
+    abstract member ToString: unit -> string
 
 type IShareInterModule =
     abstract member Identifier : ModuleIdentifier with get
     abstract member AsBytes : unit -> byte[]
     abstract member Serialize : Utf8JsonWriter -> unit
+    abstract member ToString: unit -> string
 
 type IRequestIntraModule =
     inherit System.IComparable
     abstract member Identifier: ModuleIdentifier with get
+    abstract member ToString: unit -> string
 
 type IShowValue =
     abstract member Identifier: ModuleIdentifier with get
+    abstract member ToString: unit -> string
 
 /// A task in the overall task sequence (tasks may be sequentially dependant or independant)
 type TaskItem = {
@@ -53,6 +45,8 @@ type TaskItem = {
     TaskName: string;           // the task function name of the task
     Description: string;
 }
+with
+    override this.ToString() = sprintf "TaskItem: %s %s %s" this.ModuleName this.TaskName this.Description
 
 /// Responses returned by Task Functions
 [<RequireQualifiedAccess>]
@@ -76,6 +70,28 @@ type TaskResponse =
     
     // Values that are sent as requests to the user
     | RequestArgument of IRequestIntraModule
+    with
+    override this.ToString() =
+        let folder items mapper =
+            let strings =
+                items
+                |> Seq.map mapper
+            System.String.Join(", ", strings)
+        match this with
+        | TaskInfo str -> (sprintf "TaskInfo: %s" str)
+        | TaskComplete str -> (sprintf "TaskComplete: %s" str)
+        | TaskPrompt str -> (sprintf "TaskPrompt: %s" str)
+        | TaskSelect str -> (sprintf "TaskSelect: %s" str)
+        | TaskMultiSelect taskItems -> (sprintf "TaskMultiSelect: %s" (System.String.Join(", ", taskItems)))    // assume TaskItem.ToString()
+        | TaskSequence taskItems -> (sprintf "TaskSequence: %s" (System.String.Join(", ", taskItems)))    // assume TaskItem.ToString()
+        | TaskContinue delay -> (sprintf "TaskContinue: %d (ms)" delay)
+        | TaskArgumentSave -> "TaskArgumentSave"
+        | Notification notification -> (sprintf "Notification: %s" (notification.ToString()))
+        | ShowValue showValue -> (sprintf "ShowValue: %s" (showValue.ToString()))
+        | SetArgument arg -> (sprintf "SetArgument: %s" (arg.ToString()))
+        | SetBoundaryArgument arg -> (sprintf "SetBoundaryArgument: %s" (arg.ToString()))
+        | RequestArgument request -> (sprintf "RequestArgument: %s" (request.ToString()))
+
     
 /// The event types allowed on the event stack
 [<RequireQualifiedAccess>]
@@ -120,15 +136,35 @@ type KnownArgumentsCollection () =
 /// Requests common to all modules
 type StandardRequest =
     | RequestNotifications      // the location for writing any generated notifications
+    | RequestTaskName           // the name of a task (usually a GUID; used as filename for intermediate and final results)
     | RequestTaskItem           // the current task function name and description (one of the user-selected items from the MultiSelect list)
     | RequestWorkingDirectory   // the filesystem folder where values specific to the current task function can be written and read
+    | RequestSaveFlags          // a set of flags controlling the saving of intermediate results
+    with
+    override this.ToString() =
+        match this with
+        | RequestNotifications -> "RequestNotifications"
+        | RequestTaskName -> "RequestTaskName"
+        | RequestTaskItem -> "RequestTaskItem"
+        | RequestWorkingDirectory -> "RequestWorkingDirectory"
+        | RequestSaveFlags -> "RequestSaveFlags"
 
 /// Arguments common to all modules
 type StandardArgument =
     | SetNotificationsList of NotificationsList
+    | SetTaskName of string option
     | SetTaskItem of TaskItem option
     | SetWorkingDirectory of DirectoryInfo option
+    | SetSaveFlags of SaveFlags option
     with
+    override this.ToString() =
+        match this with
+        | SetNotificationsList notifications -> (sprintf "SetNotificationsList: %s" (System.String.Join(", ", notifications.Notifications)))
+        | SetTaskName taskName -> (sprintf "SetTaskName: %s" (if taskName.IsSome then taskName.Value else "None"))
+        | SetTaskItem taskItem -> (sprintf "SetTaskItem: %s" (if taskItem.IsSome then taskItem.Value.ToString() else "None"))
+        | SetWorkingDirectory dirInfo -> (sprintf "SetWorkingDirectory: %s" (if dirInfo.IsSome then dirInfo.Value.ToString() else "None"))
+        | SetSaveFlags saveFlgs -> (sprintf "SetSaveFlags: %s" (if saveFlgs.IsSome then saveFlgs.Value.ToString() else "None"))
+
     member this.toTaskResponse() = TaskResponse.SetArgument (StandardShareIntraModule(this))
     member this.toTaskEvent() = TaskEvent.SetArgument(this.toTaskResponse());
 
@@ -136,13 +172,16 @@ type StandardArgument =
 and StandardShareIntraModule(arg: StandardArgument) =
     interface IShareIntraModule with
         member this.Identifier with get() = Identifier (CommonUtilities.toString arg)
+        member this.ToString () = sprintf "StandardShareIntraModule(%s)" (arg.ToString())
         member this.AsBytes () =
             JsonSerializer.SerializeToUtf8Bytes(arg)
         member this.Serialize writer =
             match arg with
             | SetNotificationsList _notificationsList -> ()     // don't serialize
+            | SetTaskName _taskName -> ()                       // don't serialize
             | SetTaskItem _taskItem -> ()                       // don't serialize
             | SetWorkingDirectory _dir -> ()                    // don't serialize
+            | SetSaveFlags _flags -> ()                         // don't serialize
 
     member this.Argument with get() = arg
 
@@ -155,6 +194,7 @@ type StandardRequestIntraModule(stdRequest: StandardRequest) =
             let str2 = (obj :?> IRequestIntraModule).Identifier.AsString()
             System.String.Compare(str1, str2)
         member this.Identifier with get() = Identifier (CommonUtilities.toString stdRequest)
+        member this.ToString () = sprintf "StandardRequestIntraModule(%s)" (stdRequest.ToString())
 
     member this.Request with get() = stdRequest
 
@@ -177,14 +217,18 @@ type StandardKnownArguments(notificationsList) =
 
 /// Runtime modifiable values
 type StandardVariables() =
+    let mutable taskNameArgument = StandardArgument.SetTaskName(None)
     let mutable taskItemArgument = StandardArgument.SetTaskItem(None)
     let mutable workingDirectoryArgument = StandardArgument.SetWorkingDirectory(None)
+    let mutable saveFlagsArgument = StandardArgument.SetSaveFlags(None)
 
     interface IKnownArguments with
         member this.KnownRequests with get() =
             seq {
+                StandardRequestIntraModule(StandardRequest.RequestTaskName);
                 StandardRequestIntraModule(StandardRequest.RequestTaskItem);
                 StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory);
+                StandardRequestIntraModule(StandardRequest.RequestSaveFlags);
             }
         member this.GetKnownArgument(request: IRequestIntraModule) =
             let unWrapRequest (request:IRequestIntraModule) =
@@ -192,12 +236,18 @@ type StandardVariables() =
                 | :? StandardRequestIntraModule as stdRequestIntraModule -> stdRequestIntraModule.Request
                 | _ -> invalidArg "request" "The request is not of type StandardRequestIntraModule"
             match (unWrapRequest request) with
+            | RequestTaskName -> taskNameArgument.toTaskEvent()
             | RequestTaskItem -> taskItemArgument.toTaskEvent()
             | RequestWorkingDirectory -> workingDirectoryArgument.toTaskEvent()
+            | RequestSaveFlags -> saveFlagsArgument.toTaskEvent()
             | _ -> invalidArg "request" "Unexpected request type (do you mean to use StandardKnownArguments?)"
 
     member this.SetValue(request, value:obj) =
         match request with
+        | RequestTaskName ->
+            match value with
+            | :? string -> taskNameArgument <- StandardArgument.SetTaskName(Some(value :?> string))
+            | _ -> invalidArg "value" (sprintf "%A is not an expected value" value)
         | RequestTaskItem ->
             match value with
             | :? TaskItem -> taskItemArgument <- StandardArgument.SetTaskItem(Some(value :?> TaskItem))
@@ -205,5 +255,9 @@ type StandardVariables() =
         | RequestWorkingDirectory ->
             match value with
             | :? DirectoryInfo -> workingDirectoryArgument <- StandardArgument.SetWorkingDirectory(Some(value :?> DirectoryInfo))
+            | _ -> invalidArg "value" (sprintf "%A is not an expected value" value)
+        | RequestSaveFlags ->
+            match value with
+            | :? SaveFlags -> saveFlagsArgument <- StandardArgument.SetSaveFlags(Some(value :?> SaveFlags))
             | _ -> invalidArg "value" (sprintf "%A is not an expected value" value)
         | _ -> invalidArg "request" (sprintf "%A is not a runtime modifiable value" request)

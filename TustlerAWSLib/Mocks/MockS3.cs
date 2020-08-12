@@ -190,7 +190,7 @@ namespace TustlerAWSLib.Mocks
             }
         }
 
-        public async Task<AWSResult<(bool?, string)>> DownloadItem(string bucketName, string key, string filePath)
+        public async Task<AWSResult<(bool?, string)>> DownloadItemToFile(string bucketName, string key, string filePath)
         {
             // pretend to retrieve an item from the pretend S3 bucket
             var itemExists = bucketItemDictionary.ContainsKey(bucketName) && bucketItemDictionary[bucketName].Exists(item => item.Key == key);
@@ -205,8 +205,28 @@ namespace TustlerAWSLib.Mocks
             }
             else
             {
-                var ex = new AWSException("Mock S3 DownloadItem", "Download error", new AmazonS3Exception("The item key does not exist"));
+                var ex = new AWSException("Mock S3 DownloadItemToFile", "Download error", new AmazonS3Exception("The item key does not exist"));
                 return await Task.FromResult(new AWSResult<(bool?, string)>((null, filePath), ex));
+            }
+        }
+
+        public async Task<AWSResult<Stream>> DownloadItemAsStream(string bucketName, string key)
+        {
+            // pretend to retrieve an item from the pretend S3 bucket
+            var itemExists = bucketItemDictionary.ContainsKey(bucketName) && bucketItemDictionary[bucketName].Exists(item => item.Key == key);
+            await Task.Delay(1000);
+
+            if (itemExists)
+            {
+                var data = Encoding.UTF8.GetBytes("This is mocked stream data");
+                var memstream = new MemoryStream(data);
+
+                return await Task.FromResult(new AWSResult<Stream>(memstream, null));
+            }
+            else
+            {
+                var ex = new AWSException("Mock S3 DownloadItemAsStream", "Download error", new AmazonS3Exception("The item key does not exist"));
+                return await Task.FromResult(new AWSResult<Stream>(null, ex));
             }
         }
     }

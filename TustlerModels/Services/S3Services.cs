@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using TustlerAWSLib;
 using TustlerInterfaces;
@@ -17,9 +18,14 @@ namespace TustlerModels.Services
             return await awsInterface.S3.UploadItem(bucketName, newKey, filePath, mimetype, extension).ConfigureAwait(false);
         }
 
-        public static async Task<AWSResult<(bool?, string)>> DownloadItem(AmazonWebServiceInterface awsInterface, string bucketName, string key, string filePath)
+        public static async Task<AWSResult<(bool?, string)>> DownloadItemToFile(AmazonWebServiceInterface awsInterface, string bucketName, string key, string filePath)
         {
-            return await awsInterface.S3.DownloadItem(bucketName, key, filePath).ConfigureAwait(false);
+            return await awsInterface.S3.DownloadItemToFile(bucketName, key, filePath).ConfigureAwait(false);
+        }
+
+        public static async Task<AWSResult<Stream>> DownloadItemAsStream(AmazonWebServiceInterface awsInterface, string bucketName, string key)
+        {
+            return await awsInterface.S3.DownloadItemAsStream(bucketName, key).ConfigureAwait(false);
         }
 
         public static async Task<AWSResult<(bool?, string)>> DeleteItem(AmazonWebServiceInterface awsInterface, string bucketName, string key)
@@ -65,6 +71,36 @@ namespace TustlerModels.Services
             }
 
             return success;
+        }
+
+        public static byte[] ProcessDownloadItemStreamResult(NotificationsList notifications, AWSResult<Stream> downloadResult)
+        {
+            byte[] result = null;
+
+            if (downloadResult.IsError)
+            {
+                notifications.HandleError(downloadResult);
+            }
+            else
+            {
+                var stream = downloadResult.Result;
+                if (stream is object && stream.CanRead && stream.Length > 0)
+                {
+                    // copy the stream data into a locally owned memory stream
+                    static byte[] GetData(Stream sourceStream)
+                    {
+                        using var memoryStream = new MemoryStream();
+                        sourceStream.CopyTo(memoryStream);
+                        sourceStream.Close();
+                        return memoryStream.GetBuffer();
+                    }
+
+                    return GetData(stream);
+                }
+                notifications.ShowMessage("Download succeeded", $"Task: Download text item from S3 completed @ {DateTime.Now.ToShortTimeString()}");
+            }
+
+            return result;
         }
 
         public static bool ProcessDeleteBucketItemResult(NotificationsList notifications, AWSResult<(bool?, string)> deleteResult)

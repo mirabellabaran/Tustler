@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TustlerInterfaces\TustlerInterfaces.csproj" />
+    <ProjectReference Include="..\TustlerServicesLib\TustlerServicesLib.csproj" />
   </ItemGroup>
 
 </Project>

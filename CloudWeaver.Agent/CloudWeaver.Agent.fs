@@ -6,6 +6,7 @@ open TustlerServicesLib
 open System.Collections.Concurrent
 open System.Threading.Tasks
 open CloudWeaver.Types
+open System.IO
 
 type public Agent(knownArguments:KnownArgumentsCollection) =
 
@@ -159,6 +160,15 @@ type public Agent(knownArguments:KnownArgumentsCollection) =
 
     member this.AddEvent evt =
         events.Add(evt)
+
+    member this.SetWorkingDirectory (directoryPath: DirectoryInfo) =
+        standardVariables.SetValue(StandardRequest.RequestWorkingDirectory, directoryPath);
+
+    member this.SetTaskName (taskName: string) =
+        standardVariables.SetValue(StandardRequest.RequestTaskName, taskName);
+
+    member this.SetSaveFlags (saveFlags: SaveFlags) =
+        standardVariables.SetValue(StandardRequest.RequestSaveFlags, saveFlags)
 
     member this.HasFunctionCompleted () =
         match (Seq.last events) with

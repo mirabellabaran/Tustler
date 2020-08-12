@@ -70,6 +70,10 @@ namespace TustlerServicesLib
             internal set;
         }
 
+        public override string ToString()
+        {
+            return $"Context={Context}; Message={Message}; Exception={Exception}";
+        }
     }
 
     public sealed class ApplicationMessageInfo : Notification
@@ -85,6 +89,10 @@ namespace TustlerServicesLib
             get;
             internal set;
         }
-    }
 
+        public override string ToString()
+        {
+            return $"Message={Message}; Detail={Detail}";
+        }
+    }
 }
