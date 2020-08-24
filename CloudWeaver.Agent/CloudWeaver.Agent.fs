@@ -1,4 +1,4 @@
-﻿namespace CloudWeaver.Agent
+﻿namespace CloudWeaver
 
 open System
 open System.Collections.Generic
@@ -129,7 +129,7 @@ type public Agent(knownArguments:KnownArgumentsCollection) =
 
     let runTask self responses =
         let writer = processor self responses
-        Async.Start writer
+        Async.StartAsTask writer
 
     member this.PrepareFunctionArguments (args: InfiniteList<MaybeResponse>) =
         // replay the observed events, adding the arguments that have been set

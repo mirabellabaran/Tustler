@@ -850,37 +850,40 @@ module public Tasks =
             let workingDirectory = argsRecord.WorkingDirectory.Value
             let saveFlags = argsRecord.SaveFlags.Value
 
-            let parsed = parseBucketItemRef transcriptURI
-            if parsed.IsSome then
-                let bucketName, key = parsed.Value
-                let filePath = Path.Combine(workingDirectory.FullName, taskName)
+            seq {
+                let parsed = parseBucketItemRef transcriptURI
+                if parsed.IsNone then       // add to notifications
+                    let message = sprintf "Error parsing transcript URI: %s" transcriptURI
+                    notifications.HandleError("Task Function = DownloadTranscriptFile",
+                        "The transcript URI passed as an argument is not in the correct format",
+                        (new System.InvalidOperationException(message)))
 
                 let transcriptData =
-                    if saveFlags.IsSet (AWSFlag(AWSFlagItem.TranscribeSaveJSONTranscript)) then
-                        let successfulDownload = S3.downloadBucketItemToFile awsInterface notifications bucketName key filePath |> Async.RunSynchronously
-                        if successfulDownload then
-                            let rawData = File.ReadAllBytesAsync(filePath) |> Async.AwaitTask |> Async.RunSynchronously
-                            Some(ReadOnlyMemory(rawData))
-                        else
-                            None
-                    else
-                        let rawData = S3.downloadBucketItemAsBytes awsInterface notifications bucketName key |> Async.RunSynchronously
-                        if isNull rawData then
-                            None
-                        else
-                            Some(ReadOnlyMemory(rawData))
+                    if parsed.IsSome then
+                        let bucketName, key = parsed.Value
 
-                seq {
-                    yield! getNotificationResponse notifications
-                    if transcriptData.IsSome then
-                        yield (AWSArgument.SetTranscriptJSON transcriptData.Value).toSetArgumentTaskResponse()
-                    yield TaskResponse.TaskComplete "Downloaded transcript file"
-                }
-            else
-                // add to notifications
-                let message = sprintf "Error parsing transcript URI: %s" transcriptURI
-                notifications.HandleError("Task Function = DownloadTranscriptFile", message, (invalidOp message))
-                getNotificationResponse notifications
+                        if saveFlags.IsSet (AWSFlag(AWSFlagItem.TranscribeSaveJSONTranscript)) then
+                            let filePath = Path.Combine(workingDirectory.FullName, taskName)
+                            let successfulDownload = S3.downloadBucketItemToFile awsInterface notifications bucketName key filePath |> Async.RunSynchronously
+                            if successfulDownload then
+                                let rawData = File.ReadAllBytesAsync(filePath) |> Async.AwaitTask |> Async.RunSynchronously
+                                Some(ReadOnlyMemory(rawData))
+                            else
+                                None
+                        else
+                            let rawData = S3.downloadBucketItemAsBytes awsInterface notifications bucketName key |> Async.RunSynchronously
+                            if isNull rawData then
+                                None
+                            else
+                                Some(ReadOnlyMemory(rawData))
+                    else
+                        None
+
+                yield! getNotificationResponse notifications
+                if transcriptData.IsSome then
+                    yield (AWSArgument.SetTranscriptJSON transcriptData.Value).toSetArgumentTaskResponse()
+                yield TaskResponse.TaskComplete "Downloaded transcript file"
+            }
 
         seq {
             let defaultArgs = TaskArgumentRecord.Init ()

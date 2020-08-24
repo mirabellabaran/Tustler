@@ -1,6 +1,6 @@
 ﻿#nullable enable
 
-using CloudWeaver.Agent;
+using CloudWeaver;
 using CloudWeaver.AWS;
 using CloudWeaver.Types;
 using System;
@@ -222,7 +222,7 @@ namespace Tustler.UserControls
                 }
 
                 // set a default taskname
-                agent.SetTaskName(new Guid().ToString());
+                agent.SetTaskName(Guid.NewGuid().ToString());
 
                 // set the save flags
                 var saveFlags = new SaveFlags(new ISaveFlagSet[]
@@ -242,7 +242,7 @@ namespace Tustler.UserControls
             }
         }
 
-        private void RunTask()
+        private async void RunTask()
         {
             // generate an arguments stack (by default an infinite enumerable of Nothing arguments)
             var args = new InfiniteList<MaybeResponse>(MaybeResponse.Nothing);
@@ -254,7 +254,7 @@ namespace Tustler.UserControls
             lbTaskResponses.ItemsSource = taskResponses;
 
             //var commonArgs = moduleLookup[TaskSpecifier.ModuleName];
-            agent.RunTask(responseStream);
+            await agent.RunTask(responseStream).ConfigureAwait(false);
         }
 
         private async void Agent_NewUIResponse(object? sender, TaskResponse response)
