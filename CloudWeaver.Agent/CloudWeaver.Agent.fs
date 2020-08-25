@@ -8,7 +8,7 @@ open System.Threading.Tasks
 open CloudWeaver.Types
 open System.IO
 
-type public Agent(knownArguments:KnownArgumentsCollection) =
+type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool) =
 
     let standardVariables = StandardVariables()
     let callTaskEvent = new Event<EventHandler<_>, _>()
@@ -22,6 +22,9 @@ type public Agent(knownArguments:KnownArgumentsCollection) =
 
     // the event stack: ground truth for the events generated in a given session (start task to TaskResponse.TaskComplete)
     let events = new List<TaskEvent>()
+
+    // the responses generated from the last task function call (useful for testing purposes)
+    let taskResponses = if retainResponses then Some(new List<TaskResponse>()) else None
 
     /// Get the last ForEach RetainingStack on the event stack (if there is one)
     let getCurrentLoopStack () =
@@ -88,6 +91,8 @@ type public Agent(knownArguments:KnownArgumentsCollection) =
         events.Add(TaskEvent.ForEach(subTasks))
 
     let processResponse self response =
+        if retainResponses then
+            taskResponses.Value.Add(response)
         match response with
         | TaskResponse.SetArgument _ -> addArgumentEvent self response
         | TaskResponse.SetBoundaryArgument _ -> addArgumentEvent self response
@@ -143,6 +148,10 @@ type public Agent(knownArguments:KnownArgumentsCollection) =
 
     member this.RunTask (responses: seq<TaskResponse>) =
         events.Add(TaskEvent.InvokingFunction)
+
+        // collect responses from just the current call to the task function
+        if retainResponses then taskResponses.Value.Clear()
+
         runTask this responses
 
     /// Start the task at the top of the stack
@@ -174,6 +183,8 @@ type public Agent(knownArguments:KnownArgumentsCollection) =
         match (Seq.last events) with
         | TaskEvent.FunctionCompleted -> true
         | _ -> false
+
+    member this.LastCallResponseList () = if retainResponses then taskResponses.Value else new List<TaskResponse>()
 
     [<CLIEvent>]
     member this.CallTask:IEvent<EventHandler<TaskItem>, TaskItem> = callTaskEvent.Publish

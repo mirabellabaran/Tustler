@@ -81,22 +81,38 @@ namespace TustlerAWSLib.Utilities
                                                         reader.Read();
                                                         switch (reader.TokenType)
                                                         {
-                                                            case JsonTokenType.PropertyName:
-                                                                if (reader.ValueTextEquals(transcriptProperty))
+                                                            case JsonTokenType.StartObject:
+                                                                reader.Read();
+                                                                switch (reader.TokenType)
                                                                 {
-                                                                    return reader.GetString();
+                                                                    case JsonTokenType.PropertyName:
+                                                                        if (reader.ValueTextEquals(transcriptProperty))
+                                                                        {
+                                                                            reader.Read();
+                                                                            if (reader.TokenType == JsonTokenType.String)
+                                                                                return reader.GetString();
+                                                                        }
+                                                                        else
+                                                                            throw new JsonException("Expected a 'transcript' property as first child of 'transcripts' array.");
+                                                                        break;
+                                                                    default:
+                                                                        throw new JsonException("Expected a 'transcript' property as first child of 'transcripts' array.");
+
                                                                 }
-                                                                else
-                                                                    throw new JsonException("Expected a 'transcript' property as first child of 'transcripts' array.");
+                                                                break;
                                                             default:
-                                                                throw new JsonException("Expected a 'transcript' property as first child of 'transcripts' array.");
+                                                                throw new JsonException("Expected a new object as first value of 'transcripts' array.");
                                                         }
+                                                        break;
                                                     default:
                                                         throw new JsonException("Expected a 'transcripts' array.");
                                                 }
                                             }
                                             else
                                                 throw new JsonException("Expected a 'transcripts' property as first child of 'results'.");
+                                            break;
+                                        default:
+                                            throw new JsonException("Expected a 'transcripts' property as first child of 'results'.");
                                     }
                                     break;
                                 default:

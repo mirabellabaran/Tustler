@@ -53,7 +53,13 @@ namespace TustlerAWSLib.Mocks
 
             // set the status of two jobs to complete
             transcriptionTaskDictionary["myJob1"].TranscriptionJobStatus = TranscriptionJobStatus.COMPLETED;
+            transcriptionTaskDictionary["myJob1"].CompletionTime = DateTime.Now;
             transcriptionTaskDictionary["myJob2"].TranscriptionJobStatus = TranscriptionJobStatus.COMPLETED;
+            transcriptionTaskDictionary["myJob2"].CompletionTime = DateTime.Now;
+
+            // set the output URI for the completed jobs
+            transcriptionTaskDictionary["myJob1"].Transcript = new Transcript() { TranscriptFileUri = $"https://s3.ap-southeast-2.amazonaws.com/tator/{Guid.NewGuid()}.json" };
+            transcriptionTaskDictionary["myJob2"].Transcript = new Transcript() { TranscriptFileUri = $"https://s3.ap-southeast-2.amazonaws.com/tator/{Guid.NewGuid()}.json" };
         }
 
         private TranscriptionJob CreateTranscriptionJob(string jobName, string bucketName, string s3MediaKey, string languageCode, string vocabularyName)

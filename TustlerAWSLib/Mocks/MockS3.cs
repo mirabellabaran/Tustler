@@ -199,7 +199,10 @@ namespace TustlerAWSLib.Mocks
             if (itemExists)
             {
                 // create an empty 'placeholder' file at the specified file path
-                File.Create(filePath);
+                if (!File.Exists(filePath))
+                {
+                    File.WriteAllText(filePath, "Hi there!");
+                }
 
                 return await Task.FromResult(new AWSResult<(bool?, string)>((true, filePath), null));
             }

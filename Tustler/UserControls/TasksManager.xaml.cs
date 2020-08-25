@@ -104,7 +104,7 @@ namespace Tustler.UserControls
             this.taskResponses = new ObservableCollection<TaskResponse>();
             this.TaskFunction = AWSTasks.MinimalMethod;
 
-            agent = new Agent(knownArguments);
+            agent = new Agent(knownArguments, false);
 
             agent.NewUIResponse += Agent_NewUIResponse;
             agent.SaveArguments += Agent_SaveArguments;

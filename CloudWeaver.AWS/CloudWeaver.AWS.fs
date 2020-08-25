@@ -491,6 +491,7 @@ module public Tasks =
 
         if requestStack.Count > 0 then
             Seq.singleton (requestStack.Pop())
+            //Seq.cast requestStack
         else
             Seq.empty
 
@@ -511,16 +512,16 @@ module public Tasks =
         |> Seq.fold (fun (argsRecord:TaskArgumentRecord) mr -> argsRecord.Update mr.Value) defaultArgs
 
     /// Validate the supplied arguments by type and position; all or some of the arguments can be unset (MaybeResponse.IsNotSet)
-    let private validateArgs expectedNum argChecker (args: InfiniteList<MaybeResponse>) =
-        if args.Count > expectedNum then
-            invalidArg "expectedNum" (sprintf "Expecting up to %d set argument values" expectedNum)
-        args
-        |> Seq.takeWhile (fun mr -> mr.IsSet)   // only examine arguments that are set
-        |> Seq.iteri(fun index mr ->
-            match mr with
-            | MaybeResponse.Just tr -> argChecker index tr
-            | MaybeResponse.Nothing -> ()
-        )
+    //let private validateArgs expectedNum argChecker (args: InfiniteList<MaybeResponse>) =
+    //    if args.Count > expectedNum then
+    //        invalidArg "expectedNum" (sprintf "Expecting up to %d set argument values" expectedNum)
+    //    args
+    //    |> Seq.takeWhile (fun mr -> mr.IsSet)   // only examine arguments that are set
+    //    |> Seq.iteri(fun index mr ->
+    //        match mr with
+    //        | MaybeResponse.Just tr -> argChecker index tr
+    //        | MaybeResponse.Nothing -> ()
+    //    )
 
     /// Get any notifications generated from the last AWS call (errors or informational messages)
     let private getNotificationResponse (notifications: NotificationsList) =
@@ -863,7 +864,7 @@ module public Tasks =
                         let bucketName, key = parsed.Value
 
                         if saveFlags.IsSet (AWSFlag(AWSFlagItem.TranscribeSaveJSONTranscript)) then
-                            let filePath = Path.Combine(workingDirectory.FullName, taskName)
+                            let filePath = Path.Combine(workingDirectory.FullName, (sprintf "%s.json" taskName))
                             let successfulDownload = S3.downloadBucketItemToFile awsInterface notifications bucketName key filePath |> Async.RunSynchronously
                             if successfulDownload then
                                 let rawData = File.ReadAllBytesAsync(filePath) |> Async.AwaitTask |> Async.RunSynchronously

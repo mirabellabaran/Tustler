@@ -95,9 +95,9 @@ namespace TustlerModels.Services
                         return memoryStream.GetBuffer();
                     }
 
+                    notifications.ShowMessage("Download succeeded", $"Task: Download text item from S3 completed @ {DateTime.Now.ToShortTimeString()}");
                     return GetData(stream);
                 }
-                notifications.ShowMessage("Download succeeded", $"Task: Download text item from S3 completed @ {DateTime.Now.ToShortTimeString()}");
             }
 
             return result;
