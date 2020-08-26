@@ -186,23 +186,13 @@ namespace CloudWeaver.AWS.Test
 
             var taskName = "ExtractTranscript";
             Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.ExtractTranscript;
-            var saveFlags = new SaveFlags(new ISaveFlagSet[]
-            {
-                new AWSFlagSet(new AWSFlagItem[] {
-                    AWSFlagItem.TranscribeSaveDefaultTranscript
-                })
-            });
-            var agent = InitializeTest(taskName, WorkingDirectory, saveFlags);
+            var agent = InitializeTest(taskName, WorkingDirectory, null);
 
             var transcriptJSONTestFilePath = Path.Combine(WorkingDirectory, transcriptJSONTestFilename);
             var contents = File.ReadAllBytes(transcriptJSONTestFilePath);
             var jsonData = new ReadOnlyMemory<byte>(contents);
 
             var result = await CallTaskAsync(taskFunction, agent);
-            Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestSaveFlags)" });
-
-            result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranscriptJSON)" });
             agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptJSON(jsonData))));
@@ -214,13 +204,48 @@ namespace CloudWeaver.AWS.Test
             result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 2);
             Assert.IsTrue(CheckAllStartWith(result, new string[] {
-                    "SetArgument: AWSShareIntraModule(SetDefaultTranscript:",
-                    "RequestArgument: StandardRequestIntraModule(RequestWorkingDirectory)"
+                    "SetArgument: AWSShareIntraModule(SetDefaultTranscript: You know, Sally Ride is such an amazing figure",
+                    "TaskComplete: Extracted transcript data"
                 }));
+        }
+
+        [TestMethod]
+        public async Task TestSaveTranscript()
+        {
+            var taskName = "SaveTranscript";
+            Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.SaveTranscript;
+            var saveFlags = new SaveFlags(new ISaveFlagSet[]
+            {
+                new AWSFlagSet(new AWSFlagItem[] {
+                    AWSFlagItem.TranscribeSaveDefaultTranscript
+                })
+            });
+            var agent = InitializeTest(taskName, WorkingDirectory, saveFlags);
+
+            var transcript = "This is a test transcript";
+
+            var result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestSaveFlags)" });
 
             result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestNotifications)" });
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestTaskName)" });
+
+            result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestWorkingDirectory)" });
+
+            result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestDefaultTranscript)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetDefaultTranscript(transcript))));
+
+            result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            Assert.IsTrue(CheckAllStartWith(result, new string[] {
+                    @"TaskComplete: Saved transcript data to C:\Users\Zev\Projects\C#\Tustler\Tustler\bin\Debug\netcoreapp3.1\FileCache\SaveTranscript.txt",
+                }));
         }
 
         private static Agent InitializeTest(string taskName, string workingDirectory, SaveFlags saveFlags)

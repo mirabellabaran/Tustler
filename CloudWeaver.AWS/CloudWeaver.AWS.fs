@@ -808,7 +808,7 @@ module public Tasks =
                         yield TaskResponse.TaskComplete "Transcription Job Completed"
                     else
                         yield TaskResponse.TaskInfo "Querying job status"
-                        yield TaskResponse.TaskContinue 3000
+                        yield TaskResponse.TaskContinue 1000
             }
 
         seq {
@@ -845,7 +845,6 @@ module public Tasks =
         let downloadTranscriptFile argsRecord =
             let awsInterface = argsRecord.AWSInterface.Value
             let notifications = argsRecord.Notifications.Value
-
             let transcriptURI = argsRecord.TranscriptURI.Value      // e.g. https://s3.ap-southeast-2.amazonaws.com/tator/d2a8856b-bd9a-49bf-a54a-5d91df4b73f7.json
             let taskName = argsRecord.TaskName.Value
             let workingDirectory = argsRecord.WorkingDirectory.Value
@@ -890,8 +889,8 @@ module public Tasks =
             let defaultArgs = TaskArgumentRecord.Init ()
             let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
 
-            if resolvedRecord.AWSInterface.IsSome && resolvedRecord.Notifications.IsSome &&
-                resolvedRecord.TranscriptURI.IsSome then
+            if resolvedRecord.AWSInterface.IsSome && resolvedRecord.Notifications.IsSome && resolvedRecord.TranscriptURI.IsSome &&
+                resolvedRecord.TaskName.IsSome && resolvedRecord.WorkingDirectory.IsSome && resolvedRecord.SaveFlags.IsSome then
                 yield! downloadTranscriptFile resolvedRecord
             else
                 yield! resolveByRequest resolvable_arguments [|
@@ -910,39 +909,63 @@ module public Tasks =
         let extractTranscript argsRecord =
             let notifications = argsRecord.Notifications.Value
             let transcriptJSON = argsRecord.TranscriptJSON.Value
-            let saveFlags = argsRecord.SaveFlags.Value
 
-            let defaultTranscript = TustlerAWSLib.Utilities.TranscriptParser.ParseTranscriptData(transcriptJSON, notifications) |> Async.AwaitTask |> Async.RunSynchronously
             seq {
+                let defaultTranscript = TustlerAWSLib.Utilities.TranscriptParser.ParseTranscriptData(transcriptJSON, notifications) |> Async.AwaitTask |> Async.RunSynchronously
                 if notifications.Notifications.Count > 0 then
                     yield! getNotificationResponse notifications
-                else
+                if not (isNull defaultTranscript) then
                     yield (AWSArgument.SetDefaultTranscript defaultTranscript).toSetArgumentTaskResponse()
 
-                    if saveFlags.IsSet (AWSFlag(AWSFlagItem.TranscribeSaveDefaultTranscript)) then
-                        if argsRecord.WorkingDirectory.IsSome && argsRecord.TaskName.IsSome then
-                            let filePath = Path.Combine(argsRecord.WorkingDirectory.Value.FullName, argsRecord.TaskName.Value)
-                            File.WriteAllTextAsync(filePath, defaultTranscript) |> Async.AwaitTask |> Async.RunSynchronously
-                            yield TaskResponse.TaskComplete "Extracted transcript data"
-                        else
-                            yield! resolveByRequest resolvable_arguments [|
-                                TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestTaskName));
-                                TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory));
-                                |]
-                    else
-                        yield TaskResponse.TaskComplete "Extracted transcript data"
+                yield TaskResponse.TaskComplete "Extracted transcript data"
             }
 
         seq {
             let defaultArgs = TaskArgumentRecord.Init ()
             let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
 
-            if resolvedRecord.Notifications.IsSome && resolvedRecord.TranscriptJSON.IsSome && resolvedRecord.SaveFlags.IsSome then
+            if resolvedRecord.Notifications.IsSome && resolvedRecord.TranscriptJSON.IsSome then
                 yield! extractTranscript resolvedRecord
             else
                 yield! resolveByRequest resolvable_arguments [|
                     TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestNotifications));
                     TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptJSON));
+                    |]
+        }
+
+    [<HideFromUI>]
+    let SaveTranscript (resolvable_arguments: InfiniteList<MaybeResponse>) =
+
+        let saveTranscript argsRecord =
+            
+            let defaultTranscript = argsRecord.DefaultTranscript.Value
+            let workingDirectory = argsRecord.WorkingDirectory.Value.FullName
+            let taskName = argsRecord.TaskName.Value
+            seq {
+                let filePath = Path.Combine(workingDirectory, (sprintf "%s.txt" taskName))
+                File.WriteAllTextAsync(filePath, defaultTranscript) |> Async.AwaitTask |> Async.RunSynchronously
+                yield TaskResponse.TaskComplete (sprintf "Saved transcript data to %s" filePath)
+            }
+
+        seq {
+            let defaultArgs = TaskArgumentRecord.Init ()
+            let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+
+            if resolvedRecord.SaveFlags.IsSome then
+                let saveFlags = resolvedRecord.SaveFlags.Value
+                if saveFlags.IsSet (AWSFlag(AWSFlagItem.TranscribeSaveDefaultTranscript)) then
+                    if resolvedRecord.DefaultTranscript.IsSome && resolvedRecord.WorkingDirectory.IsSome && resolvedRecord.TaskName.IsSome then
+                        yield! saveTranscript resolvedRecord
+                    else
+                        yield! resolveByRequest resolvable_arguments [|
+                            TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestDefaultTranscript));
+                            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory));
+                            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestTaskName));
+                            |]
+                else
+                    yield TaskResponse.TaskComplete "Save flag not set (TranscribeSaveDefaultTranscript)"
+            else
+                yield! resolveByRequest resolvable_arguments [|
                     TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
                     |]
         }
@@ -963,6 +986,9 @@ module public Tasks =
                     { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "UploadMediaFile"; Description = "Upload a media file to transcribe" };
                     { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "StartTranscription"; Description = "Start a transcription job" };
                     { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "MonitorTranscription"; Description = "Monitor the transcription job" }
+                    { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "DownloadTranscriptFile"; Description = "Download the transcription job output file from S3" }
+                    { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "ExtractTranscript"; Description = "Extract the transcript from the transcription job output file" }
+                    { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "SaveTranscript"; Description = "Save the extracted transcript to a file" }
                 |])
                 yield TaskResponse.TaskComplete ""
             else
@@ -971,6 +997,10 @@ module public Tasks =
                     TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionLanguageCode));
                     TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestFileMediaReference));
                     TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestBucket));
+
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestTaskName));
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory));
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
                 |]
         }
 

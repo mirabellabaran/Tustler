@@ -65,6 +65,9 @@ namespace Tustler.UserControls
                         "UploadMediaFile" => AWSTasks.UploadMediaFile,
                         "StartTranscription" => AWSTasks.StartTranscription,
                         "MonitorTranscription" => AWSTasks.MonitorTranscription,
+                        "DownloadTranscriptFile" => AWSTasks.DownloadTranscriptFile,
+                        "ExtractTranscript" => AWSTasks.ExtractTranscript,
+                        "SaveTranscript" => AWSTasks.SaveTranscript,
                         _ => throw new ArgumentException($"Unknown task name '{taskSpecifier?.TaskName}'"),
                     };
                 }

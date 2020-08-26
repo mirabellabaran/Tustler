@@ -50,6 +50,8 @@ namespace Tustler.Helpers
                             "SetTranscriptionJobName" => element.FindResource("TranscriptionJobNameTemplate") as DataTemplate,
                             "SetS3MediaReference" => element.FindResource("S3MediaReferenceTemplate") as DataTemplate,
                             "SetTranscriptURI" => element.FindResource("TranscriptURITemplate") as DataTemplate,
+                            "SetTranscriptJSON" => element.FindResource("TranscriptJSONTemplate") as DataTemplate,
+                            "SetDefaultTranscript" => element.FindResource("DefaultTranscriptTemplate") as DataTemplate,
                             _ => throw new ArgumentException("Unknown argument for SetArgument")
                         },
                         _ => null

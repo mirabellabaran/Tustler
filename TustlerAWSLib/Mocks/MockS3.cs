@@ -201,7 +201,8 @@ namespace TustlerAWSLib.Mocks
                 // create an empty 'placeholder' file at the specified file path
                 if (!File.Exists(filePath))
                 {
-                    File.WriteAllText(filePath, "Hi there!");
+                    var content = "{\"jobName\": \"d2a8856b - bd9a - 49bf - a54a - 5d91df4b73f7\",\"accountId\": \"261914005867\", \"results\": { \"transcripts\": [ { \"transcript\": \"You know, Sally Ride is such an amazing figure in NASA's history...\" } ] }, \"status\": \"COMPLETED\" }";
+                    File.WriteAllText(filePath, content);
                 }
 
                 return await Task.FromResult(new AWSResult<(bool?, string)>((true, filePath), null));

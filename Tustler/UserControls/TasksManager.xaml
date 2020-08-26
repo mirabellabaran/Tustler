@@ -317,6 +317,28 @@
             </Border>
         </DataTemplate>
 
+        <DataTemplate x:Key="TranscriptJSONTemplate"  DataType="{x:Type fsharp:TaskResponse}">
+            <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
+                <UniformGrid Margin="5">
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="Transcript JSON:" Style="{StaticResource TaskInfoLabelStyle}" />
+                        <TextBlock Text="{Binding Path=Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
+                    </StackPanel>
+                </UniformGrid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="DefaultTranscriptTemplate"  DataType="{x:Type fsharp:TaskResponse}">
+            <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
+                <UniformGrid Margin="5">
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="Default Transcript:" Style="{StaticResource TaskInfoLabelStyle}" />
+                        <TextBlock Text="{Binding Path=Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
+                    </StackPanel>
+                </UniformGrid>
+            </Border>
+        </DataTemplate>
+
         <DataTemplate x:Key="S3MediaReferenceTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
                 <StackPanel Orientation="Vertical">
