@@ -11,7 +11,11 @@ namespace TustlerServicesLib
 {
     public class SentenceChunker
     {
-        internal int chunkSize;     // maximum of 5000 UTF-8 characters per chunk, broken on sentence boundaries
+        public const long MinSleepMilliseconds = 10;
+        public const long MaxSleepMilliseconds = 5000;
+        public const int MaxRetries = 10;
+
+        //internal int chunkSize;     // maximum of 5000 UTF-8 characters per chunk, broken on sentence boundaries
 
         internal Dictionary<int, string> SourceChunks { get; set; }
         internal Dictionary<int, (bool Complete, string Value)> TranslatedChunks { get; set; }
@@ -115,23 +119,23 @@ namespace TustlerServicesLib
             }
         }
 
+        // compute an exponential backoff delay when a Rate exceeded message is received
+        public static long GetDelay(int retryNum, long minSleepMilliseconds, long maxSleepMilliseconds)
+        {
+            retryNum = Math.Max(0, retryNum);
+            long currentSleepMillis = (long)(minSleepMilliseconds * Math.Pow(2, retryNum));
+            return Math.Min(currentSleepMillis, maxSleepMilliseconds);
+        }
+
         public async Task ProcessChunks(Func<int, string, Task<(bool IsErrorState, bool RecoverableError)>> translator)
         {
-            // compute an exponential backoff delay when a Rate exceeded message is received
-            long GetDelay(int retryNum, long minSleepMilliseconds, long maxSleepMilliseconds)
-            {
-                retryNum = Math.Max(0, retryNum);
-                long currentSleepMillis = (long)(minSleepMilliseconds * Math.Pow(2, retryNum));
-                return Math.Min(currentSleepMillis, maxSleepMilliseconds);
-            }
-
             var retries = 0;
             var delay = 0L;
             foreach (var kvp in Chunks)
             {
                 if (!IsChunkTranslated(kvp.Key))
                 {
-                    int maxRetries = 10;
+                    int maxRetries = MaxRetries;
                     while (maxRetries-- > 0)
                     {
                         if (delay > 0L)
@@ -144,7 +148,7 @@ namespace TustlerServicesLib
                             if (recoverableError)
                             {
                                 // exponential backoff
-                                delay = GetDelay(++retries, 10, 5000);
+                                delay = GetDelay(++retries, MinSleepMilliseconds, MaxSleepMilliseconds);
                             }
                             else
                             {
@@ -206,30 +210,22 @@ namespace TustlerServicesLib
 
         private void Archive(string filePath)
         {
-            using (FileStream zipFile = new FileStream(filePath, FileMode.Create))
+            using FileStream zipFile = new FileStream(filePath, FileMode.Create);
+            using ZipArchive archive = new ZipArchive(zipFile, ZipArchiveMode.Create);
+            foreach (var kvp in SourceChunks)
             {
-                using (ZipArchive archive = new ZipArchive(zipFile, ZipArchiveMode.Create))
+                ZipArchiveEntry entry = archive.CreateEntry($"Source{kvp.Key}.txt");
+                using StreamWriter writer = new StreamWriter(entry.Open());
+                writer.Write(kvp.Value);
+            }
+            foreach (var kvp in TranslatedChunks)
+            {
+                var (completed, value) = kvp.Value;
+                if (completed)
                 {
-                    foreach (var kvp in SourceChunks)
-                    {
-                        ZipArchiveEntry entry = archive.CreateEntry($"Source{kvp.Key}.txt");
-                        using (StreamWriter writer = new StreamWriter(entry.Open()))
-                        {
-                            writer.Write(kvp.Value);
-                        }
-                    }
-                    foreach (var kvp in TranslatedChunks)
-                    {
-                        var (completed, value) = kvp.Value;
-                        if (completed)
-                        {
-                            ZipArchiveEntry entry = archive.CreateEntry($"Translated{kvp.Key}.txt");
-                            using (StreamWriter writer = new StreamWriter(entry.Open()))
-                            {
-                                writer.Write(value);
-                            }
-                        }
-                    }
+                    ZipArchiveEntry entry = archive.CreateEntry($"Translated{kvp.Key}.txt");
+                    using StreamWriter writer = new StreamWriter(entry.Open());
+                    writer.Write(value);
                 }
             }
         }
@@ -251,17 +247,15 @@ namespace TustlerServicesLib
                         {
                             if (int.TryParse(m.Groups[2].Value, out int index))
                             {
-                                using (StreamReader reader = new StreamReader(entry.Open()))
+                                using StreamReader reader = new StreamReader(entry.Open());
+                                var text = reader.ReadToEnd();
+                                if (entry.FullName.Contains("Source"))
                                 {
-                                    var text = reader.ReadToEnd();
-                                    if (entry.FullName.Contains("Source"))
-                                    {
-                                        sourceChunks.Add(index, text);
-                                    }
-                                    else if (entry.FullName.Contains("Translated"))
-                                    {
-                                        translatedChunks.Add(index, (true, text));
-                                    }
+                                    sourceChunks.Add(index, text);
+                                }
+                                else if (entry.FullName.Contains("Translated"))
+                                {
+                                    translatedChunks.Add(index, (true, text));
                                 }
                             }
                         }

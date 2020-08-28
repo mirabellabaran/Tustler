@@ -80,39 +80,46 @@ namespace TustlerModels.Services
             }
         }
 
-        private static async Task ProcessChunks(AmazonWebServiceInterface awsInterface, SentenceChunker chunker, NotificationsList notifications, Progress<int> progress, string jobName, string sourceLanguageCode, string targetLanguageCode, List<string>? terminologyNames)
+        // translate one chunk and process the result
+        public static async Task<(bool IsErrorState, bool RecoverableError)> TranslateProcessor(AmazonWebServiceInterface awsInterface, SentenceChunker chunker, NotificationsList notifications, Progress<int> progress, string jobName, string sourceLanguageCode, string targetLanguageCode, List<string>? terminologyNames, int index, string text)
         {
-            async Task<(bool IsErrorState, bool RecoverableError)> Translator(int index, string text)
+            var translationResult = await awsInterface.Translate.TranslateText(sourceLanguageCode, targetLanguageCode, text, terminologyNames).ConfigureAwait(true);
+            if (translationResult.IsError)
             {
-                var translationResult = await awsInterface.Translate.TranslateText(sourceLanguageCode, targetLanguageCode, text, terminologyNames).ConfigureAwait(true);
-                if (translationResult.IsError)
+                var ex = translationResult.Exception;
+                if (
+                    !(ex.InnerException is null) &&
+                    (ex.InnerException is AmazonTranslateException) &&
+                    (ex.InnerException as AmazonTranslateException)?.StatusCode == HttpStatusCode.TooManyRequests
+                    )
                 {
-                    var ex = translationResult.Exception;
-                    if (
-                        !(ex.InnerException is null) &&
-                        (ex.InnerException is AmazonTranslateException) &&
-                        (ex.InnerException as AmazonTranslateException)?.StatusCode == HttpStatusCode.TooManyRequests
-                        )
-                    {
-                        return (true, true);
-                    }
-                    else
-                    {
-                        notifications.HandleError(translationResult);
-                        chunker.ArchiveChunks(jobName, ApplicationSettings.FileCachePath);
-                        notifications.ShowMessage("The failed job can be restarted", $"{jobName} has been archived and can be restarted at another time using the same job name.");
-                        return (true, false);
-                    }
+                    return (true, true);
                 }
                 else
                 {
-                    var translatedText = translationResult.Result;
-                    chunker.Update(index, translatedText);
+                    notifications.HandleError(translationResult);
+                    chunker.ArchiveChunks(jobName, ApplicationSettings.FileCachePath);
+                    notifications.ShowMessage("The failed job can be restarted", $"{jobName} has been archived and can be restarted at another time using the same job name.");
+                    return (true, false);
+                }
+            }
+            else
+            {
+                var translatedText = translationResult.Result;
+                chunker.Update(index, translatedText);
 
+                if (progress is object)
                     (progress as IProgress<int>).Report(index * 100 / chunker.NumChunks);
 
-                    return (false, false);
-                }
+                return (false, false);
+            }
+        }
+
+        private static async Task ProcessChunks(AmazonWebServiceInterface awsInterface, SentenceChunker chunker, NotificationsList notifications, Progress<int> progress, string jobName, string sourceLanguageCode, string targetLanguageCode, List<string>? terminologyNames)
+        {
+            Task<(bool IsErrorState, bool RecoverableError)> Translator(int index, string text)
+            {
+                return TranslateProcessor(awsInterface, chunker, notifications, progress, jobName, sourceLanguageCode, targetLanguageCode, terminologyNames, index, text);
             }
 
             await chunker.ProcessChunks(Translator).ConfigureAwait(true);

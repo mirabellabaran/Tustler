@@ -69,7 +69,7 @@ namespace CloudWeaver.AWS.Test
             var result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestVocabularyName)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetVocabularyName(vocabularyName))));
+            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptionVocabularyName(vocabularyName))));
 
             result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);

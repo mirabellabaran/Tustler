@@ -499,11 +499,11 @@ namespace Tustler.UserControls
                         break;
                     case UITaskArgument.TranslationLanguageCode translationLanguageCodeArg:
                         var translationLanguageCode = translationLanguageCodeArg.Item;
-                        agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationLanguageCode(translationLanguageCode))));
+                        agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationLanguageCodeSource(translationLanguageCode))));
                         break;
                     case UITaskArgument.VocabularyName vocabularyNameArg:
                         var vocabularyName = vocabularyNameArg.Item;
-                        agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetVocabularyName(vocabularyName))));
+                        agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptionVocabularyName(vocabularyName))));
                         break;
                     default:
                         throw new ArgumentException($"RunSelectBucketMiniTask: Unknown argument type");

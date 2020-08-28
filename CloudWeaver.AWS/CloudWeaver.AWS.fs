@@ -72,8 +72,10 @@ type AWSArgument =
     | SetTranscriptionJobsModel of TranscriptionJobsViewModel       // the model that wraps transcription jobs
     | SetFileMediaReference of FileMediaReference
     | SetTranscriptionLanguageCode of string
-    | SetTranslationLanguageCode of string
-    | SetVocabularyName of string
+    | SetTranscriptionVocabularyName of string
+    | SetTranslationLanguageCodeSource of string
+    | SetTranslationLanguageCodeTarget of string
+    | SetTranslationTerminologyNames of List<string>
     with
     member this.toSetArgumentTaskResponse() = TaskResponse.SetArgument (AWSShareIntraModule(this))
     member this.toTaskEvent() = TaskEvent.SetArgument(this.toSetArgumentTaskResponse());
@@ -90,8 +92,10 @@ type AWSArgument =
         | SetTranscriptionJobsModel transcriptionJobsViewModel -> (sprintf "SetTranscriptionJobsModel: %s" (transcriptionJobsViewModel.ToString()))
         | SetFileMediaReference fileMediaReference -> (sprintf "SetFileMediaReference: %s" (fileMediaReference.ToString()))
         | SetTranscriptionLanguageCode languageCode -> (sprintf "SetTranscriptionLanguageCode: %s" languageCode)
-        | SetTranslationLanguageCode languageCode -> (sprintf "SetTranslationLanguageCode: %s" languageCode)
-        | SetVocabularyName vocabularyName -> (sprintf "SetVocabularyName: %s" vocabularyName)
+        | SetTranscriptionVocabularyName vocabularyName -> (sprintf "SetTranscriptionVocabularyName: %s" vocabularyName)
+        | SetTranslationLanguageCodeSource languageCode -> (sprintf "SetTranslationLanguageCodeSource: %s" languageCode)
+        | SetTranslationLanguageCodeTarget languageCode -> (sprintf "SetTranslationLanguageCodeTarget: %s" languageCode)
+        | SetTranslationTerminologyNames terminologyNames -> (sprintf "SetTranslationTerminologyNames: %s" (System.String.Join(", ", terminologyNames)))
 
 
 /// Wrapper for the arguments used by this module
@@ -114,8 +118,10 @@ and AWSShareIntraModule(arg: AWSArgument) =
             | SetTranscriptionJobsModel transcriptionJobsViewModel -> writer.WritePropertyName("SetTranscriptionJobsModel"); JsonSerializer.Serialize<TranscriptionJobsViewModel>(writer, transcriptionJobsViewModel)
             | SetFileMediaReference fileMediaReference -> writer.WritePropertyName("SetFileMediaReference"); JsonSerializer.Serialize<FileMediaReference>(writer, fileMediaReference)
             | SetTranscriptionLanguageCode transcriptionLanguageCode -> writer.WritePropertyName("SetTranscriptionLanguageCode"); JsonSerializer.Serialize<string>(writer, transcriptionLanguageCode)
-            | SetTranslationLanguageCode translationLanguageCode -> writer.WritePropertyName("SetTranslationLanguageCode"); JsonSerializer.Serialize<string>(writer, translationLanguageCode)
-            | SetVocabularyName vocabularyName -> writer.WritePropertyName("SetVocabularyName"); JsonSerializer.Serialize<string>(writer, vocabularyName)
+            | SetTranscriptionVocabularyName vocabularyName -> writer.WritePropertyName("SetTranscriptionVocabularyName"); JsonSerializer.Serialize<string>(writer, vocabularyName)
+            | SetTranslationLanguageCodeSource translationLanguageCode -> writer.WritePropertyName("SetTranslationLanguageCodeSource"); JsonSerializer.Serialize<string>(writer, translationLanguageCode)
+            | SetTranslationLanguageCodeTarget translationLanguageCode -> writer.WritePropertyName("SetTranslationLanguageCodeTarget"); JsonSerializer.Serialize<string>(writer, translationLanguageCode)
+            | SetTranslationTerminologyNames terminologyNames -> writer.WritePropertyName("SetTranslationTerminologyNames"); JsonSerializer.Serialize<IEnumerable<string>>(writer, terminologyNames)
     
     member this.Argument with get() = arg
 
@@ -159,12 +165,18 @@ and AWSShareIntraModule(arg: AWSArgument) =
             | "SetTranscriptionLanguageCode" ->
                 let data = JsonSerializer.Deserialize<string>(jsonString)
                 AWSArgument.SetTranscriptionLanguageCode data
-            | "SetTranslationLanguageCode" ->
+            | "SetTranscriptionVocabularyName" ->
                 let data = JsonSerializer.Deserialize<string>(jsonString)
-                AWSArgument.SetTranslationLanguageCode data
-            | "SetVocabularyName" ->
+                AWSArgument.SetTranscriptionVocabularyName data
+            | "SetTranslationLanguageCodeSource" ->
                 let data = JsonSerializer.Deserialize<string>(jsonString)
-                AWSArgument.SetVocabularyName data
+                AWSArgument.SetTranslationLanguageCodeSource data
+            | "SetTranslationLanguageCodeTarget" ->
+                let data = JsonSerializer.Deserialize<string>(jsonString)
+                AWSArgument.SetTranslationLanguageCodeTarget data
+            | "SetTranslationTerminologyNames" ->
+                let data = JsonSerializer.Deserialize<IEnumerable<string>>(jsonString)
+                AWSArgument.SetTranslationTerminologyNames (new List<string>(data))
             | _ -> invalidArg "propertyName" (sprintf "Property %s was not recognized" propertyName)
 
         AWSShareIntraModule(awsArgument)
@@ -180,8 +192,10 @@ type AWSRequest =
     | RequestDefaultTranscript
     | RequestTranscriptURI
     | RequestTranscriptionLanguageCode
-    | RequestTranslationLanguageCode
-    | RequestVocabularyName
+    | RequestTranscriptionVocabularyName
+    | RequestTranslationLanguageCodeSource
+    | RequestTranslationLanguageCodeTarget
+    | RequestTranslationTerminologyNames
     with
     override this.ToString() =
         match this with
@@ -194,8 +208,10 @@ type AWSRequest =
         | RequestDefaultTranscript -> "RequestDefaultTranscript"
         | RequestTranscriptURI -> "RequestTranscriptURI"
         | RequestTranscriptionLanguageCode -> "RequestTranscriptionLanguageCode"
-        | RequestTranslationLanguageCode -> "RequestTranslationLanguageCode"
-        | RequestVocabularyName -> "RequestVocabularyName"
+        | RequestTranscriptionVocabularyName -> "RequestTranscriptionVocabularyName"
+        | RequestTranslationLanguageCodeSource -> "RequestTranslationLanguageCodeSource"
+        | RequestTranslationLanguageCodeTarget -> "RequestTranslationLanguageCodeTarget"
+        | RequestTranslationTerminologyNames -> "RequestTranslationTerminologyNames"
 
 /// Wrapper for the requests used by this module
 type AWSRequestIntraModule(awsRequest: AWSRequest) =
@@ -231,6 +247,7 @@ type AWSKnownArguments(awsInterface) =
 type AWSFlagItem =
     | TranscribeSaveJSONTranscript          // save the JSON transcript generated by the Transcribe service
     | TranscribeSaveDefaultTranscript       // save the default transcript extracted from the JSON transcript file
+    | TranslateSaveTranslation              // save a translated text item
 
 type AWSFlag(awsFlag: AWSFlagItem) =
     interface ISaveFlag with
@@ -283,8 +300,8 @@ type TaskArgumentRecord = {
     S3Bucket: Bucket option
     S3BucketModel: BucketViewModel option
     FileMediaReference: FileMediaReference option           // a reference to a media file to be uploaded
-    TranscriptionLanguageCode: string option                // a transcription language code
-    VocabularyName: string option                           // the name of an optional transcription vocabulary
+    TranscriptionLanguageCode: string option                // the language code for a transcription audio source
+    TranscriptionVocabularyName: string option              // the name of an optional transcription vocabulary
 
     // arguments generated in response to proevious Task function calls
     TaskItem: TaskItem option
@@ -295,7 +312,9 @@ type TaskArgumentRecord = {
     TranscriptionJobsModel: TranscriptionJobsViewModel option   // the state of all transcription jobs, running or completed
     TranscriptURI: string option                            // location of the transcript for a completed transcription job
 
-    //TranslationLanguageCode: string option
+    TranslationLanguageCodeSource: string option            // the language code for a translation source text
+    TranslationLanguageCodeTarget: string option            // the language code for a translation target text
+    TranslationTerminologyNames: List<string> option        // optional list of terminologies
 }
 type TaskArgumentRecord with
     static member Init () =
@@ -310,7 +329,7 @@ type TaskArgumentRecord with
             S3BucketModel = None;
             FileMediaReference = None;
             TranscriptionLanguageCode = None;
-            VocabularyName = None;
+            TranscriptionVocabularyName = None;
 
             TaskItem = None;
             S3MediaReference = None;
@@ -319,6 +338,10 @@ type TaskArgumentRecord with
             DefaultTranscript = None
             TranscriptionJobsModel = None;
             TranscriptURI = None;
+
+            TranslationLanguageCodeSource = None;
+            TranslationLanguageCodeTarget = None;
+            TranslationTerminologyNames = None;
         }
     member x.InitialArgs = 4
     member x.Update response =
@@ -338,9 +361,10 @@ type TaskArgumentRecord with
                 | SetTranscriptionJobsModel transcriptionJobsModel -> { x with TranscriptionJobsModel = Some(transcriptionJobsModel) }
                 | SetFileMediaReference fileMediaReference -> { x with FileMediaReference = Some(fileMediaReference) }
                 | SetTranscriptionLanguageCode transcriptionLanguageCode -> { x with TranscriptionLanguageCode = Some(transcriptionLanguageCode) }
-                | SetVocabularyName vocabularyName -> { x with VocabularyName = Some(vocabularyName) }
-                // the following are unused for now
-                | SetTranslationLanguageCode _translationLanguageCode -> x
+                | SetTranscriptionVocabularyName vocabularyName -> { x with TranscriptionVocabularyName = Some(vocabularyName) }
+                | SetTranslationLanguageCodeSource translationLanguageCode -> { x with TranslationLanguageCodeSource = Some(translationLanguageCode) }
+                | SetTranslationLanguageCodeTarget translationLanguageCode -> { x with TranslationLanguageCodeTarget = Some(translationLanguageCode) }
+                | SetTranslationTerminologyNames terminologyNames -> { x with TranslationTerminologyNames = Some(terminologyNames) }
             | :? StandardShareIntraModule as stdRequestIntraModule ->
                 match stdRequestIntraModule.Argument with
                 | SetNotificationsList notifications -> { x with Notifications = Some(notifications) }
@@ -431,8 +455,35 @@ module public AWSInterface =
                 return model.TranscriptionVocabularies
             }
 
+    module Translate =
+
+        let getArchivedJob jobName =
+            let archiveFilePath = TranslateServices.GetArchivedJob(jobName)
+            if isNull archiveFilePath then
+                None
+            else
+                Some(archiveFilePath)
+
+        let translateLargeText awsInterface notifications progress useArchivedJob jobName sourceLanguageCode targetLanguageCode textFilePath terminologyNames = 
+            async {
+                TranslateServices.TranslateLargeText(awsInterface, notifications, progress, useArchivedJob,
+                    jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames) |> Async.AwaitTask |> Async.RunSynchronously
+            }
+
+        let translateSentences awsInterface notifications progress useArchivedJob jobName sourceLanguageCode targetLanguageCode textFilePath terminologyNames =
+            async {
+                TranslateServices.TranslateSentences(awsInterface, notifications, progress, useArchivedJob,
+                    jobName, sourceLanguageCode, targetLanguageCode, textFilePath, terminologyNames) |> Async.AwaitTask |> Async.RunSynchronously
+            }
+
+        let getTranslator awsInterface chunker notifications jobName sourceLanguageCode targetLanguageCode terminologyNames =
+            let translator (index, text) =
+                TranslateServices.TranslateProcessor(awsInterface, chunker, notifications, null, jobName, sourceLanguageCode, targetLanguageCode, terminologyNames, index, text)
+            translator
+
 open AWSInterface
 open System.Text.RegularExpressions
+open System.Threading.Tasks
 
 [<CloudWeaverTaskFunctionModule>]
 module public Tasks =
@@ -459,8 +510,10 @@ module public Tasks =
                         | SetDefaultTranscript _ -> Some(AWSRequestIntraModule(RequestDefaultTranscript) :> IRequestIntraModule)
                         | SetTranscriptURI _ -> Some(AWSRequestIntraModule(RequestTranscriptURI) :> IRequestIntraModule)
                         | SetTranscriptionLanguageCode _ -> Some(AWSRequestIntraModule(RequestTranscriptionLanguageCode) :> IRequestIntraModule)
-                        | SetTranslationLanguageCode _ -> Some(AWSRequestIntraModule(RequestTranslationLanguageCode) :> IRequestIntraModule)
-                        | SetVocabularyName _ -> Some(AWSRequestIntraModule(RequestVocabularyName) :> IRequestIntraModule)
+                        | SetTranslationLanguageCodeSource _ -> Some(AWSRequestIntraModule(RequestTranslationLanguageCodeSource) :> IRequestIntraModule)
+                        | SetTranslationLanguageCodeTarget _ -> Some(AWSRequestIntraModule(RequestTranslationLanguageCodeTarget) :> IRequestIntraModule)
+                        | SetTranscriptionVocabularyName _ -> Some(AWSRequestIntraModule(RequestTranscriptionVocabularyName) :> IRequestIntraModule)
+                        | SetTranslationTerminologyNames _ -> Some(AWSRequestIntraModule(RequestTranslationTerminologyNames) :> IRequestIntraModule)
 
                         // ignore: these are resolved internally within a task function (therefore no Request is ever generated)
                         | SetBucketsModel _ -> None
@@ -755,7 +808,7 @@ module public Tasks =
 
             let s3Media = argsRecord.S3MediaReference.Value
             let languageCode = argsRecord.TranscriptionLanguageCode.Value
-            let vocabularyName = argsRecord.VocabularyName.Value
+            let vocabularyName = argsRecord.TranscriptionVocabularyName.Value
 
             let jobName = Guid.NewGuid().ToString()
 
@@ -774,7 +827,7 @@ module public Tasks =
             let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
 
             if resolvedRecord.AWSInterface.IsSome && resolvedRecord.Notifications.IsSome &&
-                resolvedRecord.S3MediaReference.IsSome && resolvedRecord.TranscriptionLanguageCode.IsSome && resolvedRecord.VocabularyName.IsSome then
+                resolvedRecord.S3MediaReference.IsSome && resolvedRecord.TranscriptionLanguageCode.IsSome && resolvedRecord.TranscriptionVocabularyName.IsSome then
                 yield! startTranscription resolvedRecord
             else
                 yield! resolveByRequest resolvable_arguments [|
@@ -782,7 +835,7 @@ module public Tasks =
                     TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestNotifications));
                     TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestS3MediaReference));
                     TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionLanguageCode));
-                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestVocabularyName));
+                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionVocabularyName));
                     |]
         }
 
@@ -863,7 +916,7 @@ module public Tasks =
                         let bucketName, key = parsed.Value
 
                         if saveFlags.IsSet (AWSFlag(AWSFlagItem.TranscribeSaveJSONTranscript)) then
-                            let filePath = Path.Combine(workingDirectory.FullName, (sprintf "%s.json" taskName))
+                            let filePath = Path.Combine(workingDirectory.FullName, (sprintf "Transcript-%s.json" taskName))
                             let successfulDownload = S3.downloadBucketItemToFile awsInterface notifications bucketName key filePath |> Async.RunSynchronously
                             if successfulDownload then
                                 let rawData = File.ReadAllBytesAsync(filePath) |> Async.AwaitTask |> Async.RunSynchronously
@@ -942,7 +995,7 @@ module public Tasks =
             let workingDirectory = argsRecord.WorkingDirectory.Value.FullName
             let taskName = argsRecord.TaskName.Value
             seq {
-                let filePath = Path.Combine(workingDirectory, (sprintf "%s.txt" taskName))
+                let filePath = Path.Combine(workingDirectory, (sprintf "Transcript-%s.txt" taskName))
                 File.WriteAllTextAsync(filePath, defaultTranscript) |> Async.AwaitTask |> Async.RunSynchronously
                 yield TaskResponse.TaskComplete (sprintf "Saved transcript data to %s" filePath)
             }
@@ -979,7 +1032,7 @@ module public Tasks =
             let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
 
             if resolvedRecord.S3Bucket.IsSome && resolvedRecord.FileMediaReference.IsSome
-                && resolvedRecord.TranscriptionLanguageCode.IsSome && resolvedRecord.VocabularyName.IsSome then
+                && resolvedRecord.TranscriptionLanguageCode.IsSome && resolvedRecord.TranscriptionVocabularyName.IsSome then
                 // restored from a previous session OR resolved by request to the UI
                 yield TaskResponse.TaskArgumentSave     // save the resolved arguments (if not already saved)
                 yield TaskResponse.TaskSequence ([|
@@ -993,7 +1046,7 @@ module public Tasks =
                 yield TaskResponse.TaskComplete ""
             else
                 yield! resolveByRequest resolvable_arguments [|
-                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestVocabularyName));
+                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionVocabularyName));
                     TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionLanguageCode));
                     TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestFileMediaReference));
                     TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestBucket));
@@ -1002,6 +1055,116 @@ module public Tasks =
                     TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory));
                     TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
                 |]
+        }
+
+
+    [<HideFromUI>]
+    let TranslateText (resolvable_arguments: InfiniteList<MaybeResponse>) =
+
+        // translate a chunk and return the number of attempts (retries)
+        let processChunk (translator: (int * string) -> Task<struct (bool * bool)>) (chunk:KeyValuePair<int, string>) numRetriesLastChunk =
+            let maxRetries = SentenceChunker.MaxRetries
+
+            // unfold a sequence of translation attempts (stopping on success or when the maximum number of retries has been reached)
+            // each attempt sets a flag indicating a non-recoverable error
+            let attempts =
+                Seq.unfold (fun (retryNum, delay, complete) ->
+                    // limit the number of attempts
+                    if complete || retryNum >= maxRetries then
+                        None
+                    else
+                        if delay > 0L then
+                            Async.AwaitTask (Task.Delay((int)delay)) |> Async.RunSynchronously
+                        let struct (isErrorState, recoverableError) = Async.AwaitTask (translator(chunk.Key, chunk.Value)) |> Async.RunSynchronously
+
+                        let result =
+                            if isErrorState then
+                                if recoverableError then
+                                    // exponential backoff
+                                    let newDelay = SentenceChunker.GetDelay(numRetriesLastChunk + 1, SentenceChunker.MinSleepMilliseconds, SentenceChunker.MaxSleepMilliseconds)
+                                    (false, (retryNum + 1, newDelay, false))
+                                else
+                                    (true, (0, 0L, true))   // first field indicates a non-recoverable error
+                            else
+                                (false, (0, 0L, true))
+                        Some(result)
+                ) (0, 0L, false)
+
+            let nonRecoverableError = attempts |> Seq.exists (fun errorState -> errorState)
+            let numAttempts = attempts |> Seq.length
+            (nonRecoverableError, numAttempts)
+
+        let rec mapChunks (mapping: (int -> KeyValuePair<int, string> -> TaskResponse option * int)) currentRetryLevel (chunks: seq<KeyValuePair<int, string>>) =
+
+            seq {
+                if not (Seq.isEmpty chunks) then
+                    let response, nextRetryLevel =
+                        match Seq.tryHead chunks with
+                        | Some(chunk) -> mapping currentRetryLevel chunk
+                        | None -> None, currentRetryLevel
+                    if response.IsSome then yield response.Value
+                    
+                    yield! mapChunks mapping nextRetryLevel (Seq.tail chunks)
+            }
+
+        let processChunks translator (chunker: SentenceChunker) =
+            let chunkMapper currentRetryLevel chunk =
+                let nonRecoverableError, retries = processChunk translator chunk currentRetryLevel
+                // retry level is used to calculate the delay between AWS calls; the level can escalate but cannot de-escalate
+                let result = if nonRecoverableError then None else Some(TaskResponse.TaskInfo ".")
+                result, retries
+
+            chunker.Chunks
+            |> Seq.filter (fun chunk -> not (chunker.IsChunkTranslated(chunk.Key)))
+            |> mapChunks chunkMapper 0
+
+        let translateText argsRecord = 
+            let awsInterface = argsRecord.AWSInterface.Value
+            let notifications = argsRecord.Notifications.Value
+            let defaultTranscript = argsRecord.DefaultTranscript.Value
+            let sourceLanguageCode = argsRecord.TranslationLanguageCodeSource.Value
+            let targetLanguageCode = argsRecord.TranslationLanguageCodeTarget.Value
+            let terminologyNames = argsRecord.TranslationTerminologyNames.Value
+            let taskName = argsRecord.TaskName.Value
+            let workingDirectory = argsRecord.WorkingDirectory.Value
+            let saveFlags = argsRecord.SaveFlags.Value
+
+            let chunker =
+                let archiveFilePath = Translate.getArchivedJob taskName   // using taskName as the job name
+                if archiveFilePath.IsSome then
+                    SentenceChunker.DeArchiveChunks(taskName, ApplicationSettings.FileCachePath)
+                else
+                    //// the text file is assumed to contain a sequence of sentences, with one complete sentence per line
+                    //let sentences = File.ReadAllLines(textFilePath)
+                    //new TustlerServicesLib.SentenceChunker(sentences)
+                    //TustlerServicesLib.SentenceChunker.FromFile(textFilePath)
+                    new TustlerServicesLib.SentenceChunker(defaultTranscript)
+
+            let translator = Translate.getTranslator awsInterface chunker notifications taskName sourceLanguageCode targetLanguageCode terminologyNames
+
+            seq {
+                // send TaskResponse messages to show progress
+                yield! processChunks translator chunker
+
+                if chunker.IsJobComplete && saveFlags.IsSet (AWSFlag(AWSFlagItem.TranslateSaveTranslation)) then
+                    // save the translated text
+                    let filePath = Path.Combine(workingDirectory.FullName, (sprintf "Translation-%s-%s.txt" taskName targetLanguageCode))
+                    File.WriteAllText(filePath, chunker.CompletedTranslation)
+
+                    yield TaskResponse.TaskComplete (sprintf "Saved translation to %s" filePath)
+            }
+
+        seq {
+            let defaultArgs = TaskArgumentRecord.Init ()
+            let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+
+            if resolvedRecord.Notifications.IsSome && resolvedRecord.TranscriptJSON.IsSome then
+                yield! translateText resolvedRecord
+            else
+                yield! resolveByRequest resolvable_arguments [|
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestNotifications));
+                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptJSON));
+                    |]
         }
 
 /// Tasks within a task (for S3FetchItems task)
