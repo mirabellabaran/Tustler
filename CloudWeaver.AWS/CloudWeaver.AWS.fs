@@ -464,6 +464,13 @@ module public AWSInterface =
             else
                 Some(archiveFilePath)
 
+        let getArchivedJobInFolder folder jobName =
+            let archiveFilePath = TranslateServices.GetArchivedJob(folder, jobName)
+            if isNull archiveFilePath then
+                None
+            else
+                Some(archiveFilePath)
+
         let translateLargeText awsInterface notifications progress useArchivedJob jobName sourceLanguageCode targetLanguageCode textFilePath terminologyNames = 
             async {
                 TranslateServices.TranslateLargeText(awsInterface, notifications, progress, useArchivedJob,
@@ -1065,12 +1072,18 @@ module public Tasks =
         let processChunk (translator: (int * string) -> Task<struct (bool * bool)>) (chunk:KeyValuePair<int, string>) numRetriesLastChunk =
             let maxRetries = SentenceChunker.MaxRetries
 
+            // for testing purposes: record changes in state
+            let state = Stack<(int * int64 * bool)>()
+            state.Push((0, 0L, false))
+
             // unfold a sequence of translation attempts (stopping on success or when the maximum number of retries has been reached)
             // each attempt sets a flag indicating a non-recoverable error
             let attempts =
-                Seq.unfold (fun (retryNum, delay, complete) ->
+                Seq.unfold (fun (currentState: Stack<(int * int64 * bool)>) ->
+                    let currentRetryNum, delay, complete = currentState.Peek()
+
                     // limit the number of attempts
-                    if complete || retryNum >= maxRetries then
+                    if complete || currentRetryNum >= maxRetries then
                         None
                     else
                         if delay > 0L then
@@ -1081,42 +1094,58 @@ module public Tasks =
                             if isErrorState then
                                 if recoverableError then
                                     // exponential backoff
-                                    let newDelay = SentenceChunker.GetDelay(numRetriesLastChunk + 1, SentenceChunker.MinSleepMilliseconds, SentenceChunker.MaxSleepMilliseconds)
-                                    (false, (retryNum + 1, newDelay, false))
+                                    let totalRetries = numRetriesLastChunk + currentRetryNum
+                                    let newDelay = SentenceChunker.GetDelay(totalRetries + 1, SentenceChunker.MinSleepMilliseconds, SentenceChunker.MaxSleepMilliseconds)
+                                    currentState.Push((currentRetryNum + 1, newDelay, false))
+                                    (false, currentState)
                                 else
-                                    (true, (0, 0L, true))   // first field indicates a non-recoverable error
+                                    currentState.Push((0, 0L, true))
+                                    (true, currentState)   // first field indicates a non-recoverable error
                             else
-                                (false, (0, 0L, true))
+                                currentState.Push((0, 0L, true))
+                                (false, currentState)
                         Some(result)
-                ) (0, 0L, false)
+                ) state
+                |> Seq.toArray
 
             let nonRecoverableError = attempts |> Seq.exists (fun errorState -> errorState)
-            let numAttempts = attempts |> Seq.length
-            (nonRecoverableError, numAttempts)
+            let numAttempts = attempts.Length
+            let stateChanges =
+                let stringify (items: seq<string>) = System.String.Join(", ", items)
+                state
+                |> Seq.rev
+                |> Seq.map (fun (_currentRetryNum, delay, _complete) -> delay)
+                |> Seq.map (fun tup -> tup.ToString())
+                |> stringify
+            (nonRecoverableError, numAttempts, stateChanges)
 
-        let rec mapChunks (mapping: (int -> KeyValuePair<int, string> -> TaskResponse option * int)) currentRetryLevel (chunks: seq<KeyValuePair<int, string>>) =
-
+        /// recursively process each chunk, adjusting the retry level as necessary
+        let rec mapChunks (mapping: (int -> KeyValuePair<int, string> -> TaskResponse option * int)) currentRetryLevel (chunks: (KeyValuePair<int, string>) list) =
             seq {
-                if not (Seq.isEmpty chunks) then
+                if not (chunks.IsEmpty) then
                     let response, nextRetryLevel =
                         match Seq.tryHead chunks with
                         | Some(chunk) -> mapping currentRetryLevel chunk
                         | None -> None, currentRetryLevel
                     if response.IsSome then yield response.Value
                     
-                    yield! mapChunks mapping nextRetryLevel (Seq.tail chunks)
+                    yield! mapChunks mapping nextRetryLevel (chunks.Tail)
             }
 
         let processChunks translator (chunker: SentenceChunker) =
             let chunkMapper currentRetryLevel chunk =
-                let nonRecoverableError, retries = processChunk translator chunk currentRetryLevel
+                let nonRecoverableError, retries, stateChanges = processChunk translator chunk currentRetryLevel
                 // retry level is used to calculate the delay between AWS calls; the level can escalate but cannot de-escalate
-                let result = if nonRecoverableError then None else Some(TaskResponse.TaskInfo ".")
+                let result = if nonRecoverableError then None else Some(TaskResponse.TaskInfo (sprintf "backoff (ms): %s" stateChanges))
                 result, retries
 
-            chunker.Chunks
-            |> Seq.filter (fun chunk -> not (chunker.IsChunkTranslated(chunk.Key)))
-            |> mapChunks chunkMapper 0
+            // ignore already translated chunks
+            let chunks =
+                chunker.Chunks
+                |> Seq.filter (fun chunk -> not (chunker.IsChunkTranslated(chunk.Key)))
+                |> Seq.toList
+
+            mapChunks chunkMapper 0 chunks
 
         let translateText argsRecord = 
             let awsInterface = argsRecord.AWSInterface.Value
@@ -1127,18 +1156,23 @@ module public Tasks =
             let terminologyNames = argsRecord.TranslationTerminologyNames.Value
             let taskName = argsRecord.TaskName.Value
             let workingDirectory = argsRecord.WorkingDirectory.Value
-            let saveFlags = argsRecord.SaveFlags.Value
 
             let chunker =
-                let archiveFilePath = Translate.getArchivedJob taskName   // using taskName as the job name
+                let archiveFilePath = Translate.getArchivedJobInFolder workingDirectory.FullName taskName   // using taskName as the job name
                 if archiveFilePath.IsSome then
-                    SentenceChunker.DeArchiveChunks(taskName, ApplicationSettings.FileCachePath)
+                    SentenceChunker.DeArchiveChunks(archiveFilePath.Value);
                 else
                     //// the text file is assumed to contain a sequence of sentences, with one complete sentence per line
                     //let sentences = File.ReadAllLines(textFilePath)
                     //new TustlerServicesLib.SentenceChunker(sentences)
                     //TustlerServicesLib.SentenceChunker.FromFile(textFilePath)
-                    new TustlerServicesLib.SentenceChunker(defaultTranscript)
+
+                    if awsInterface.IsMocked then
+                        // set a small chunk size for testing (needs to be longer than the test sentence length for the chunker to work correctly)
+                        let chunkSize = 40
+                        new TustlerServicesLib.SentenceChunker(defaultTranscript, chunkSize)
+                    else
+                        new TustlerServicesLib.SentenceChunker(defaultTranscript)
 
             let translator = Translate.getTranslator awsInterface chunker notifications taskName sourceLanguageCode targetLanguageCode terminologyNames
 
@@ -1146,26 +1180,82 @@ module public Tasks =
                 // send TaskResponse messages to show progress
                 yield! processChunks translator chunker
 
-                if chunker.IsJobComplete && saveFlags.IsSet (AWSFlag(AWSFlagItem.TranslateSaveTranslation)) then
-                    // save the translated text
-                    let filePath = Path.Combine(workingDirectory.FullName, (sprintf "Translation-%s-%s.txt" taskName targetLanguageCode))
-                    File.WriteAllText(filePath, chunker.CompletedTranslation)
-
-                    yield TaskResponse.TaskComplete (sprintf "Saved translation to %s" filePath)
+                if chunker.IsJobComplete then
+                    yield TaskResponse.TaskComplete (sprintf "Translation to %s is complete" targetLanguageCode)
+                else
+                    chunker.ArchiveChunks(taskName, workingDirectory.FullName)
+                    let filePath =
+                        let partial = Path.Combine(workingDirectory.FullName, taskName)
+                        Path.ChangeExtension(partial, "zip");
+                    yield TaskResponse.TaskComplete
+                        (sprintf "Not all chunks were translated due to processing errors. The results so far for language %s have been archived at %s. Rerun this function to process the archived results."
+                            targetLanguageCode filePath)
             }
 
         seq {
             let defaultArgs = TaskArgumentRecord.Init ()
             let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
 
-            if resolvedRecord.Notifications.IsSome && resolvedRecord.TranscriptJSON.IsSome then
+            if resolvedRecord.AWSInterface.IsSome && resolvedRecord.Notifications.IsSome && resolvedRecord.DefaultTranscript.IsSome &&
+                resolvedRecord.TranslationLanguageCodeSource.IsSome && resolvedRecord.TranslationLanguageCodeTarget.IsSome &&
+                resolvedRecord.TranslationTerminologyNames.IsSome && resolvedRecord.TaskName.IsSome && resolvedRecord.WorkingDirectory.IsSome then
                 yield! translateText resolvedRecord
             else
                 yield! resolveByRequest resolvable_arguments [|
+                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestAWSInterface));
                     TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestNotifications));
-                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptJSON));
+
+                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestDefaultTranscript));
+                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranslationLanguageCodeSource));
+                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranslationLanguageCodeTarget));
+                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranslationTerminologyNames));
+
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestTaskName));
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory));
                     |]
         }
+
+    //[<HideFromUI>]
+    //let SaveTranslation (resolvable_arguments: InfiniteList<MaybeResponse>) =
+
+    //    let saveTranslation argsRecord =
+    //        let taskName = argsRecord.TaskName.Value
+    //        let workingDirectory = argsRecord.WorkingDirectory.Value
+    //        let targetLanguageCode = argsRecord.TranslationLanguageCodeTarget.Value
+    //        let chunker = argsRecord.SentenceChunker.Value
+
+    //        seq {
+    //            // save the translated text
+    //            let filePath = Path.Combine(workingDirectory.FullName, (sprintf "Translation-%s-%s.txt" taskName targetLanguageCode))
+    //            File.WriteAllText(filePath, chunker.CompletedTranslation)
+
+    //            yield TaskResponse.TaskComplete (sprintf "Saved translation to %s" filePath)
+    //        }
+
+    //    seq {
+    //        let defaultArgs = TaskArgumentRecord.Init ()
+    //        let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+
+    //        if resolvedRecord.SaveFlags.IsSome then
+    //            let saveFlags = resolvedRecord.SaveFlags.Value
+    //            if saveFlags.IsSet (AWSFlag(AWSFlagItem.TranslateSaveTranslation)) then
+    //                if resolvedRecord.TaskName.IsSome && resolvedRecord.WorkingDirectory.IsSome &&
+    //                   resolvedRecord.TranslationLanguageCodeTarget.IsSome && resolvedRecord.SentenceChunker.IsSome then
+    //                    yield! saveTranslation resolvedRecord
+    //                else
+    //                    yield! resolveByRequest resolvable_arguments [|
+    //                        TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestSentenceChunker));
+    //                        TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranslationLanguageCodeTarget));
+    //                        TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory));
+    //                        TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestTaskName));
+    //                        |]
+    //            else
+    //                yield TaskResponse.TaskComplete "Save flag not set (TranslateSaveTranslation)"
+    //        else
+    //            yield! resolveByRequest resolvable_arguments [|
+    //                TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
+    //                |]
+    //    }
 
 /// Tasks within a task (for S3FetchItems task)
 module public MiniTasks =

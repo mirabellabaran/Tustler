@@ -21,6 +21,7 @@ namespace TustlerAWSLib.Mocks
 
         private readonly Dictionary<string, TerminologyProperties> terminologyDictionary;                       // keyed by terminology name
         private readonly ConcurrentDictionary<string, TextTranslationJobProperties> translationTaskDictionary;  // keyed by JobId
+        private DateTime timeLastTranslationCall;
 
         public MockTranslate(AmazonWebServiceInterface awsInterface)
         {
@@ -92,8 +93,23 @@ namespace TustlerAWSLib.Mocks
         {
             await Task.Delay(1000);
 
-            var result = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
-            return await Task.FromResult(new AWSResult<string>(result, null));
+            // test throttling; if calls occur more than one every two seconds then throw a special error that triggers throttling
+            var current = DateTime.Now;
+            var period = current - timeLastTranslationCall;     // initialized to default datetime value first time through -> very long period
+            timeLastTranslationCall = current;
+
+            // the maximum backoff delay is set to five seconds (see SentenceChunker.cs)
+            if (period < TimeSpan.FromSeconds(2.0))
+            {
+                var ex = new AWSException("MockTranslate: TranslateText", "Calls too frequent",
+                new AmazonTranslateException("Calls too frequent", Amazon.Runtime.ErrorType.Receiver, "", "", System.Net.HttpStatusCode.TooManyRequests));
+                return await Task.FromResult(new AWSResult<string>(null, ex));
+            }
+            else
+            {
+                var result = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
+                return await Task.FromResult(new AWSResult<string>(result, null));
+            }
         }
 
         public async Task<AWSResult<TranslateJobStatus>> StartTextTranslationJob(string jobName, RegionEndpoint region, string dataAccessRoleArn, string sourceLanguageCode, List<string> targetLanguageCodes, string s3InputFolderName, string s3OutputFolderName, List<string> terminologyNames)

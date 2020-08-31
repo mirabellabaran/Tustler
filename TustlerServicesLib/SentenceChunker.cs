@@ -186,11 +186,22 @@ namespace TustlerServicesLib
         /// Recover source and translated chunks from disk
         /// </summary>
         /// <param name="jobName"></param>
+        /// <param name="folderPath"></param>
         /// <returns></returns>
         public static SentenceChunker DeArchiveChunks(string jobName, string folderPath)
         {
-            var filePath = Path.Combine(folderPath, jobName);
-            filePath = Path.ChangeExtension(filePath, "zip");
+            var filePath = Path.ChangeExtension(Path.Combine(folderPath, jobName), "zip");
+
+            return DeArchiveChunks(filePath);
+        }
+
+        /// <summary>
+        /// Recover source and translated chunks from disk
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        public static SentenceChunker DeArchiveChunks(string filePath)
+        {
             var (sourceChunks, translatedChunks) = DeArchive(filePath);
 
             return new SentenceChunker(sourceChunks, translatedChunks);

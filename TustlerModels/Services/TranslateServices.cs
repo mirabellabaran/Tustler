@@ -146,6 +146,17 @@ namespace TustlerModels.Services
         public static string? GetArchivedJob(string jobName)
         {
             var filePath = Path.Combine(ApplicationSettings.FileCachePath, jobName);
+            return GetArchivedJobImpl(filePath);
+        }
+
+        public static string? GetArchivedJob(string folder, string jobName)
+        {
+            var filePath = Path.Combine(folder, jobName);
+            return GetArchivedJobImpl(filePath);
+        }
+
+        private static string? GetArchivedJobImpl(string filePath)
+        {
             filePath = Path.ChangeExtension(filePath, "zip");
             if (File.Exists(filePath))
                 return filePath;

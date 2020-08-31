@@ -248,6 +248,85 @@ namespace CloudWeaver.AWS.Test
                 }));
         }
 
+        [TestMethod]
+        public async Task TestTranslateText()
+        {
+            var taskName = "TranslateText";
+            Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.TranslateText;
+            var agent = InitializeTest(taskName, WorkingDirectory, null);
+
+            var languageCodeSource = "en";
+            var languageCodeTarget = "fr";
+            var terminologyNames = new List<string>()
+            {
+                "Bob"
+            };
+            var transcript = "This is a test transcript. This is a test transcript. This is a test transcript.";
+
+            var result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestWorkingDirectory)" });
+
+            result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestTaskName)" });
+
+            result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranslationTerminologyNames)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationTerminologyNames(terminologyNames))));
+
+            result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranslationLanguageCodeTarget)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationLanguageCodeTarget(languageCodeTarget))));
+
+            result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranslationLanguageCodeSource)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationLanguageCodeSource(languageCodeSource))));
+
+            result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestDefaultTranscript)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetDefaultTranscript(transcript))));
+
+            result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestNotifications)" });
+
+            result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestAWSInterface)" });
+
+            result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 4);
+            Assert.IsTrue(CheckAllStartWith(result, new string[] {
+                    "TaskInfo: backoff (ms): 0,",
+                    "TaskInfo: backoff (ms): 0,",
+                    "TaskInfo: backoff (ms): 0,",
+                    "TaskComplete: Translation to fr is complete"
+                }));
+        }
+
+        //[TestMethod]
+        //public async Task TestSaveTranslation()
+        //{
+        //    var taskName = "SaveTranslation";
+        //    Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.SaveTranslation;
+        //    var saveFlags = new SaveFlags(new ISaveFlagSet[]
+        //    {
+        //        new AWSFlagSet(new AWSFlagItem[] {
+        //            AWSFlagItem.TranslateSaveTranslation
+        //        })
+        //    });
+        //    var agent = InitializeTest(taskName, WorkingDirectory, saveFlags);
+
+        //    var result = await CallTaskAsync(taskFunction, agent);
+        //    Assert.IsTrue(result.Length == 1);
+        //    CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestSaveFlags)" });
+        //}
+
         private static Agent InitializeTest(string taskName, string workingDirectory, SaveFlags saveFlags)
         {
             var notificationsList = new NotificationsList();
