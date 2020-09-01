@@ -1,14 +1,22 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
 namespace TustlerServicesLib
 {
+    // a type whose internal items can be consumed until none are left
+    public interface IConsumable
+    {
+        public int Count { get; }
+    }
+
     /// <summary>
     /// A stack-like object that supports Stack semantics but retains all data
     /// </summary>
-    public class RetainingStack<T>
+    /// <remarks>A retaining stack can be consumed but the original contents are always retrievable</remarks>
+    public class RetainingStack<T> : IConsumable, IEnumerable<T>
     {
         /// <summary>
         /// Specifies whether stack items such as tasks are independant or sequentially dependant
@@ -21,7 +29,10 @@ namespace TustlerServicesLib
 
         private readonly Stack<T> _stack;
         private readonly ImmutableArray<T> _array;
-        private readonly ItemOrdering _ordering;
+
+        public RetainingStack(IEnumerable<T> items) : this(items, ItemOrdering.Sequential)
+        {
+        }
 
         public RetainingStack(IEnumerable<T> items, ItemOrdering ordering)
         {
@@ -30,16 +41,10 @@ namespace TustlerServicesLib
             _array = items.ToImmutableArray();
             _stack = new Stack<T>(items.Reverse());     // reversed so that calling Pop() removes items in _array order
 
-            _ordering = ordering;
+            Ordering = ordering;
         }
 
-        public ItemOrdering Ordering
-        {
-            get
-            {
-                return _ordering;
-            }
-        }
+        public ItemOrdering Ordering { get; }
 
         public int Count
         {
@@ -49,25 +54,34 @@ namespace TustlerServicesLib
             }
         }
 
-        public T Pop()
+        // Get the current item (head of stack) without consuming it
+        public T Current
         {
-            return _stack.Pop();
+            get
+            {
+                return _stack.Peek();
+            }
         }
 
-        /// <summary>
-        /// Refills the stack with the same items used at construction time
-        /// </summary>
-        public void Reset()
+        // Consume the current item (head of stack)
+        public T Consume()
         {
-            foreach (var item in _array)
-            {
-                _stack.Push(item);
-            }
+            return _stack.Pop();
         }
 
         public override string ToString()
         {
             return $"RetainingStack of {typeof(T).Name}: store={_array.Count()}; stack={_stack.Count}";
+        }
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            return ((IEnumerable<T>)_array).GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return ((IEnumerable<T>)_array).GetEnumerator();
         }
     }
 }

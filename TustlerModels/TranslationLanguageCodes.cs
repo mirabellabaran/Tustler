@@ -87,7 +87,7 @@ namespace TustlerModels
 
     public class LanguageCode
     {
-        public string Name { get; internal set; }
-        public string Code { get; internal set; }
+        public string Name { get; set; }
+        public string Code { get; set; }
     }
 }

@@ -61,7 +61,9 @@ type TaskResponse =
     | TaskArgumentSave                                  // save any arguments set on the event stack for subsequent sessions
     
     | Notification of Notification
-    
+    | BeginLoopSequence of IEnumerable<TaskItem>        // begin a looped sequence of tasks (the specified tasks are inside the loop)
+    | EndLoopSequence of IConsumable                    // end a looped sequence when the IConsumable has a Count of zero
+
     // Values for UI display only
     | ShowValue of IShowValue
 
@@ -82,11 +84,13 @@ type TaskResponse =
         | TaskComplete str -> (sprintf "TaskComplete: %s" str)
         | TaskPrompt str -> (sprintf "TaskPrompt: %s" str)
         | TaskSelect str -> (sprintf "TaskSelect: %s" str)
-        | TaskMultiSelect taskItems -> (sprintf "TaskMultiSelect: %s" (System.String.Join(", ", taskItems)))    // assume TaskItem.ToString()
-        | TaskSequence taskItems -> (sprintf "TaskSequence: %s" (System.String.Join(", ", taskItems)))    // assume TaskItem.ToString()
+        | TaskMultiSelect taskItems -> (sprintf "TaskMultiSelect: %s" (System.String.Join(", ", (Seq.map (fun item -> item.TaskName) taskItems))))
+        | TaskSequence taskItems -> (sprintf "TaskSequence: %s" (System.String.Join(", ", (Seq.map (fun item -> item.TaskName) taskItems))))
         | TaskContinue delay -> (sprintf "TaskContinue: %d (ms)" delay)
         | TaskArgumentSave -> "TaskArgumentSave"
         | Notification notification -> (sprintf "Notification: %s" (notification.ToString()))
+        | BeginLoopSequence taskItems -> (sprintf "BeginLoopSequence: %s" (System.String.Join(", ", (Seq.map (fun item -> item.TaskName) taskItems))))
+        | EndLoopSequence consumable -> (sprintf "EndLoopSequence: %s" (sprintf "(%d items)" consumable.Count))
         | ShowValue showValue -> (sprintf "ShowValue: %s" (showValue.ToString()))
         | SetArgument arg -> (sprintf "SetArgument: %s" (arg.ToString()))
         | SetBoundaryArgument arg -> (sprintf "SetBoundaryArgument: %s" (arg.ToString()))

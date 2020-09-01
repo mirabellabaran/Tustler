@@ -43,23 +43,23 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         | Some(TaskEvent.ForEach items) -> Some(items)
         | _ -> None
 
-    let restartCurrentTask (self:Agent) =
-        // find the last SubTask event
-        let taskEvent =
-            events
-            |> Seq.tryFindBack (fun evt ->
-                match evt with
-                | TaskEvent.Task _ -> true
-                | _ -> false
-            )
+    //let restartCurrentTask (self:Agent) =
+    //    // find the last Task event
+    //    let taskEvent =
+    //        events
+    //        |> Seq.tryFindBack (fun evt ->
+    //            match evt with
+    //            | TaskEvent.Task _ -> true
+    //            | _ -> false
+    //        )
 
-        // and set the task name
-        let task =
-            match taskEvent with
-            | Some(TaskEvent.Task task) -> task
-            | _ -> invalidOp "Expecting a sub-task event in the events list"
+    //    // and set the task name
+    //    let task =
+    //        match taskEvent with
+    //        | Some(TaskEvent.Task task) -> task
+    //        | _ -> invalidOp "Expecting a sub-task event in the events list"
 
-        callTaskEvent.Trigger(self, task)    // receiver should set the TaskName and call RunTask
+    //    callTaskEvent.Trigger(self, task)    // receiver should set the TaskName and call RunTask
 
     let startNewTask (self:Agent) (stack:RetainingStack<TaskItem>) =
         // check if task is independant
@@ -68,7 +68,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
             // independant tasks cannot share arguments; clear all arguments
             events.Add(TaskEvent.ClearArguments)
 
-        let nextTask = stack.Pop();
+        let nextTask = stack.Consume();
         events.Add(TaskEvent.Task(nextTask))
 
         // update task item variable
@@ -108,10 +108,20 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         | TaskResponse.TaskSequence taskSequence -> addSubTaskEvent taskSequence
         | TaskResponse.TaskContinue delayMilliseconds ->
             Async.AwaitTask (Task.Delay(delayMilliseconds)) |> Async.RunSynchronously
-            restartCurrentTask self
+            //restartCurrentTask self
+            recallTaskEvent.Trigger(self, EventArgs())
         | TaskResponse.TaskComplete _ ->
             newUIResponseEvent.Trigger(self, response)
             nextTask self
+        //| TaskResponse.BeginLoopSequence taskSequence ->
+        //    addBeginLoopEvent taskSequence      // need an event to go back to
+        //    addSubTaskEvent taskSequence
+        //    newUIResponseEvent.Trigger(self, response)
+        //    nextTask self
+        //| TaskResponse.EndLoopSequence consumable ->
+        //    if consumable.Count > 0 then
+        //        consumable.Consume()        // need to be able to consume
+        //        nextTask self
         | TaskResponse.TaskArgumentSave ->
             // the event handler should asynchronously invoke a function to save the supplied event stack arguments
             // (note that by the time this function is invoked, the events stack may be in the process of being modified via new incoming responses
