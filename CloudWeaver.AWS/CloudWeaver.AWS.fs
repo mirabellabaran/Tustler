@@ -1275,15 +1275,16 @@ module public Tasks =
             let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
 
             if resolvedRecord.TranslationTargetLanguages.IsSome then
-                // call translate and save tasks for each of multiple target languages
+                // call the translate and save tasks for each of multiple target languages
                 let targetLanguages = resolvedRecord.TranslationTargetLanguages.Value
-                yield TaskResponse.BeginLoopSequence ([|
+                let taskSequence = ([|
                     { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "TranslateText"; Description = "Translate text into a specified language" };
                     { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "SaveTranslation"; Description = "Save some translated text" };
                 |])
-                yield TaskResponse.EndLoopSequence targetLanguages
+                yield TaskResponse.BeginLoopSequence (targetLanguages, taskSequence)
 
-                yield TaskResponse.TaskComplete "Text translation task into multiple languages has completed"
+                // sending task complete initiates the loop
+                yield TaskResponse.TaskComplete "Text translation task into multiple languages is running"
             else
                 yield! resolveByRequest resolvable_arguments [|
                     TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranslationTargetLanguages));

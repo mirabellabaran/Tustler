@@ -376,7 +376,22 @@ namespace CloudWeaver.AWS.Test
             Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.MultiLanguageTranslateText;
             var agent = InitializeTest(taskName, WorkingDirectory, null);
 
-            var languageTargets = new RetainingStack<TustlerModels.LanguageCode>(
+            // Agent callbacks are required for switching between tasks
+            // Note that any previous calls to CallTaskAsync() must have run to completion for this to work correctly
+            // so here we will just keep track of task function changes
+            var taskList = new List<string>();
+            agent.CallTask += (object sender, TaskItem task) =>
+            {
+                taskList.Add(task.TaskName);
+            };
+
+            static IEnumerable<TaskResponse> PurgeFunction(InfiniteList<MaybeResponse> resolvable_arguments)
+            {
+                // five more TaskComplete responses (six total)
+                return Enumerable.Range(0, 5).Select(i => TaskResponse.NewTaskComplete(i.ToString()));
+            }
+
+           var languageTargets = new RetainingStack<TustlerModels.LanguageCode>(
                 new TustlerModels.LanguageCode[] {
                     new TustlerModels.LanguageCode() { Name = "French", Code = "fr" },
                     new TustlerModels.LanguageCode() { Name = "Danish", Code = "da" },
@@ -389,8 +404,32 @@ namespace CloudWeaver.AWS.Test
             agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationTargetLanguages(languageTargets))));
 
             result = await CallTaskAsync(taskFunction, agent);
-            Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestSaveFlags)" });
+            Assert.IsTrue(result.Length == 2);
+            Assert.IsTrue(CheckAllStartWith(result, new string[] {
+                    "BeginLoopSequence (3 items): TranslateText, SaveTranslation",
+                    "TaskComplete: Text translation task into multiple languages is running"
+                }));
+
+            // call the purge function to exhaust the nested data and task loops
+            result = await CallTaskAsync(PurgeFunction, agent);
+            Assert.IsTrue(result.Length == 5);
+            CollectionAssert.AreEqual(result, new string[] {
+                "TaskComplete: 0",
+                "TaskComplete: 1",
+                "TaskComplete: 2",
+                "TaskComplete: 3",
+                "TaskComplete: 4",
+            });
+
+            // expecting a sequence of TranslateText, SaveTranslation for each of the three languages
+            CollectionAssert.AreEqual(taskList, new string[] {
+                "TranslateText",
+                "SaveTranslation",
+                "TranslateText",
+                "SaveTranslation",
+                "TranslateText",
+                "SaveTranslation",
+            });
         }
 
         private static Agent InitializeTest(string taskName, string workingDirectory, SaveFlags saveFlags)

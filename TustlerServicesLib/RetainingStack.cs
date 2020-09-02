@@ -6,10 +6,14 @@ using System.Linq;
 
 namespace TustlerServicesLib
 {
-    // a type whose internal items can be consumed until none are left
+    /// <summary>
+    /// Defines a type whose internal items can be consumed until none are left
+    /// </summary>
     public interface IConsumable
     {
         public int Count { get; }
+        public int Total { get; }
+        public void Consume();      // consume the current item
     }
 
     /// <summary>
@@ -46,6 +50,9 @@ namespace TustlerServicesLib
 
         public ItemOrdering Ordering { get; }
 
+        /// <summary>
+        /// Get the current (consumable) count
+        /// </summary>
         public int Count
         {
             get
@@ -54,7 +61,20 @@ namespace TustlerServicesLib
             }
         }
 
-        // Get the current item (head of stack) without consuming it
+        /// <summary>
+        /// Get the total count
+        /// </summary>
+        public int Total
+        {
+            get
+            {
+                return _array.Length;
+            }
+        }
+
+        /// <summary>
+        /// Get the current item (head of stack) without consuming it
+        /// </summary>
         public T Current
         {
             get
@@ -63,10 +83,33 @@ namespace TustlerServicesLib
             }
         }
 
-        // Consume the current item (head of stack)
-        public T Consume()
+        /// <summary>
+        /// Consume the current item (head of stack) and return it
+        /// </summary>
+        /// <returns></returns>
+        public T Pop()
         {
             return _stack.Pop();
+        }
+
+        /// <summary>
+        /// Consume the current item (head of stack)
+        /// </summary>
+        public void Consume()
+        {
+            _stack.Pop();
+        }
+
+        /// <summary>
+        /// Refill the stack with the same items used at construction time
+        /// </summary>
+        public void Reset()
+        {
+            _stack.Clear();
+            foreach (var item in _array.Reverse())
+            {
+                _stack.Push(item);
+            }
         }
 
         public override string ToString()

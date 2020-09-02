@@ -61,8 +61,7 @@ type TaskResponse =
     | TaskArgumentSave                                  // save any arguments set on the event stack for subsequent sessions
     
     | Notification of Notification
-    | BeginLoopSequence of IEnumerable<TaskItem>        // begin a looped sequence of tasks (the specified tasks are inside the loop)
-    | EndLoopSequence of IConsumable                    // end a looped sequence when the IConsumable has a Count of zero
+    | BeginLoopSequence of IConsumable * IEnumerable<TaskItem>  // execute the task sequence for each consumable data item (the specified tasks are inside the loop)
 
     // Values for UI display only
     | ShowValue of IShowValue
@@ -89,8 +88,7 @@ type TaskResponse =
         | TaskContinue delay -> (sprintf "TaskContinue: %d (ms)" delay)
         | TaskArgumentSave -> "TaskArgumentSave"
         | Notification notification -> (sprintf "Notification: %s" (notification.ToString()))
-        | BeginLoopSequence taskItems -> (sprintf "BeginLoopSequence: %s" (System.String.Join(", ", (Seq.map (fun item -> item.TaskName) taskItems))))
-        | EndLoopSequence consumable -> (sprintf "EndLoopSequence: %s" (sprintf "(%d items)" consumable.Count))
+        | BeginLoopSequence (consumable, taskItems) -> (sprintf "BeginLoopSequence (%d items): %s" consumable.Total (System.String.Join(", ", (Seq.map (fun item -> item.TaskName) taskItems))))
         | ShowValue showValue -> (sprintf "ShowValue: %s" (showValue.ToString()))
         | SetArgument arg -> (sprintf "SetArgument: %s" (arg.ToString()))
         | SetBoundaryArgument arg -> (sprintf "SetBoundaryArgument: %s" (arg.ToString()))
@@ -102,7 +100,8 @@ type TaskResponse =
 type TaskEvent =
     | InvokingFunction
     | SetArgument of TaskResponse
-    | ForEach of RetainingStack<TaskItem>
+    | ForEachTask of RetainingStack<TaskItem>
+    | ForEachDataItem of IConsumable
     | Task of TaskItem     // the name and description of the task
     | SelectArgument
     | ClearArguments

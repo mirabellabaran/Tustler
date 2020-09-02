@@ -281,6 +281,8 @@ namespace Tustler.UserControls
 
         private async void Agent_CallTask(object? sender, TaskItem task)
         {
+            // Note that the previous call to RunTask() must have run to completion for this to work correctly
+            // The Dispatcher InvokeAsync method seems to ensure this
             await Dispatcher.InvokeAsync(() =>
             {
                 var taskPath = TaskFunctionSpecifier.FullPathFromTaskItem(task);
@@ -292,6 +294,7 @@ namespace Tustler.UserControls
 
         private async void Agent_RecallTask(object? sender, EventArgs e)
         {
+            // Note that the previous call to RunTask() must have run to completion for this to work correctly
             await Dispatcher.InvokeAsync(() =>
             {
                 RunTask();
@@ -529,7 +532,7 @@ namespace Tustler.UserControls
                 };
 
                 // now that the user has made their selections, add those selections to the event source for later reference
-                agent.AddEvent(TaskEvent.NewForEach(subtasks));
+                agent.AddEvent(TaskEvent.NewForEachTask(subtasks));
 
                 // pop the first task item and set an argument on the event source
                 if (subtasks.Count > 0)
