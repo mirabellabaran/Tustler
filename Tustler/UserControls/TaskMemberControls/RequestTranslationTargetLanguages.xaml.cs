@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -16,23 +17,21 @@ using TustlerModels;
 namespace Tustler.UserControls.TaskMemberControls
 {
     /// <summary>
-    /// Interaction logic for RequestLanguageCode.xaml
-    /// Used for BOTH Transcription and Translation (use LanguageCodesViewModelType property)
+    /// Interaction logic for RequestTranslationTargetLanguages.xaml
     /// </summary>
-    public partial class RequestLanguageCode : UserControl, ICommandSource
+    public partial class RequestTranslationTargetLanguages : UserControl, ICommandSource
     {
         #region IsButtonEnabled DependencyProperty
         public static readonly DependencyProperty IsButtonEnabledProperty =
-            DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(RequestLanguageCode), new PropertyMetadata(true, PropertyChangedCallback));
+            DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(RequestTranslationTargetLanguages), new PropertyMetadata(true, PropertyChangedCallback));
 
         private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
         {
-            if (dependencyObject is RequestLanguageCode ctrl)
+            if (dependencyObject is RequestTranslationTargetLanguages ctrl)
             {
                 if (dependencyPropertyChangedEventArgs.NewValue != null)
                 {
                     var newState = (bool)dependencyPropertyChangedEventArgs.NewValue;
-                    ctrl.cbLanguage.IsEnabled = newState;
                     ctrl.btnContinue.IsEnabled = newState;
                 }
             }
@@ -48,57 +47,9 @@ namespace Tustler.UserControls.TaskMemberControls
         }
         #endregion
 
-        #region LanguageCodesViewModelType
-
-        public static readonly DependencyProperty LanguageCodesViewModelTypeProperty =
-            DependencyProperty.Register(
-                "LanguageCodesViewModelType",
-                typeof(LanguageCodesViewModelType),
-                typeof(RequestLanguageCode));
-
-        public LanguageCodesViewModelType LanguageCodesViewModelType
-        {
-            get
-            {
-                return (LanguageCodesViewModelType)GetValue(LanguageCodesViewModelTypeProperty);
-            }
-            set
-            {
-                SetValue(LanguageCodesViewModelTypeProperty, value);
-            }
-        }
-
-        #endregion
-
-        public RequestLanguageCode()
+        public RequestTranslationTargetLanguages()
         {
             InitializeComponent();
-        }
-
-        private void UserControl_Loaded(object sender, RoutedEventArgs e)
-        {
-            // bind the view model
-            LanguageCodesViewModel model = LanguageCodesViewModelType switch
-            {
-                LanguageCodesViewModelType.Transcription => new TranscriptionLanguageCodesViewModel(),
-                LanguageCodesViewModelType.Translation => new TranslationLanguageCodesViewModel(),
-                _ => throw new NotImplementedException(),
-            };
-
-            Binding myBinding = new Binding("LanguageCodes")
-            {
-                Source = model
-            };
-
-            cbLanguage.SetBinding(ComboBox.ItemsSourceProperty, myBinding);
-
-            // set the default item
-            cbLanguage.SelectedValue = LanguageCodesViewModelType switch
-            {
-                LanguageCodesViewModelType.Transcription => "en-US",
-                LanguageCodesViewModelType.Translation => "en",
-                _ => throw new ArgumentException("Language Code Task Member received an unknown language viewmodel type"),
-            };
         }
 
         #region ICommandSource
@@ -140,10 +91,8 @@ namespace Tustler.UserControls.TaskMemberControls
         private void AddCommand(ICommand newCommand)
         {
             EventHandler handler = new EventHandler(CanExecuteChanged);
-            //canExecuteChangedHandler = handler;
             if (newCommand != null)
             {
-                //newCommand.CanExecuteChanged += canExecuteChangedHandler;
                 newCommand.CanExecuteChanged += handler;
             }
         }
@@ -183,13 +132,13 @@ namespace Tustler.UserControls.TaskMemberControls
             DependencyProperty.Register(
                 "Command",
                 typeof(ICommand),
-                typeof(RequestLanguageCode),
+                typeof(RequestTranslationTargetLanguages),
                 new PropertyMetadata((ICommand)null,
                 new PropertyChangedCallback(CommandChanged)));
 
         private static void CommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            RequestLanguageCode ctrl = (RequestLanguageCode) d;
+            RequestTranslationTargetLanguages ctrl = (RequestTranslationTargetLanguages)d;
             ctrl.HookUpCommand((ICommand)e.OldValue, (ICommand)e.NewValue);
         }
 
@@ -218,38 +167,42 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void Continue_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = cbLanguage.SelectedItem is TustlerModels.LanguageCode _;
+            e.CanExecute = lbTargetLanguages.SelectedItems.Count > 0;
         }
 
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            if (cbLanguage.SelectedItem is TustlerModels.LanguageCode languageCode)
+            var targetLanguageCodes = (lbTargetLanguages.SelectedItems as IEnumerable<object>).Cast<LanguageCode>();
+
+            CommandParameter = new UITaskArguments()
             {
-                var arg = LanguageCodesViewModelType switch
-                {
-                    LanguageCodesViewModelType.Transcription => UITaskArgument.NewTranscriptionLanguageCode(languageCode.Code),
-                    LanguageCodesViewModelType.Translation => UITaskArgument.NewTranslationLanguageCodeSource(languageCode.Code),
-                    _ => null
-                };
+                Mode = UITaskMode.Select,
+                TaskArguments = new UITaskArgument[] { UITaskArgument.NewTranslationTargetLanguages(targetLanguageCodes) }
+            };
 
-                CommandParameter = new UITaskArguments()
-                {
-                    Mode = UITaskMode.Select,
-                    TaskArguments = new UITaskArgument[] { arg }
-                };
+            ExecuteCommand();
+        }
 
-                ExecuteCommand();
+        private void TargetLanguages_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var selectedLanguageCodes = lbTargetLanguages.FindResource("selectedLanguageCodes") as SelectedItemsViewModel;
+            selectedLanguageCodes.Update(lbTargetLanguages.SelectedItems as IEnumerable<object>);
+
+            if (e.AddedItems.Count > 0)
+            {
+                var firstItem = (e.AddedItems as IEnumerable<object>).First() as LanguageCode;
+                lbTargetLanguages.ScrollIntoView(firstItem);
             }
         }
     }
 
-    public static class LanguageCodeCommands
+    public static class TranslationTargetLanguagesCommands
     {
         public static readonly RoutedUICommand Continue = new RoutedUICommand
             (
                 "Continue",
                 "Continue",
-                typeof(LanguageCodeCommands),
+                typeof(FileMediaReferenceCommands),
                 null
             );
     }

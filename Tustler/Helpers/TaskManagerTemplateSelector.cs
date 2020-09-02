@@ -32,8 +32,10 @@ namespace Tustler.Helpers
                         "RequestS3MediaReference" => element.FindResource("S3MediaReferenceRequestTemplate") as DataTemplate,
                         "RequestBucket" => element.FindResource("BucketRequestTemplate") as DataTemplate,
                         "RequestTranscriptionLanguageCode" => element.FindResource("TranscriptionLanguageCodeRequestTemplate") as DataTemplate,
+                        "RequestTranscriptionVocabularyName" => element.FindResource("TranscriptionVocabularyNameRequestTemplate") as DataTemplate,
+
                         "RequestTranslationLanguageCode" => element.FindResource("TranslationLanguageCodeRequestTemplate") as DataTemplate,
-                        "RequestVocabularyName" => element.FindResource("VocabularyNameRequestTemplate") as DataTemplate,
+                        "RequestTranslationTargetLanguages" => element.FindResource("TranslationTargetLanguagesRequestTemplate") as DataTemplate,
                         _ => null
                     };
                 }
@@ -103,8 +105,6 @@ namespace Tustler.Helpers
                     TaskResponse.TaskSelect _ => element.FindResource("TaskSelectTemplate") as DataTemplate,
                     TaskResponse.TaskMultiSelect _ => element.FindResource("TaskMultiSelectTemplate") as DataTemplate,
                     TaskResponse.TaskSequence _ => element.FindResource("TaskSequenceTemplate") as DataTemplate,
-
-                    //TaskResponse.ShowTranscriptionJobsSummary _ => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
 
                     TaskResponse.ShowValue arg => GetShowValueTemplate(arg.Item),
                     TaskResponse.SetArgument arg => GetSetArgumentTemplate(arg.Item),

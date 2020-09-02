@@ -20,8 +20,9 @@ type UITaskArgument =
     | S3MediaReference of S3MediaReference
     | FileMediaReference of FileMediaReference
     | TranscriptionLanguageCode of string
-    | TranslationLanguageCode of string
     | VocabularyName of string
+    | TranslationLanguageCodeSource of string
+    | TranslationTargetLanguages of IEnumerable<LanguageCode>
 
 /// Collects arguments used by user control command source objects
 type UITaskArguments () =

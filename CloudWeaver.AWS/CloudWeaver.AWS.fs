@@ -1267,7 +1267,7 @@ module public Tasks =
         }
 
     /// Translate text into multiple languages
-    [<HideFromUI>]
+    //[<HideFromUI>]
     let MultiLanguageTranslateText (resolvable_arguments: InfiniteList<MaybeResponse>) =
         
         seq {

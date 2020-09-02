@@ -387,13 +387,18 @@
             <uctask:RequestLanguageCode Command="{x:Static uc:TaskCommands.UIResponse}" LanguageCodesViewModelType="Transcription" />
         </DataTemplate>
 
+        <DataTemplate x:Key="TranscriptionVocabularyNameRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <uctask:RequestVocabularyName Command="{x:Static uc:TaskCommands.UIResponse}" />
+        </DataTemplate>
+
         <DataTemplate x:Key="TranslationLanguageCodeRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <uctask:RequestLanguageCode Command="{x:Static uc:TaskCommands.UIResponse}" LanguageCodesViewModelType="Translation" />
         </DataTemplate>
 
-        <DataTemplate x:Key="VocabularyNameRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
-            <uctask:RequestVocabularyName Command="{x:Static uc:TaskCommands.UIResponse}" />
+        <DataTemplate x:Key="TranslationTargetLanguagesRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <uctask:RequestTranslationTargetLanguages Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
+        
     </UserControl.Resources>
     
     <DockPanel Margin="20">

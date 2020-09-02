@@ -58,9 +58,11 @@ namespace Tustler.UserControls
                     ctrl.TaskFunction = taskSpecifier?.TaskName switch
                     {
                         "S3FetchItems" => AWSTasks.S3FetchItems,
+
                         "Cleanup" => AWSTasks.Cleanup,
                         "CleanTranscriptionJobHistory" => AWSTasks.CleanTranscriptionJobHistory,
                         "SomeSubTask" => AWSTasks.SomeSubTask,
+
                         "TranscribeAudio" => AWSTasks.TranscribeAudio,
                         "UploadMediaFile" => AWSTasks.UploadMediaFile,
                         "StartTranscription" => AWSTasks.StartTranscription,
@@ -68,6 +70,11 @@ namespace Tustler.UserControls
                         "DownloadTranscriptFile" => AWSTasks.DownloadTranscriptFile,
                         "ExtractTranscript" => AWSTasks.ExtractTranscript,
                         "SaveTranscript" => AWSTasks.SaveTranscript,
+
+                        "MultiLanguageTranslateText" => AWSTasks.MultiLanguageTranslateText,
+                        "TranslateText" => AWSTasks.TranslateText,
+                        "SaveTranslation" => AWSTasks.SaveTranslation,
+
                         _ => throw new ArgumentException($"Unknown task name '{taskSpecifier?.TaskName}'"),
                     };
                 }
@@ -447,6 +454,9 @@ namespace Tustler.UserControls
                     case RequestVocabularyName ctrl:
                         ctrl.IsButtonEnabled = false;
                         break;
+                    case RequestTranslationTargetLanguages ctrl:
+                        ctrl.IsButtonEnabled = false;
+                        break;
                 }
 
                 // the user has selected an item that sets an argument
@@ -500,13 +510,17 @@ namespace Tustler.UserControls
                         var transcriptionLanguageCode = transcriptionLanguageCodeArg.Item;
                         agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptionLanguageCode(transcriptionLanguageCode))));
                         break;
-                    case UITaskArgument.TranslationLanguageCode translationLanguageCodeArg:
+                    case UITaskArgument.TranslationLanguageCodeSource translationLanguageCodeArg:
                         var translationLanguageCode = translationLanguageCodeArg.Item;
                         agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationLanguageCodeSource(translationLanguageCode))));
                         break;
                     case UITaskArgument.VocabularyName vocabularyNameArg:
                         var vocabularyName = vocabularyNameArg.Item;
                         agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptionVocabularyName(vocabularyName))));
+                        break;
+                    case UITaskArgument.TranslationTargetLanguages translationTargetLanguagesArg:
+                        var translationTargetLanguages = new RetainingStack<LanguageCode>(translationTargetLanguagesArg.Item);
+                        agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationTargetLanguages(translationTargetLanguages))));
                         break;
                     default:
                         throw new ArgumentException($"RunSelectBucketMiniTask: Unknown argument type");
