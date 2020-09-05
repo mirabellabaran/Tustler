@@ -202,7 +202,7 @@ namespace Tustler.UserControls.TaskMemberControls
             (
                 "Continue",
                 "Continue",
-                typeof(FileMediaReferenceCommands),
+                typeof(TranslationTargetLanguagesCommands),
                 null
             );
     }

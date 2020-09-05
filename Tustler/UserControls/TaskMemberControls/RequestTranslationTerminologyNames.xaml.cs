@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,25 +20,21 @@ using TustlerServicesLib;
 namespace Tustler.UserControls.TaskMemberControls
 {
     /// <summary>
-    /// Interaction logic for RequestVocabularyName.xaml
+    /// Interaction logic for RequestTranslationTerminologyNames.xaml
     /// </summary>
-    public partial class RequestVocabularyName : UserControl
+    public partial class RequestTranslationTerminologyNames : UserControl
     {
-        private readonly AmazonWebServiceInterface awsInterface;
-        private readonly NotificationsList notifications;
-
         #region IsButtonEnabled DependencyProperty
         public static readonly DependencyProperty IsButtonEnabledProperty =
-            DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(RequestVocabularyName), new PropertyMetadata(true, PropertyChangedCallback));
+            DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(RequestTranslationTerminologyNames), new PropertyMetadata(true, PropertyChangedCallback));
 
         private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
         {
-            if (dependencyObject is RequestVocabularyName ctrl)
+            if (dependencyObject is RequestTranslationTerminologyNames ctrl)
             {
                 if (dependencyPropertyChangedEventArgs.NewValue != null)
                 {
                     var newState = (bool)dependencyPropertyChangedEventArgs.NewValue;
-                    ctrl.cbVocabularyName.IsEnabled = newState;
                     ctrl.btnContinue.IsEnabled = newState;
                 }
             }
@@ -53,7 +50,10 @@ namespace Tustler.UserControls.TaskMemberControls
         }
         #endregion
 
-        public RequestVocabularyName()
+        private readonly AmazonWebServiceInterface awsInterface;
+        private readonly NotificationsList notifications;
+
+        public RequestTranslationTerminologyNames()
         {
             InitializeComponent();
 
@@ -65,19 +65,18 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private async void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
+            var terminologiesInstance = this.FindResource("terminologiesInstance") as TranslationTerminologiesViewModel;
+
             try
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                var vocabulariesInstance = this.FindResource("vocabulariesInstance") as TranscriptionVocabulariesViewModel;
-                await vocabulariesInstance.Refresh(awsInterface, notifications).ConfigureAwait(true);
+                await terminologiesInstance.Refresh(awsInterface, notifications).ConfigureAwait(true);
             }
             finally
             {
                 Mouse.OverrideCursor = null;
             }
-
-            CommandManager.InvalidateRequerySuggested();
         }
 
         #region ICommandSource
@@ -119,10 +118,8 @@ namespace Tustler.UserControls.TaskMemberControls
         private void AddCommand(ICommand newCommand)
         {
             EventHandler handler = new EventHandler(CanExecuteChanged);
-            //canExecuteChangedHandler = handler;
             if (newCommand != null)
             {
-                //newCommand.CanExecuteChanged += canExecuteChangedHandler;
                 newCommand.CanExecuteChanged += handler;
             }
         }
@@ -162,13 +159,13 @@ namespace Tustler.UserControls.TaskMemberControls
             DependencyProperty.Register(
                 "Command",
                 typeof(ICommand),
-                typeof(RequestVocabularyName),
+                typeof(RequestTranslationTerminologyNames),
                 new PropertyMetadata((ICommand)null,
                 new PropertyChangedCallback(CommandChanged)));
 
         private static void CommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            RequestVocabularyName ctrl = (RequestVocabularyName)d;
+            RequestTranslationTerminologyNames ctrl = (RequestTranslationTerminologyNames)d;
             ctrl.HookUpCommand((ICommand)e.OldValue, (ICommand)e.NewValue);
         }
 
@@ -197,34 +194,44 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void Continue_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = cbVocabularyName.SelectedItem is TustlerModels.Vocabulary _;
+            e.CanExecute = true;
         }
 
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            if (cbVocabularyName.SelectedItem is TustlerModels.Vocabulary vocabulary)
+            var terminologyNames = (lbTerminologyNames.SelectedItems as IEnumerable<object>)
+                .Cast<Terminology>()
+                .Select(term => term.Name);
+
+            CommandParameter = new UITaskArguments()
             {
-                // handle special case of 'None'
-                var vocabularyName = (vocabulary.VocabularyName == "None" && vocabulary.LanguageCode is null) ? null : vocabulary.VocabularyName;
+                Mode = UITaskMode.Select,
+                TaskArguments = new UITaskArgument[] { UITaskArgument.NewTranslationTerminologyNames(terminologyNames) }
+            };
 
-                CommandParameter = new UITaskArguments()
-                {
-                    Mode = UITaskMode.Select,
-                    TaskArguments = new UITaskArgument[] { UITaskArgument.NewTranscriptionVocabularyName(vocabularyName) }
-                };
+            ExecuteCommand();
+        }
 
-                ExecuteCommand();
+        private void TerminologyNames_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var selectedTerminologies = lbTerminologyNames.FindResource("selectedTerminologies") as SelectedItemsViewModel;
+            selectedTerminologies.Update(lbTerminologyNames.SelectedItems as IEnumerable<object>);
+
+            if (e.AddedItems.Count > 0)
+            {
+                var firstItem = (e.AddedItems as IEnumerable<object>).First() as Terminology;
+                lbTerminologyNames.ScrollIntoView(firstItem);
             }
         }
     }
 
-    public static class VocabularyNameCommands
+    public static class TranslationTerminologyNamesCommands
     {
         public static readonly RoutedUICommand Continue = new RoutedUICommand
             (
                 "Continue",
                 "Continue",
-                typeof(VocabularyNameCommands),
+                typeof(TranslationTerminologyNamesCommands),
                 null
             );
     }

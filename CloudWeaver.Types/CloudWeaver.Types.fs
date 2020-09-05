@@ -139,7 +139,7 @@ type KnownArgumentsCollection () =
 /// Requests common to all modules
 type StandardRequest =
     | RequestNotifications      // the location for writing any generated notifications
-    | RequestTaskName           // the name of a task (usually a GUID; used as filename for intermediate and final results)
+    | RequestTaskIdentifier     // the identifier for a task (usually a GUID; used as filename for intermediate and final results)
     | RequestTaskItem           // the current task function name and description (one of the user-selected items from the MultiSelect list)
     | RequestWorkingDirectory   // the filesystem folder where values specific to the current task function can be written and read
     | RequestSaveFlags          // a set of flags controlling the saving of intermediate results
@@ -147,7 +147,7 @@ type StandardRequest =
     override this.ToString() =
         match this with
         | RequestNotifications -> "RequestNotifications"
-        | RequestTaskName -> "RequestTaskName"
+        | RequestTaskIdentifier -> "RequestTaskIdentifier"
         | RequestTaskItem -> "RequestTaskItem"
         | RequestWorkingDirectory -> "RequestWorkingDirectory"
         | RequestSaveFlags -> "RequestSaveFlags"
@@ -155,7 +155,7 @@ type StandardRequest =
 /// Arguments common to all modules
 type StandardArgument =
     | SetNotificationsList of NotificationsList
-    | SetTaskName of string option
+    | SetTaskIdentifier of string option
     | SetTaskItem of TaskItem option
     | SetWorkingDirectory of DirectoryInfo option
     | SetSaveFlags of SaveFlags option
@@ -163,7 +163,7 @@ type StandardArgument =
     override this.ToString() =
         match this with
         | SetNotificationsList notifications -> (sprintf "SetNotificationsList: %s" (System.String.Join(", ", notifications.Notifications)))
-        | SetTaskName taskName -> (sprintf "SetTaskName: %s" (if taskName.IsSome then taskName.Value else "None"))
+        | SetTaskIdentifier taskId -> (sprintf "SetTaskName: %s" (if taskId.IsSome then taskId.Value else "None"))
         | SetTaskItem taskItem -> (sprintf "SetTaskItem: %s" (if taskItem.IsSome then taskItem.Value.ToString() else "None"))
         | SetWorkingDirectory dirInfo -> (sprintf "SetWorkingDirectory: %s" (if dirInfo.IsSome then dirInfo.Value.ToString() else "None"))
         | SetSaveFlags saveFlgs -> (sprintf "SetSaveFlags: %s" (if saveFlgs.IsSome then saveFlgs.Value.ToString() else "None"))
@@ -181,7 +181,7 @@ and StandardShareIntraModule(arg: StandardArgument) =
         member this.Serialize writer =
             match arg with
             | SetNotificationsList _notificationsList -> ()     // don't serialize
-            | SetTaskName _taskName -> ()                       // don't serialize
+            | SetTaskIdentifier _taskId -> ()                   // don't serialize
             | SetTaskItem _taskItem -> ()                       // don't serialize
             | SetWorkingDirectory _dir -> ()                    // don't serialize
             | SetSaveFlags _flags -> ()                         // don't serialize
@@ -220,7 +220,7 @@ type StandardKnownArguments(notificationsList) =
 
 /// Runtime modifiable values
 type StandardVariables() =
-    let mutable taskNameArgument = StandardArgument.SetTaskName(None)
+    let mutable taskIdentifierArgument = StandardArgument.SetTaskIdentifier(None)
     let mutable taskItemArgument = StandardArgument.SetTaskItem(None)
     let mutable workingDirectoryArgument = StandardArgument.SetWorkingDirectory(None)
     let mutable saveFlagsArgument = StandardArgument.SetSaveFlags(None)
@@ -228,7 +228,7 @@ type StandardVariables() =
     interface IKnownArguments with
         member this.KnownRequests with get() =
             seq {
-                StandardRequestIntraModule(StandardRequest.RequestTaskName);
+                StandardRequestIntraModule(StandardRequest.RequestTaskIdentifier);
                 StandardRequestIntraModule(StandardRequest.RequestTaskItem);
                 StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory);
                 StandardRequestIntraModule(StandardRequest.RequestSaveFlags);
@@ -239,7 +239,7 @@ type StandardVariables() =
                 | :? StandardRequestIntraModule as stdRequestIntraModule -> stdRequestIntraModule.Request
                 | _ -> invalidArg "request" "The request is not of type StandardRequestIntraModule"
             match (unWrapRequest request) with
-            | RequestTaskName -> taskNameArgument.toTaskEvent()
+            | RequestTaskIdentifier -> taskIdentifierArgument.toTaskEvent()
             | RequestTaskItem -> taskItemArgument.toTaskEvent()
             | RequestWorkingDirectory -> workingDirectoryArgument.toTaskEvent()
             | RequestSaveFlags -> saveFlagsArgument.toTaskEvent()
@@ -247,9 +247,9 @@ type StandardVariables() =
 
     member this.SetValue(request, value:obj) =
         match request with
-        | RequestTaskName ->
+        | RequestTaskIdentifier ->
             match value with
-            | :? string -> taskNameArgument <- StandardArgument.SetTaskName(Some(value :?> string))
+            | :? string -> taskIdentifierArgument <- StandardArgument.SetTaskIdentifier(Some(value :?> string))
             | _ -> invalidArg "value" (sprintf "%A is not an expected value" value)
         | RequestTaskItem ->
             match value with

@@ -33,9 +33,12 @@ namespace Tustler.Helpers
                         "RequestBucket" => element.FindResource("BucketRequestTemplate") as DataTemplate,
                         "RequestTranscriptionLanguageCode" => element.FindResource("TranscriptionLanguageCodeRequestTemplate") as DataTemplate,
                         "RequestTranscriptionVocabularyName" => element.FindResource("TranscriptionVocabularyNameRequestTemplate") as DataTemplate,
+                        "RequestTranscriptionDefaultTranscript" => element.FindResource("TranscriptionDefaultTranscriptRequestTemplate") as DataTemplate,
 
                         "RequestTranslationLanguageCode" => element.FindResource("TranslationLanguageCodeRequestTemplate") as DataTemplate,
                         "RequestTranslationTargetLanguages" => element.FindResource("TranslationTargetLanguagesRequestTemplate") as DataTemplate,
+                        "RequestTranslationTerminologyNames" => element.FindResource("TranslationTerminologyNamesRequestTemplate") as DataTemplate,
+                        "RequestTranslationLanguageCodeSource" => element.FindResource("TranslationLanguageCodeSourceRequestTemplate") as DataTemplate,
                         _ => null
                     };
                 }
@@ -48,12 +51,16 @@ namespace Tustler.Helpers
                         {
                             "SetBucket" => element.FindResource("BucketTemplate") as DataTemplate,
                             "SetBucketsModel" => element.FindResource("BucketsModelTemplate") as DataTemplate,
-                            "SetTranscriptionJobsModel" => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
-                            "SetTranscriptionJobName" => element.FindResource("TranscriptionJobNameTemplate") as DataTemplate,
                             "SetS3MediaReference" => element.FindResource("S3MediaReferenceTemplate") as DataTemplate,
+
                             "SetTranscriptURI" => element.FindResource("TranscriptURITemplate") as DataTemplate,
                             "SetTranscriptJSON" => element.FindResource("TranscriptJSONTemplate") as DataTemplate,
-                            "SetDefaultTranscript" => element.FindResource("DefaultTranscriptTemplate") as DataTemplate,
+                            "SetTranscriptionJobsModel" => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
+                            "SetTranscriptionJobName" => element.FindResource("TranscriptionJobNameTemplate") as DataTemplate,
+                            "SetTranscriptionDefaultTranscript" => element.FindResource("DefaultTranscriptTemplate") as DataTemplate,
+
+                            "SetTranslationSegments" => element.FindResource("TranslationSegmentsTemplate") as DataTemplate,
+
                             _ => throw new ArgumentException("Unknown argument for SetArgument")
                         },
                         _ => null

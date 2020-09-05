@@ -25,11 +25,26 @@
         </DataTemplate>
     </UserControl.Resources>
 
-    <StackPanel Orientation="Vertical">
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="Select a language" Style="{StaticResource TextBlockPrompt}" />
+    <!-- Note that the DataContext of LayoutRoot has been set to this UserControl -->
+    <StackPanel x:Name="LayoutRoot" Orientation="Vertical">
+        <TextBlock Grid.Row="0" Grid.Column="0">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock" BasedOn="{StaticResource TextBlockPrompt}">
+                    <Setter Property="Text" Value="Select a language" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Path=LanguageCodesViewModelType}" Value="Translation">
+                            <Setter Property="Text" Value="Select the translation source language" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=LanguageCodesViewModelType}" Value="Transcription">
+                            <Setter Property="Text" Value="Select the language of the transcription media source" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
         <Border BorderBrush="BlanchedAlmond" BorderThickness="5" CornerRadius="10" Margin="10" Padding="10">
             <DockPanel>
-                <ComboBox x:Name="cbLanguage" Height="30" Style="{StaticResource comboBoxStyles}" ItemTemplate="{StaticResource comboBoxItemTempate}" SelectedValuePath="Code" />
+                <ComboBox x:Name="cbLanguage" Width="150" Height="30" Style="{StaticResource comboBoxStyles}" ItemTemplate="{StaticResource comboBoxItemTempate}" SelectedValuePath="Code" />
                 <Button x:Name="btnContinue" Content="Continue" Height="30" Width="80" Command="{x:Static uc:LanguageCodeCommands.Continue}" Style="{StaticResource ButtonDarkFlat}" />
             </DockPanel>
         </Border>

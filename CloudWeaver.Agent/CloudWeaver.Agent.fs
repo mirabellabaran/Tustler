@@ -12,7 +12,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
 
     let standardVariables = StandardVariables()
     let callTaskEvent = new Event<EventHandler<_>, _>()
-    let recallTaskEvent = new Event<EventHandler<_>, _>()
+    //let recallTaskEvent = new Event<EventHandler<_>, _>()
     let newUIResponseEvent = new Event<EventHandler<_>, _>()
     let saveArgumentsEvent = new Event<EventHandler<_>, _>()
     let errorEvent = new Event<EventHandler<_>, _>()
@@ -105,7 +105,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         let subTasks = new RetainingStack<TaskItem>(taskSequence, RetainingStack<TaskItem>.ItemOrdering.Sequential)
         events.Add(TaskEvent.ForEachTask(subTasks))
 
-    let processResponse self response =
+    let processResponse self (taskInfo: TaskItem) response =
         if retainResponses then
             taskResponses.Value.Add(response)
         match response with
@@ -115,15 +115,16 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         // resolve requests for common arguments immediately (other requests get passed to the UI)
         | TaskResponse.RequestArgument arg when knownArguments.IsKnownArgument(arg) ->
             events.Add(knownArguments.GetKnownArgument(arg))
-            recallTaskEvent.Trigger(self, EventArgs())    // receiver should set the TaskName and call RunTask
+            callTaskEvent.Trigger(self, taskInfo)
+            //recallTaskEvent.Trigger(self, EventArgs())    // receiver should set the TaskName and call RunTask
         | TaskResponse.TaskSelect _ ->
             events.Add(TaskEvent.SelectArgument)
             newUIResponseEvent.Trigger(self, response)
         | TaskResponse.TaskSequence taskSequence -> addTaskSequenceEvent taskSequence
         | TaskResponse.TaskContinue delayMilliseconds ->
             Async.AwaitTask (Task.Delay(delayMilliseconds)) |> Async.RunSynchronously
-            //restartCurrentTask self
-            recallTaskEvent.Trigger(self, EventArgs())
+            callTaskEvent.Trigger(self, taskInfo)
+            //recallTaskEvent.Trigger(self, EventArgs())
         | TaskResponse.TaskComplete _ ->
             newUIResponseEvent.Trigger(self, response)
             nextTask self
@@ -137,19 +138,19 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
 
         | _ -> newUIResponseEvent.Trigger(self, response)    // receiver would typically call Dispatcher.InvokeAsync to invoke a function to add the response to the user interface
 
-    let processor self responses =
+    let processor self taskInfo responses =
         async {
             try
                 responses
-                |> Seq.iter (fun response -> processResponse self response)
+                |> Seq.iter (fun response -> processResponse self taskInfo response)
             with
                 | :? AggregateException as ex ->
                     let errorInfo = NotificationsList.CreateErrorNotification ("TaskQueue: queueWriter", ex.InnerException.Message, ex.InnerException)
                     errorEvent.Trigger(self, errorInfo)
         }
 
-    let runTask self responses =
-        let writer = processor self responses
+    let runTask self taskInfo responses =
+        let writer = processor self taskInfo responses
         Async.StartAsTask writer
 
     member this.PrepareFunctionArguments (args: InfiniteList<MaybeResponse>) =
@@ -162,13 +163,15 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
             | _ -> ()
         )
 
-    member this.RunTask (responses: seq<TaskResponse>) =
+    /// Process the responses from the current task function
+    member this.RunTask taskInfo (responses: seq<TaskResponse>) =
         events.Add(TaskEvent.InvokingFunction)
 
         // collect responses from just the current call to the task function
         if retainResponses then taskResponses.Value.Clear()
 
-        runTask this responses
+        // The TaskItem parameter is to allow the current task to be queued for recall when specified by the task function
+        runTask this taskInfo responses
 
     /// Start the task at the top of the stack
     member this.StartNewTask stack =
@@ -189,8 +192,8 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
     member this.SetWorkingDirectory (directoryPath: DirectoryInfo) =
         standardVariables.SetValue(StandardRequest.RequestWorkingDirectory, directoryPath);
 
-    member this.SetTaskName (taskName: string) =
-        standardVariables.SetValue(StandardRequest.RequestTaskName, taskName);
+    member this.SetTaskIdentifier (taskId: string) =
+        standardVariables.SetValue(StandardRequest.RequestTaskIdentifier, taskId);
 
     member this.SetSaveFlags (saveFlags: SaveFlags) =
         standardVariables.SetValue(StandardRequest.RequestSaveFlags, saveFlags)
@@ -205,8 +208,8 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
     [<CLIEvent>]
     member this.CallTask:IEvent<EventHandler<TaskItem>, TaskItem> = callTaskEvent.Publish
 
-    [<CLIEvent>]
-    member this.RecallTask:IEvent<EventHandler<EventArgs>, EventArgs> = recallTaskEvent.Publish
+    //[<CLIEvent>]
+    //member this.RecallTask:IEvent<EventHandler<EventArgs>, EventArgs> = recallTaskEvent.Publish
 
     [<CLIEvent>]
     member this.NewUIResponse:IEvent<EventHandler<TaskResponse>, TaskResponse> = newUIResponseEvent.Publish

@@ -153,7 +153,58 @@ namespace Tustler
 
         private void SwitchCommand_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = (tvActions?.SelectedItem != null);
+            bool canExecute = false;
+
+            if (tvActions.SelectedItem is TreeViewItem item)
+            {
+                if (panControlsContainer.Children.Count == 0)
+                {
+                    canExecute = true;
+                }
+                else
+                {
+                    // allows a switch if the current child user control is not the TasksManager or if switching to a new task function
+                    // return true to allow a switch
+                    static bool CheckTaskFunction(UIElement firstChild, IElementTag tag)
+                    {
+                        if (firstChild is TasksManager tasksManager)
+                        {
+                            var currentTask = tasksManager.TaskSpecifier.TaskName;
+                            if (tag is TaskFunctionSpecifier specifier)
+                            {
+                                return currentTask != specifier.TaskName;
+                            }
+                            else
+                            {
+                                throw new ArgumentException("TreeViewItems that are children of Tasks should have a TaskFunctionSpecifier tag");
+                            }
+                        }
+                        else
+                        {
+                            return true;    // can switch to TasksManager
+                        }
+                    }
+
+                    var firstChild = panControlsContainer.Children[0];
+
+                    var elementTag = (item.Tag ?? new DefaultTag("always-allow-switch")) as IElementTag;
+                    string tag = elementTag.TagDescription;
+
+                    canExecute = tag switch
+                    {
+                        "s3management" => !(firstChild is Tustler.UserControls.S3Management),
+                        "credentials" => !(firstChild is Tustler.UserControls.Credentials),
+                        "appSettings" => !(firstChild is AppSettingsControl),
+                        "translate" => !(firstChild is Tustler.UserControls.TranslateFunctions),
+                        "transcribe" => !(firstChild is Tustler.UserControls.TranscribeFunctions),
+                        "polly" => !(firstChild is Tustler.UserControls.PollyFunctions),
+                        "taskfunction" => CheckTaskFunction(firstChild, elementTag),
+                        _ => true
+                    };
+                }
+            }
+
+            e.CanExecute = canExecute;
         }
 
         private void SwitchCommand_Executed(object sender, ExecutedRoutedEventArgs e)

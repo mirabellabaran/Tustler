@@ -73,6 +73,8 @@ namespace Tustler.UserControls.TaskMemberControls
         public RequestLanguageCode()
         {
             InitializeComponent();
+
+            LayoutRoot.DataContext = this;      // child elements of LayoutRoot control use this as the context
         }
 
         private void UserControl_Loaded(object sender, RoutedEventArgs e)

@@ -192,6 +192,37 @@
             </Border>
         </DataTemplate>
 
+        <DataTemplate x:Key="S3MediaReferenceTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="Created New S3 Object:" Style="{StaticResource TaskInfoTextStyle}" Margin="5" />
+                    <UniformGrid Margin="5">
+                        <UniformGrid.Resources>
+                            <Style x:Key="s3LabelStyle" TargetType="Label" BasedOn="{StaticResource TaskInfoLabelStyle}">
+                                <Setter Property="Width" Value="100" />
+                            </Style>
+                        </UniformGrid.Resources>
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="BucketName:" Style="{StaticResource s3LabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.BucketName}" Style="{StaticResource TaskInfoTextStyle}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="Key:" Style="{StaticResource s3LabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.Key}" Style="{StaticResource TaskInfoTextStyle}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="MimeType:" Style="{StaticResource s3LabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.MimeType}" Style="{StaticResource TaskInfoTextStyle}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="Extension:" Style="{StaticResource s3LabelStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.Extension}" Style="{StaticResource TaskInfoTextStyle}" />
+                        </StackPanel>
+                    </UniformGrid>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
         <DataTemplate x:Key="TranscriptionJobsModelTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
                 <StackPanel Orientation="Vertical">
@@ -339,37 +370,53 @@
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="S3MediaReferenceTemplate" DataType="{x:Type fsharp:TaskResponse}">
+        <DataTemplate x:Key="TranslationSegmentsTemplate"  DataType="{x:Type fsharp:TaskResponse}">
             <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
-                <StackPanel Orientation="Vertical">
-                    <TextBlock Text="Created New S3 Object:" Style="{StaticResource TaskInfoTextStyle}" Margin="5" />
-                    <UniformGrid Margin="5">
-                        <UniformGrid.Resources>
-                            <Style x:Key="s3LabelStyle" TargetType="Label" BasedOn="{StaticResource TaskInfoLabelStyle}">
-                                <Setter Property="Width" Value="100" />
-                            </Style>
-                        </UniformGrid.Resources>
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="BucketName:" Style="{StaticResource s3LabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.BucketName}" Style="{StaticResource TaskInfoTextStyle}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="Key:" Style="{StaticResource s3LabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.Key}" Style="{StaticResource TaskInfoTextStyle}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="MimeType:" Style="{StaticResource s3LabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.MimeType}" Style="{StaticResource TaskInfoTextStyle}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="Extension:" Style="{StaticResource s3LabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.Extension}" Style="{StaticResource TaskInfoTextStyle}" />
-                        </StackPanel>
-                    </UniformGrid>
+                <StackPanel>
+                    <Label Foreground="#637074" Background="#BDD4AA" FontWeight="Bold" Margin="1" Content="Translation segments:" />
+                    <ScrollViewer MaxHeight="100" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Path=Item.Argument.Item.Summary}" Background="{StaticResource NormalBackground}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ShowGridLines="False">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150" />
+                                            <ColumnDefinition Width="150" />
+                                            <ColumnDefinition Width="300" />
+                                            <ColumnDefinition Width="300" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Orientation="Horizontal" Grid.Column="0">
+                                            <Label Content="Index:" Width="100" Style="{StaticResource TaskInfoLabelStyle}" />
+                                            <TextBlock Text="{Binding Path=Index}" Style="{StaticResource TaskInfoTextStyle}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Grid.Column="1">
+                                            <Label Content="Translated:" Width="100" Style="{StaticResource TaskInfoLabelStyle}" />
+                                            <TextBlock Text="{Binding Path=IsTranslated}" Style="{StaticResource TaskInfoTextStyle}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Grid.Column="2">
+                                            <Label Content="Source Text:" Width="100" Style="{StaticResource TaskInfoLabelStyle}" />
+                                            <TextBlock Text="{Binding Path=SourceInitial}" Style="{StaticResource TaskInfoTextStyle}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Grid.Column="3">
+                                            <Label Content="Translated Text:" Width="100" Style="{StaticResource TaskInfoLabelStyle}" />
+                                            <TextBlock Text="{Binding Path=TranslatedInitial}" Style="{StaticResource TaskInfoTextStyle}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Vertical" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </ScrollViewer>
                 </StackPanel>
             </Border>
         </DataTemplate>
-
 
         <DataTemplate x:Key="FileMediaReferenceRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <uctask:RequestFileMediaReference Command="{x:Static uc:TaskCommands.UIResponse}" />
@@ -387,6 +434,10 @@
             <uctask:RequestLanguageCode Command="{x:Static uc:TaskCommands.UIResponse}" LanguageCodesViewModelType="Transcription" />
         </DataTemplate>
 
+        <DataTemplate x:Key="TranscriptionDefaultTranscriptRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <uctask:RequestTranscriptionDefaultTranscript Command="{x:Static uc:TaskCommands.UIResponse}" />
+        </DataTemplate>
+        
         <DataTemplate x:Key="TranscriptionVocabularyNameRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <uctask:RequestVocabularyName Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
@@ -397,6 +448,14 @@
 
         <DataTemplate x:Key="TranslationTargetLanguagesRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <uctask:RequestTranslationTargetLanguages Command="{x:Static uc:TaskCommands.UIResponse}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="TranslationTerminologyNamesRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <uctask:RequestTranslationTerminologyNames Command="{x:Static uc:TaskCommands.UIResponse}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="TranslationLanguageCodeSourceRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <uctask:RequestLanguageCode Command="{x:Static uc:TaskCommands.UIResponse}" LanguageCodesViewModelType="Translation" />
         </DataTemplate>
         
     </UserControl.Resources>

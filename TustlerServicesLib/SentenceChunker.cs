@@ -11,6 +11,22 @@ namespace TustlerServicesLib
 {
     public class SentenceChunker
     {
+        public class SummaryData
+        {
+            public SummaryData(int index, string sourceInitial, string translatedInitial, bool isTranslated)
+            {
+                Index = index;
+                SourceInitial = sourceInitial;
+                TranslatedInitial = translatedInitial;
+                IsTranslated = isTranslated;
+            }
+
+            public int Index { get; }
+            public string SourceInitial { get; }
+            public string TranslatedInitial { get; }
+            public bool IsTranslated { get; }
+        }
+
         public const long MinSleepMilliseconds = 10;
         public const long MaxSleepMilliseconds = 5000;
         public const int MaxRetries = 10;
@@ -81,6 +97,30 @@ namespace TustlerServicesLib
             get
             {
                 return SourceChunks.AsEnumerable();
+            }
+        }
+
+        public IEnumerable<SummaryData> Summary
+        {
+            get
+            {
+                return SourceChunks.Select(kvp =>
+                {
+                    static string TruncateString(string str, int truncationIndex)
+                    {
+                        if (str.Length < truncationIndex)
+                            return str;
+                        else
+                            return String.Format("{0}...", str.Substring(0, truncationIndex));
+                    }
+
+                    var index = kvp.Key;
+                    var source = kvp.Value;
+                    var translated = TranslatedChunks[index].Value;
+                    var isTranslated = TranslatedChunks[index].Complete;
+
+                    return new SummaryData(index, TruncateString(source, 30), TruncateString(translated, 30), isTranslated);
+                });
             }
         }
 

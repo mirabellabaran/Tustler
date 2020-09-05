@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows;
@@ -11,33 +10,26 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using TustlerAWSLib;
 using TustlerFSharpPlatform;
-using TustlerModels;
-using TustlerServicesLib;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
     /// <summary>
-    /// Interaction logic for RequestVocabularyName.xaml
+    /// Interaction logic for RequestTranscriptionDefaultTranscript.xaml
     /// </summary>
-    public partial class RequestVocabularyName : UserControl
+    public partial class RequestTranscriptionDefaultTranscript : UserControl
     {
-        private readonly AmazonWebServiceInterface awsInterface;
-        private readonly NotificationsList notifications;
-
         #region IsButtonEnabled DependencyProperty
         public static readonly DependencyProperty IsButtonEnabledProperty =
-            DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(RequestVocabularyName), new PropertyMetadata(true, PropertyChangedCallback));
+            DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(RequestTranscriptionDefaultTranscript), new PropertyMetadata(true, PropertyChangedCallback));
 
         private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
         {
-            if (dependencyObject is RequestVocabularyName ctrl)
+            if (dependencyObject is RequestTranscriptionDefaultTranscript ctrl)
             {
                 if (dependencyPropertyChangedEventArgs.NewValue != null)
                 {
                     var newState = (bool)dependencyPropertyChangedEventArgs.NewValue;
-                    ctrl.cbVocabularyName.IsEnabled = newState;
                     ctrl.btnContinue.IsEnabled = newState;
                 }
             }
@@ -53,31 +45,9 @@ namespace Tustler.UserControls.TaskMemberControls
         }
         #endregion
 
-        public RequestVocabularyName()
+        public RequestTranscriptionDefaultTranscript()
         {
             InitializeComponent();
-
-            var serviceProvider = (Application.Current as App).ServiceProvider;
-
-            this.awsInterface = serviceProvider.GetRequiredService<AmazonWebServiceInterface>();
-            this.notifications = this.FindResource("applicationNotifications") as NotificationsList;
-        }
-
-        private async void UserControl_Loaded(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                Mouse.OverrideCursor = Cursors.Wait;
-
-                var vocabulariesInstance = this.FindResource("vocabulariesInstance") as TranscriptionVocabulariesViewModel;
-                await vocabulariesInstance.Refresh(awsInterface, notifications).ConfigureAwait(true);
-            }
-            finally
-            {
-                Mouse.OverrideCursor = null;
-            }
-
-            CommandManager.InvalidateRequerySuggested();
         }
 
         #region ICommandSource
@@ -162,13 +132,13 @@ namespace Tustler.UserControls.TaskMemberControls
             DependencyProperty.Register(
                 "Command",
                 typeof(ICommand),
-                typeof(RequestVocabularyName),
+                typeof(RequestTranscriptionDefaultTranscript),
                 new PropertyMetadata((ICommand)null,
                 new PropertyChangedCallback(CommandChanged)));
 
         private static void CommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            RequestVocabularyName ctrl = (RequestVocabularyName)d;
+            RequestTranscriptionDefaultTranscript ctrl = (RequestTranscriptionDefaultTranscript)d;
             ctrl.HookUpCommand((ICommand)e.OldValue, (ICommand)e.NewValue);
         }
 
@@ -197,20 +167,17 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void Continue_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = cbVocabularyName.SelectedItem is TustlerModels.Vocabulary _;
+            e.CanExecute = !(string.IsNullOrWhiteSpace(tbTranscript.Text));
         }
 
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            if (cbVocabularyName.SelectedItem is TustlerModels.Vocabulary vocabulary)
+            if (!string.IsNullOrWhiteSpace(tbTranscript.Text))
             {
-                // handle special case of 'None'
-                var vocabularyName = (vocabulary.VocabularyName == "None" && vocabulary.LanguageCode is null) ? null : vocabulary.VocabularyName;
-
                 CommandParameter = new UITaskArguments()
                 {
                     Mode = UITaskMode.Select,
-                    TaskArguments = new UITaskArgument[] { UITaskArgument.NewTranscriptionVocabularyName(vocabularyName) }
+                    TaskArguments = new UITaskArgument[] { UITaskArgument.NewTranscriptionDefaultTranscript(tbTranscript.Text) }
                 };
 
                 ExecuteCommand();
@@ -218,13 +185,13 @@ namespace Tustler.UserControls.TaskMemberControls
         }
     }
 
-    public static class VocabularyNameCommands
+    public static class TranscriptionDefaultTranscriptCommands
     {
         public static readonly RoutedUICommand Continue = new RoutedUICommand
             (
                 "Continue",
                 "Continue",
-                typeof(VocabularyNameCommands),
+                typeof(TranscriptionDefaultTranscriptCommands),
                 null
             );
     }
