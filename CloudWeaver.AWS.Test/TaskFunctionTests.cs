@@ -487,6 +487,36 @@ namespace CloudWeaver.AWS.Test
             });
         }
 
+        [TestMethod]
+        public async Task TestCreateSubTitles()
+        {
+            const string transcriptJSONTestFilename = "SallyRide d2a8856b.json";
+
+            var taskName = "CreateSubTitles";
+            Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.CreateSubTitles;
+            var agent = InitializeTest(taskName, WorkingDirectory, null);
+
+            var transcriptJSONTestFilePath = Path.Combine(WorkingDirectory, transcriptJSONTestFilename);
+            var contents = File.ReadAllBytes(transcriptJSONTestFilePath);
+            var jsonData = new ReadOnlyMemory<byte>(contents);
+
+            var result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranscriptJSON)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptJSON(jsonData))));
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestNotifications)" });
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 2);
+            Assert.IsTrue(CheckAllStartWith(result, new string[] {
+                    "SetArgument: AWSShareIntraModule(SetTranscriptionDefaultTranscript: You know, Sally Ride is such",
+                    "TaskComplete: Extracted transcript data"
+                }));
+        }
+
         private static Agent InitializeTest(string taskId, string workingDirectory, SaveFlags saveFlags)
         {
             var notificationsList = new NotificationsList();

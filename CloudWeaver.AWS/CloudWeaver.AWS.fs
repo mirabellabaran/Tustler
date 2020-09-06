@@ -1074,6 +1074,72 @@ module public Tasks =
         }
 
 
+    let CreateSubTitles (resolvable_arguments: InfiniteList<MaybeResponse>) =
+
+        let makeSubtitles (timingData: seq<Utilities.WordTiming>) =
+            let makeSubTitleLine (words: (double * string) list) =
+                let ordered = List.rev words
+                let startTime, _ = List.head ordered
+                let orderedWords =
+                    ordered
+                    |> Seq.map (fun (_startTime, word) -> word)
+                let sentence = System.Text.StringBuilder(words.Length + 3)
+                                .Append("[").Append(startTime).Append("]").Append(" ").AppendJoin(" ", orderedWords).Append(".")
+                sentence.ToString()
+
+            let words, sentences =
+                timingData
+                |> Seq.fold (fun (words, sentences) wordTiming ->
+                    if wordTiming.Type = Utilities.WordTiming.WordType.Punctuation && wordTiming.Content = "." then
+                        let sentence = makeSubTitleLine words
+                        ([], sentence :: sentences)
+                    else
+                        ((wordTiming.StartTime, wordTiming.Content) :: words, sentences)
+                ) ([], [])
+
+            let result =
+                if not words.IsEmpty then
+                    let finalSentence = makeSubTitleLine words
+                    finalSentence :: sentences
+                else
+                    sentences
+
+            result
+            |> List.rev
+            |> List.toArray
+
+        let createSubTitles argsRecord =
+            let notifications = argsRecord.Notifications.Value
+            let transcriptJSON = argsRecord.TranscriptJSON.Value
+
+            seq {
+                let timingData = TustlerAWSLib.Utilities.TranscriptParser.ParseWordTimingData(transcriptJSON, notifications) |> Async.AwaitTask |> Async.RunSynchronously
+                if notifications.Notifications.Count > 0 then
+                    yield! getNotificationResponse notifications                    
+
+                let subTitles = makeSubtitles timingData
+                // TODO remove spaces before commas; deal with ellipses and other special cases; split sentences that run too long
+
+                //if not (isNull defaultTranscript) then
+                //    yield (AWSArgument.SetTranscriptionDefaultTranscript defaultTranscript).toSetArgumentTaskResponse()
+
+                yield TaskResponse.TaskComplete "Created subtitle data"
+            }
+
+        seq {
+            let defaultArgs = TaskArgumentRecord.Init ()
+            let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+
+            if resolvedRecord.Notifications.IsSome && resolvedRecord.TranscriptJSON.IsSome then
+                yield! createSubTitles resolvedRecord
+            else
+                yield! resolveByRequest resolvable_arguments [|
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestNotifications));
+                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptJSON));
+                    |]
+        }
+
+
     [<HideFromUI>]
     let TranslateText (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
