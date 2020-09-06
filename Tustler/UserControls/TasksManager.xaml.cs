@@ -240,7 +240,7 @@ namespace Tustler.UserControls
                     new AWSFlagSet(new AWSFlagItem[] {
                         AWSFlagItem.TranscribeSaveJSONTranscript,
                         AWSFlagItem.TranscribeSaveDefaultTranscript,
-                        //AWSFlagItem.TranslateSaveTranslation
+                        AWSFlagItem.TranslateSaveTranslation
                     })
                 });
                 agent.SetSaveFlags(saveFlags);
@@ -268,20 +268,16 @@ namespace Tustler.UserControls
             await agent.RunTask(currentTask, responseStream).ConfigureAwait(false);
 
             // Once the previous call to RunTask() has run to completion start the next task (if any)
-            // MG Testing whether InvokeSync will ensure other dispatched calls are resolved BEFORE this is called (see Agent_RecallTask)
-            //await Dispatcher.InvokeAsync(async () =>
-            //{
-                if (taskQueue.Count > 0)
+            if (taskQueue.Count > 0)
+            {
+                var nextTaskSpecifier = taskQueue.Dequeue();
+                await Dispatcher.InvokeAsync(() =>
                 {
-                    var nextTaskSpecifier = taskQueue.Dequeue();
-                    await Dispatcher.InvokeAsync(() =>
-                    {
-                        this.TaskSpecifier = nextTaskSpecifier;
+                    this.TaskSpecifier = nextTaskSpecifier;
 
-                        RunTask();
-                    });
-                }
-        //});
+                    RunTask();
+                });
+            }
         }
 
         private async void Agent_NewUIResponse(object? sender, TaskResponse response)
@@ -311,32 +307,7 @@ namespace Tustler.UserControls
             // Instead, just enqueue the next task specifier and run the task later (see RunTask)
             var taskPath = TaskFunctionSpecifier.FullPathFromTaskItem(task);
             taskQueue.Enqueue(this.taskFunctionLookup[taskPath]);      // will throw if task path is unknown
-
-            //await Dispatcher.InvokeAsync(() =>
-            //{
-            //    var taskPath = TaskFunctionSpecifier.FullPathFromTaskItem(task);
-            //    taskQueue.Enqueue(this.taskFunctionLookup[taskPath]);      // will throw if task path is unknown
-
-            //    RunTask();
-            //});
         }
-
-        //private async void Agent_RecallTask(object? sender, EventArgs e)
-        //{
-        //    // Callback from the current call to agent.RunTask()
-        //    // Note that the current call must run to completion for the system to work correctly (ie the agent must run just one task function at a time)
-        //    // Just enqueue the current task specifier so that the task can be run later (see RunTask)
-        //    // Note that the current thread can't access the TaskSpecifier property of the TasksManager instance without running through the Dispatcher
-        //    await Dispatcher.InvokeAsync(() =>
-        //    {
-        //        taskQueue.Enqueue(this.TaskSpecifier);
-        //    });
-
-        //    //await Dispatcher.InvokeAsync(() =>
-        //    //{
-        //    //    RunTask();
-        //    //});
-        //}
 
         private async void Agent_Error(object? sender, Notification errorInfo)
         {
@@ -601,9 +572,12 @@ namespace Tustler.UserControls
                 // pop the first task item and set an argument on the event source
                 if (subtasks.Count > 0)
                 {
-                    agent.StartNewTask(subtasks);
+                    agent.StartNewTask(subtasks);       // this will invoke the callback that adds the next task to the queue
                     await Dispatcher.InvokeAsync(() =>
                     {
+                        var nextTaskSpecifier = taskQueue.Dequeue();
+                        this.TaskSpecifier = nextTaskSpecifier;
+
                         RunTask();
                     });
                 }

@@ -156,7 +156,7 @@ namespace CloudWeaver.AWS.Test
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestTaskName)" });
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestTaskIdentifier)" });
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
@@ -205,7 +205,7 @@ namespace CloudWeaver.AWS.Test
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 2);
             Assert.IsTrue(CheckAllStartWith(result, new string[] {
-                    "SetArgument: AWSShareIntraModule(SetDefaultTranscript: You know, Sally Ride is such an amazing figure",
+                    "SetArgument: AWSShareIntraModule(SetTranscriptionDefaultTranscript: You know, Sally Ride is such",
                     "TaskComplete: Extracted transcript data"
                 }));
         }
@@ -231,7 +231,7 @@ namespace CloudWeaver.AWS.Test
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestTaskName)" });
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestTaskIdentifier)" });
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
@@ -239,7 +239,7 @@ namespace CloudWeaver.AWS.Test
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestDefaultTranscript)" });
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranscriptionDefaultTranscript)" });
             agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptionDefaultTranscript(transcript))));
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
@@ -273,7 +273,7 @@ namespace CloudWeaver.AWS.Test
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestTaskName)" });
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestTaskIdentifier)" });
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
@@ -292,7 +292,7 @@ namespace CloudWeaver.AWS.Test
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestDefaultTranscript)" });
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranscriptionDefaultTranscript)" });
             agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptionDefaultTranscript(transcript))));
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
@@ -304,11 +304,13 @@ namespace CloudWeaver.AWS.Test
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestAWSInterface)" });
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
-            Assert.IsTrue(result.Length == 4);
+            Assert.IsTrue(result.Length == 6);
             Assert.IsTrue(CheckAllStartWith(result, new string[] {
-                    "TaskInfo: backoff (ms): 0,",
-                    "TaskInfo: backoff (ms): 0,",
-                    "TaskInfo: backoff (ms): 0,",
+                    "TaskInfo: Running French translation...",
+                    "TaskInfo: Segment 0 completed",
+                    "TaskInfo: Segment 1 completed",
+                    "TaskInfo: Segment 2 completed",
+                    "SetArgument: AWSShareIntraModule(SetTranslationSegments: TustlerServicesLib.SentenceChunker)",
                     "TaskComplete: Translation to French is complete"
                 }));
         }
@@ -346,7 +348,7 @@ namespace CloudWeaver.AWS.Test
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestTaskName)" });
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestTaskIdentifier)" });
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
@@ -374,7 +376,26 @@ namespace CloudWeaver.AWS.Test
         {
             var taskName = "MultiLanguageTranslateText";
             Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.MultiLanguageTranslateText;
-            var agent = InitializeTest(taskName, WorkingDirectory, null);
+            var saveFlags = new SaveFlags(new ISaveFlagSet[]
+            {
+                new AWSFlagSet(new AWSFlagItem[] {
+                    AWSFlagItem.TranslateSaveTranslation
+                })
+            });
+            var agent = InitializeTest(taskName, WorkingDirectory, saveFlags);
+
+            var languageCodeSource = "en";
+            var languageTargets = new RetainingStack<TustlerModels.LanguageCode>(
+                 new TustlerModels.LanguageCode[] {
+                                new TustlerModels.LanguageCode() { Name = "French", Code = "fr" },
+                                new TustlerModels.LanguageCode() { Name = "Danish", Code = "da" },
+                                new TustlerModels.LanguageCode() { Name = "German", Code = "de" }
+                 });
+            var terminologyNames = new List<string>()
+            {
+                "Bob"
+            };
+            var transcript = "This is a test transcript. This is a test transcript. This is a test transcript.";
 
             // Agent callbacks are required for switching between tasks
             // Note that any previous calls to CallTaskAsync(taskName, ) must have run to completion for this to work correctly
@@ -391,17 +412,45 @@ namespace CloudWeaver.AWS.Test
                 return Enumerable.Range(0, 5).Select(i => TaskResponse.NewTaskComplete(i.ToString()));
             }
 
-           var languageTargets = new RetainingStack<TustlerModels.LanguageCode>(
-                new TustlerModels.LanguageCode[] {
-                    new TustlerModels.LanguageCode() { Name = "French", Code = "fr" },
-                    new TustlerModels.LanguageCode() { Name = "Danish", Code = "da" },
-                    new TustlerModels.LanguageCode() { Name = "German", Code = "de" }
-                });
-
             var result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestSaveFlags)" });
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestWorkingDirectory)" });
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestTaskIdentifier)" });
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranslationLanguageCodeSource)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationLanguageCodeSource(languageCodeSource))));
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranslationTargetLanguages)" });
             agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationTargetLanguages(languageTargets))));
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranslationTerminologyNames)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationTerminologyNames(terminologyNames))));
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranscriptionDefaultTranscript)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptionDefaultTranscript(transcript))));
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestNotifications)" });
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestAWSInterface)" });
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 2);
@@ -421,8 +470,14 @@ namespace CloudWeaver.AWS.Test
                 "TaskComplete: 4",
             });
 
-            // expecting a sequence of TranslateText, SaveTranslation for each of the three languages
+            // expecting a sequence of calls to MultiLanguageTranslateText as arguments are resolved
+            // then a sequence of TranslateText, SaveTranslation for each of the three languages
             CollectionAssert.AreEqual(taskList, new string[] {
+                "MultiLanguageTranslateText",
+                "MultiLanguageTranslateText",
+                "MultiLanguageTranslateText",
+                "MultiLanguageTranslateText",
+                "MultiLanguageTranslateText",
                 "TranslateText",
                 "SaveTranslation",
                 "TranslateText",

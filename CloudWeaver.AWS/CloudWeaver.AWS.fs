@@ -1146,9 +1146,9 @@ module public Tasks =
         let processChunks translator (chunker: SentenceChunker) =
             let prepareInfo index stateChanges =
                 if stateChanges = "0" then
-                    sprintf "Chunk %d completed" index
+                    sprintf "Segment %d completed" index
                 else
-                    sprintf "Chunk %d completed: (delay adjustments (ms): %s)" index stateChanges
+                    sprintf "Segment %d completed: (delay adjustments (ms): %s)" index stateChanges
 
             let chunkMapper index currentRetryLevel currentDelay chunk =
                 let nonRecoverableError, retries, maxDelay, stateChanges = processChunk translator chunk currentRetryLevel currentDelay
@@ -1242,10 +1242,12 @@ module public Tasks =
             seq {
                 if chunker.IsJobComplete then
                     // save the translated text
-                    let filePath = Path.Combine(workingDirectory.FullName, (sprintf "Translation-%s-%s.txt" taskId targetLanguageCode.Code))
+                    let fileName = sprintf "Translation-%s-%s.txt" taskId targetLanguageCode.Code
+                    let filePath = Path.Combine(workingDirectory.FullName, fileName)
                     File.WriteAllText(filePath, chunker.CompletedTranslation)
 
-                    yield TaskResponse.TaskComplete (sprintf "Saved translation to %s" filePath)
+                    yield TaskResponse.TaskInfo (sprintf "Working directory is: %s" workingDirectory.FullName)
+                    yield TaskResponse.TaskComplete (sprintf "Saved translation to %s" fileName)
                 else
                     chunker.ArchiveChunks(taskId, workingDirectory.FullName)
                     let filePath =
