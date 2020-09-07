@@ -180,11 +180,11 @@ and StandardShareIntraModule(arg: StandardArgument) =
             JsonSerializer.SerializeToUtf8Bytes(arg)
         member this.Serialize writer =
             match arg with
-            | SetNotificationsList _notificationsList -> ()     // don't serialize
-            | SetTaskIdentifier _taskId -> ()                   // don't serialize
-            | SetTaskItem _taskItem -> ()                       // don't serialize
-            | SetWorkingDirectory _dir -> ()                    // don't serialize
-            | SetSaveFlags _flags -> ()                         // don't serialize
+            | SetNotificationsList _notificationsList -> writer.WritePropertyName("SetNotificationsList"); JsonSerializer.Serialize(writer, "") // don't serialize the value
+            | SetTaskIdentifier taskId -> writer.WritePropertyName("SetTaskIdentifier"); JsonSerializer.Serialize(writer, if taskId.IsSome then taskId.Value else "")
+            | SetTaskItem taskItem -> writer.WritePropertyName("SetTaskItem"); JsonSerializer.Serialize(writer, taskItem)
+            | SetWorkingDirectory dir -> writer.WritePropertyName("SetWorkingDirectory"); JsonSerializer.Serialize(writer, if dir.IsSome then dir.Value.FullName else "")
+            | SetSaveFlags flags -> writer.WritePropertyName("SetSaveFlags"); JsonSerializer.Serialize(writer, if flags.IsSome then flags.Value.ToString() else "")
 
     member this.Argument with get() = arg
 

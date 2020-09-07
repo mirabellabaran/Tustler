@@ -7,12 +7,15 @@ open System.Collections.Concurrent
 open System.Threading.Tasks
 open CloudWeaver.Types
 open System.IO
+open System.Text.Json
 
 type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool) =
 
+    let mutable loggedCount = 0
+
     let standardVariables = StandardVariables()
+
     let callTaskEvent = new Event<EventHandler<_>, _>()
-    //let recallTaskEvent = new Event<EventHandler<_>, _>()
     let newUIResponseEvent = new Event<EventHandler<_>, _>()
     let saveArgumentsEvent = new Event<EventHandler<_>, _>()
     let errorEvent = new Event<EventHandler<_>, _>()
@@ -25,6 +28,63 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
 
     // the responses generated from the last task function call (useful for testing purposes)
     let taskResponses = if retainResponses then Some(new List<TaskResponse>()) else None
+
+    let getUnloggedEvents () =
+        
+        let options = JsonWriterOptions(Indented = false)
+
+        let unloggedSerializedData =
+            events
+            |> Seq.skip loggedCount
+            |> Seq.map (fun event ->
+
+                // serialize each event as its own JSON data (not part of the same JSON document)
+                // this is so that the log file can be closed without calling WriteEndObject or WriteEndArray
+                use stream = new MemoryStream()
+                let result = using (new Utf8JsonWriter(stream, options)) (fun writer ->
+
+                    writer.WriteStartObject()
+                    match event with
+                    | TaskEvent.InvokingFunction -> writer.WritePropertyName("TaskEvent.InvokingFunction"); JsonSerializer.Serialize(writer, "InvokingFunction")
+                    | TaskEvent.SetArgument arg ->
+                        writer.WritePropertyName("TaskEvent.SetArgument");
+                        writer.WriteStartObject()
+                        match arg with
+                        | TaskResponse.SetArgument responseArg -> responseArg.Serialize(writer)
+                        | _ -> invalidArg "event" (sprintf "Unexpected event stack set-argument type: %A" arg)
+                        writer.WriteEndObject()
+                    | TaskEvent.ForEachTask stack -> writer.WritePropertyName("TaskEvent.ForEachTask"); JsonSerializer.Serialize(writer, stack)
+                    | TaskEvent.ForEachDataItem consumable -> writer.WritePropertyName("TaskEvent.ForEachDataItem"); JsonSerializer.Serialize(writer, consumable)
+                        // MG consumable as RetainingStack<T>
+                    | TaskEvent.Task taskItem -> writer.WritePropertyName("TaskEvent.Task"); JsonSerializer.Serialize(writer, taskItem)
+                    | TaskEvent.SelectArgument -> writer.WritePropertyName("TaskEvent.SelectArgument"); JsonSerializer.Serialize(writer, "SelectArgument")
+                    | TaskEvent.ClearArguments -> writer.WritePropertyName("TaskEvent.ClearArguments"); JsonSerializer.Serialize(writer, "ClearArguments")
+                    | TaskEvent.FunctionCompleted -> writer.WritePropertyName("TaskEvent.FunctionCompleted"); JsonSerializer.Serialize(writer, "FunctionCompleted")
+                    | _ -> invalidArg "event" (sprintf "Unexpected event stack type: %A" event)
+
+                    writer.WriteEndObject()
+                    writer.Flush()
+                    stream.ToArray()
+                )
+
+                result
+            )
+            |> Seq.toArray
+
+        loggedCount <- events.Count
+        unloggedSerializedData
+
+    let setLoggedEvents (blocks: List<byte[]>) =
+        
+        let options = new JsonDocumentOptions(AllowTrailingCommas = true)
+
+        blocks
+        |> Seq.iter (fun block ->
+            let sequence = ReadOnlyMemory<byte>(block)
+            use document = JsonDocument.Parse(sequence, options)
+            document.RootElement.EnumerateObject()
+            |> Seq.iter (fun property -> Console.WriteLine(property))
+        )
 
     /// Get the last ForEachTask RetainingStack on the event stack (if there is one)
     let getCurrentTaskLoopStack () =
@@ -202,6 +262,12 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         match (Seq.last events) with
         | TaskEvent.FunctionCompleted -> true
         | _ -> false
+
+    member this.GetUnloggedEvents () =
+        getUnloggedEvents ()
+
+    member this.SetLoggedEvents blocks =
+        setLoggedEvents blocks
 
     member this.LastCallResponseList () = if retainResponses then taskResponses.Value else new List<TaskResponse>()
 

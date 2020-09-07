@@ -10,7 +10,7 @@
              xmlns:uc="clr-namespace:Tustler.UserControls"
              xmlns:uctask="clr-namespace:Tustler.UserControls.TaskMemberControls"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
+             d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded" Unloaded="UserControl_Unloaded">
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static uc:TaskCommands.StartTask}" CanExecute="StartTask_CanExecute" Executed="StartTask_Executed" />
         <CommandBinding Command="{x:Static uc:TaskCommands.StartMiniTask}" CanExecute="StartMiniTask_CanExecute" Executed="StartMiniTask_Executed" />

@@ -16,6 +16,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using Tustler.Helpers.UIServices;
 using Tustler.Models;
@@ -35,8 +36,10 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class TasksManager : UserControl
     {
-        //private const string DefaultModulePath = "CloudWeaver.AWS.Tasks";
-        private const string EventStackArgumentRestorePath = "defaultargs.json";
+        private const string LogFileName = "log.bin";
+        private const string EventStackArgumentRestoreName = "defaultargs.json";
+
+        private FileStream? logFile;
 
         private readonly NotificationsList notificationsList;
         private readonly AmazonWebServiceInterface awsInterface;
@@ -72,6 +75,8 @@ namespace Tustler.UserControls
                         "ExtractTranscript" => AWSTasks.ExtractTranscript,
                         "SaveTranscript" => AWSTasks.SaveTranscript,
 
+                        "CreateSubTitles" => AWSTasks.CreateSubTitles,
+
                         "MultiLanguageTranslateText" => AWSTasks.MultiLanguageTranslateText,
                         "TranslateText" => AWSTasks.TranslateText,
                         "SaveTranslation" => AWSTasks.SaveTranslation,
@@ -98,6 +103,8 @@ namespace Tustler.UserControls
         {
             InitializeComponent();
 
+            this.logFile = null;
+
             this.taskFunctionLookup = new Dictionary<string, TaskFunctionSpecifier>(taskFunctions.Select(tfs => new KeyValuePair<string, TaskFunctionSpecifier>(tfs.TaskFullPath, tfs)));
             this.taskQueue = new Queue<TaskFunctionSpecifier>();
 
@@ -116,13 +123,21 @@ namespace Tustler.UserControls
             agent.NewUIResponse += Agent_NewUIResponse;
             agent.SaveArguments += Agent_SaveArguments;
             agent.CallTask += Agent_CallTask;
-            //agent.RecallTask += Agent_RecallTask;
             agent.Error += Agent_Error;
         }
 
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
             ShowGlobalMessage("Parameter set", $"Task name set to {TaskSpecifier.TaskName}");
+        }
+
+        private void UserControl_Unloaded(object sender, RoutedEventArgs e)
+        {
+            if (logFile is object)
+            {
+                logFile.Close();
+                logFile = null;
+            }
         }
 
         private void ShowGlobalMessage(string message, string detail)
@@ -177,7 +192,7 @@ namespace Tustler.UserControls
 
             // compare current version (if any)
             var newData = stream.ToArray();
-            var serializedDataPath = Path.Combine(taskFolderPath, EventStackArgumentRestorePath);
+            var serializedDataPath = Path.Combine(taskFolderPath, EventStackArgumentRestoreName);
             if (File.Exists(serializedDataPath))
             {
                 var oldData = File.ReadAllBytes(serializedDataPath);
@@ -208,7 +223,7 @@ namespace Tustler.UserControls
                 var taskFolderPath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.TaskSpecifier.TaskName);
                 if (Directory.Exists(taskFolderPath))
                 {
-                    var serializedDataPath = Path.Combine(taskFolderPath, EventStackArgumentRestorePath);
+                    var serializedDataPath = Path.Combine(taskFolderPath, EventStackArgumentRestoreName);
                     if (File.Exists(serializedDataPath))
                     {
                         var options = new JsonDocumentOptions
@@ -229,6 +244,20 @@ namespace Tustler.UserControls
                 {
                     Directory.CreateDirectory(taskFolderPath);
                 }
+
+                // close the log file
+                if (logFile is object)
+                {
+                    logFile.Close();
+                    logFile = null;
+                }
+
+                var logFilePath = Path.Combine(taskFolderPath, LogFileName);
+                if (File.Exists(logFilePath))
+                {
+                    UnLogEvents(logFilePath);
+                }
+
                 agent.SetWorkingDirectory(new DirectoryInfo(taskFolderPath));
 
                 // set a default task identifier
@@ -267,6 +296,9 @@ namespace Tustler.UserControls
             var currentTask = new TaskItem(this.TaskSpecifier.ModuleName, this.TaskSpecifier.TaskName, string.Empty);
             await agent.RunTask(currentTask, responseStream).ConfigureAwait(false);
 
+            // update the log file
+            await LogEventsAsync().ConfigureAwait(false);
+
             // Once the previous call to RunTask() has run to completion start the next task (if any)
             if (taskQueue.Count > 0)
             {
@@ -278,6 +310,69 @@ namespace Tustler.UserControls
                     RunTask();
                 });
             }
+            else
+            {
+                // task is complete
+                if (logFile is object)
+                {
+                    logFile.Close();
+                    logFile = null;
+                }
+            }
+        }
+
+        private async Task LogEventsAsync()
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                var unloggedEvents = agent.GetUnloggedEvents();
+
+                if (logFile is null)
+                {
+                    var logFilePath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.TaskSpecifier.TaskName, LogFileName);
+                    logFile = File.Open(logFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+                }
+
+                foreach (var data in unloggedEvents)
+                {
+                    var header = BitConverter.GetBytes(data.Length);
+                    logFile.Write(header, 0, header.Length);
+                    logFile.Write(data, 0, data.Length);
+                }
+                logFile.Flush();
+            });
+        }
+
+        private void UnLogEvents(string logFilePath)
+        {
+            var localReadLogFile = File.Open(logFilePath, FileMode.Open, FileAccess.Read, FileShare.None);
+
+            var blocks = new List<byte[]>(30);
+            var buffer = new byte[1024];
+            var span = new Span<byte>(buffer);
+            var bytesRemaining = localReadLogFile.Length;
+
+            while (bytesRemaining > 0)
+            {
+                var n = localReadLogFile.Read(buffer, 0, 4);
+                var slice = span.Slice(0, 4);
+                var blockLength = BitConverter.ToInt32(slice);
+                if (blockLength < 1024)
+                {
+                    n += localReadLogFile.Read(buffer, 0, blockLength);
+                    slice = span.Slice(0, blockLength);
+                    blocks.Add(slice.ToArray());
+                }
+
+                if (n == 0)
+                    break;
+
+                bytesRemaining -= n;
+            }
+
+            localReadLogFile.Close();
+
+            agent.SetLoggedEvents(blocks);
         }
 
         private async void Agent_NewUIResponse(object? sender, TaskResponse response)

@@ -109,12 +109,12 @@ and AWSShareIntraModule(arg: AWSArgument) =
             JsonSerializer.SerializeToUtf8Bytes(arg)
         member this.Serialize writer =
             match arg with
-            | SetAWSInterface _awsInterface -> ()
+            | SetAWSInterface _awsInterface -> writer.WritePropertyName("SetAWSInterface"); JsonSerializer.Serialize(writer, "")    // don't serialize the value
             | SetBucket bucket -> writer.WritePropertyName("SetBucket"); JsonSerializer.Serialize<Bucket>(writer, bucket)
             | SetBucketsModel bucketViewModel -> writer.WritePropertyName("SetBucketsModel"); JsonSerializer.Serialize<BucketViewModel>(writer, bucketViewModel)
             | SetS3MediaReference s3MediaReference -> writer.WritePropertyName("SetFileUpload"); JsonSerializer.Serialize<S3MediaReference>(writer, s3MediaReference)
             | SetTranscriptionJobName jobName -> writer.WritePropertyName("SetTranscriptionJobName"); JsonSerializer.Serialize<string>(writer, jobName)
-            | SetTranscriptJSON transcriptData -> writer.WritePropertyName("SetTranscriptJSON"); JsonSerializer.Serialize<ReadOnlyMemory<byte>>(writer, transcriptData)
+            | SetTranscriptJSON transcriptData -> writer.WritePropertyName("SetTranscriptJSON"); JsonSerializer.Serialize<byte[]>(writer, transcriptData.ToArray())
             | SetTranscriptionDefaultTranscript defaultTranscript -> writer.WritePropertyName("SetTranscriptionDefaultTranscript"); JsonSerializer.Serialize<string>(writer, defaultTranscript)
             | SetTranscriptURI transcriptURI -> writer.WritePropertyName("SetTranscriptURI"); JsonSerializer.Serialize<string>(writer, transcriptURI)
             | SetTranscriptionJobsModel transcriptionJobsViewModel -> writer.WritePropertyName("SetTranscriptionJobsModel"); JsonSerializer.Serialize<TranscriptionJobsViewModel>(writer, transcriptionJobsViewModel)
@@ -1075,6 +1075,11 @@ module public Tasks =
 
 
     let CreateSubTitles (resolvable_arguments: InfiniteList<MaybeResponse>) =
+
+        // Subtitle lines need to:
+        //  last for at least three seconds
+        //  be no more than ten words long
+        //  be preferentially broken after punctuation boundaries
 
         let makeSubtitles (timingData: seq<Utilities.WordTiming>) =
             let makeSubTitleLine (words: (double * string) list) =
