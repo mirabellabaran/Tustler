@@ -372,7 +372,7 @@ namespace Tustler.UserControls
 
             localReadLogFile.Close();
 
-            agent.SetLoggedEvents(blocks);
+            agent.SetLoggedEvents(blocks, Helpers.ModuleResolver.ModuleLookup);
         }
 
         private async void Agent_NewUIResponse(object? sender, TaskResponse response)

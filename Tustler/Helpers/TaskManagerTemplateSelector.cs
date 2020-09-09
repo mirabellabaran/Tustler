@@ -47,7 +47,7 @@ namespace Tustler.Helpers
                 {
                     return arg.Identifier switch
                     {
-                        ModuleIdentifier id => id.Item switch
+                        WrappedItemIdentifier id => id.Item switch
                         {
                             "SetBucket" => element.FindResource("BucketTemplate") as DataTemplate,
                             "SetBucketsModel" => element.FindResource("BucketsModelTemplate") as DataTemplate,
@@ -67,30 +67,30 @@ namespace Tustler.Helpers
                     };
                 }
 
-                DataTemplate? GetSetBoundaryArgumentTemplate(IShareInterModule arg)
-                {
-                    return arg.Identifier switch
-                    {
-                        ModuleIdentifier id => id.Item switch
-                        {
-                            //"SetBucket" => element.FindResource("BucketTemplate") as DataTemplate,
-                            //"SetBucketsModel" => element.FindResource("BucketsModelTemplate") as DataTemplate,
-                            //"SetBucketItemsModel" => element.FindResource("BucketItemsModelTemplate") as DataTemplate,
-                            //"SetTranscriptionJobsModel" => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
-                            //"SetTranscriptionJobName" => element.FindResource("TranscriptionJobNameTemplate") as DataTemplate,
-                            //"SetFileUpload" => element.FindResource("FileUploadTemplate") as DataTemplate,
+                //DataTemplate? GetSetBoundaryArgumentTemplate(IShareInterModule arg)
+                //{
+                //    return arg.Identifier switch
+                //    {
+                //        WrappedItemIdentifier id => id.Item switch
+                //        {
+                //            //"SetBucket" => element.FindResource("BucketTemplate") as DataTemplate,
+                //            //"SetBucketsModel" => element.FindResource("BucketsModelTemplate") as DataTemplate,
+                //            //"SetBucketItemsModel" => element.FindResource("BucketItemsModelTemplate") as DataTemplate,
+                //            //"SetTranscriptionJobsModel" => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
+                //            //"SetTranscriptionJobName" => element.FindResource("TranscriptionJobNameTemplate") as DataTemplate,
+                //            //"SetFileUpload" => element.FindResource("FileUploadTemplate") as DataTemplate,
 
-                            _ => throw new ArgumentException("Unknown boundary argument")
-                        },
-                        _ => null
-                    };
-                }
+                //            _ => throw new ArgumentException("Unknown boundary argument")
+                //        },
+                //        _ => null
+                //    };
+                //}
 
                 DataTemplate? GetShowValueTemplate(IShowValue arg)
                 {
                     return arg.Identifier switch
                     {
-                        ModuleIdentifier id => id.Item switch
+                        WrappedItemIdentifier id => id.Item switch
                         {
                             "DisplayTranscriptionJobsModel" => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
                             "DisplayTranscriptionJob" => element.FindResource("TranscriptionJobTemplate") as DataTemplate,
@@ -115,7 +115,7 @@ namespace Tustler.Helpers
 
                     TaskResponse.ShowValue arg => GetShowValueTemplate(arg.Item),
                     TaskResponse.SetArgument arg => GetSetArgumentTemplate(arg.Item),
-                    TaskResponse.SetBoundaryArgument arg => GetSetBoundaryArgumentTemplate(arg.Item),
+                    //TaskResponse.SetBoundaryArgument arg => GetSetBoundaryArgumentTemplate(arg.Item),
 
                     TaskResponse.RequestArgument arg => GetRequestTemplate(arg.Item),
 

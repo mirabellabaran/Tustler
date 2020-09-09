@@ -6,6 +6,7 @@ open System.Collections.Generic
 open Microsoft.FSharp.Reflection
 open System.Text.Json
 open System.IO
+open System
 
 // an attribute to mark CloudWeaver modules that contain Task Functions
 type CloudWeaverTaskFunctionModule() = inherit System.Attribute()
@@ -13,30 +14,37 @@ type CloudWeaverTaskFunctionModule() = inherit System.Attribute()
 // an attribute to tell the UI not to show certain task functions (those that are called as sub-tasks)
 type HideFromUI() = inherit System.Attribute()
 
-type ModuleIdentifier =
+type ModuleTag =
+    | Tag of string
+    with
+    member x.AsString() = match x with | Tag str -> str
+
+type WrappedItemIdentifier =
     | Identifier of string
     with
     member x.AsString() = match x with | Identifier str -> str
 
 type IShareIntraModule =
-    abstract member Identifier : ModuleIdentifier with get
+    abstract member ModuleTag : ModuleTag with get
+    abstract member Identifier : WrappedItemIdentifier with get
     abstract member AsBytes : unit -> byte[]
     abstract member Serialize : Utf8JsonWriter -> unit
     abstract member ToString: unit -> string
 
-type IShareInterModule =
-    abstract member Identifier : ModuleIdentifier with get
-    abstract member AsBytes : unit -> byte[]
-    abstract member Serialize : Utf8JsonWriter -> unit
-    abstract member ToString: unit -> string
+//type IShareInterModule =
+//    abstract member ModuleTag : ModuleTag with get
+//    abstract member Identifier : WrappedItemIdentifier with get
+//    abstract member AsBytes : unit -> byte[]
+//    abstract member Serialize : Utf8JsonWriter -> unit
+//    abstract member ToString: unit -> string
 
 type IRequestIntraModule =
     inherit System.IComparable
-    abstract member Identifier: ModuleIdentifier with get
+    abstract member Identifier: WrappedItemIdentifier with get
     abstract member ToString: unit -> string
 
 type IShowValue =
-    abstract member Identifier: ModuleIdentifier with get
+    abstract member Identifier: WrappedItemIdentifier with get
     abstract member ToString: unit -> string
 
 /// A task in the overall task sequence (tasks may be sequentially dependant or independant)
@@ -67,7 +75,7 @@ type TaskResponse =
     | ShowValue of IShowValue
 
     | SetArgument of IShareIntraModule
-    | SetBoundaryArgument of IShareInterModule
+    //| SetBoundaryArgument of IShareInterModule
     
     // Values that are sent as requests to the user
     | RequestArgument of IRequestIntraModule
@@ -91,7 +99,7 @@ type TaskResponse =
         | BeginLoopSequence (consumable, taskItems) -> (sprintf "BeginLoopSequence (%d items): %s" consumable.Total (System.String.Join(", ", (Seq.map (fun item -> item.TaskName) taskItems))))
         | ShowValue showValue -> (sprintf "ShowValue: %s" (showValue.ToString()))
         | SetArgument arg -> (sprintf "SetArgument: %s" (arg.ToString()))
-        | SetBoundaryArgument arg -> (sprintf "SetBoundaryArgument: %s" (arg.ToString()))
+        //| SetBoundaryArgument arg -> (sprintf "SetBoundaryArgument: %s" (arg.ToString()))
         | RequestArgument request -> (sprintf "RequestArgument: %s" (request.ToString()))
 
     
@@ -174,6 +182,7 @@ type StandardArgument =
 /// Wraps standard argument types
 and StandardShareIntraModule(arg: StandardArgument) =
     interface IShareIntraModule with
+        member this.ModuleTag with get() = Tag "StandardShareIntraModule"
         member this.Identifier with get() = Identifier (CommonUtilities.toString arg)
         member this.ToString () = sprintf "StandardShareIntraModule(%s)" (arg.ToString())
         member this.AsBytes () =
@@ -187,6 +196,44 @@ and StandardShareIntraModule(arg: StandardArgument) =
             | SetSaveFlags flags -> writer.WritePropertyName("SetSaveFlags"); JsonSerializer.Serialize(writer, if flags.IsSome then flags.Value.ToString() else "")
 
     member this.Argument with get() = arg
+
+    static member Deserialize propertyName (jsonString:string) (flagResolver: Func<string, Dictionary<string, ISaveFlagSet>, Dictionary<string, ISaveFlagSet>>) =   //(flagResolver: Func<string, ISaveFlagSet[], ISaveFlagSet[]>) =
+        let standardArgument =
+            match propertyName with
+            | "SetNotificationsList" ->
+                StandardArgument.SetNotificationsList (NotificationsList())
+            | "SetTaskIdentifier" ->
+                let data = 
+                    if jsonString.Length > 0 then
+                        Some(JsonSerializer.Deserialize<string>(jsonString))
+                    else
+                        None
+                StandardArgument.SetTaskIdentifier data
+            | "SetTaskItem" ->
+                let data = JsonSerializer.Deserialize<TaskItem option>(jsonString)
+                StandardArgument.SetTaskItem data
+            | "SetWorkingDirectory" ->
+                let data = 
+                    if jsonString.Length > 0 then
+                        let dirPath = JsonSerializer.Deserialize<string>(jsonString)
+                        Some(DirectoryInfo(dirPath))
+                    else
+                        None
+                StandardArgument.SetWorkingDirectory data
+            | "SetSaveFlags" ->
+                let resolver (serializedFlagItem: string) (flagSets: Dictionary<string, ISaveFlagSet>) : Dictionary<string, ISaveFlagSet> =
+                    //List.ofArray (flagResolver.Invoke(serializedFlagItem, List.toArray flagSets))
+                    flagResolver.Invoke(serializedFlagItem, flagSets)
+                let flags =
+                    if jsonString.Length > 0 then
+                        let serializedData = JsonSerializer.Deserialize<string>(jsonString)
+                        Some(SaveFlags(serializedData, resolver))
+                    else
+                        None
+                StandardArgument.SetSaveFlags flags
+            | _ -> invalidArg "propertyName" (sprintf "Property %s was not recognized" propertyName)
+
+        StandardShareIntraModule(standardArgument)
 
 /// Wraps standard request types
 type StandardRequestIntraModule(stdRequest: StandardRequest) =

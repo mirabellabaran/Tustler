@@ -1,5 +1,8 @@
 ﻿namespace CloudWeaver.Types
 
+open System.Collections.Generic
+open Microsoft.FSharp.Reflection
+
 type ISaveFlag =
     inherit System.IComparable
     abstract member Identifier: string with get
@@ -12,6 +15,18 @@ type ISaveFlagSet =
 
 type StandardFlagItem =
     | SaveTaskName
+    with
+    static member GetNames () =
+        FSharpType.GetUnionCases typeof<StandardFlagItem>
+        |> Seq.map (fun caseInfo ->
+            caseInfo.Name
+        )
+        |> Seq.toArray
+    static member Create name =
+        let unionCase =
+            FSharpType.GetUnionCases typeof<StandardFlagItem>
+            |> Seq.find (fun unionCase -> unionCase.Name = name)
+        FSharpValue.MakeUnion (unionCase, Array.empty) :?> StandardFlagItem
 
 type StandardFlag(stdFlag: StandardFlagItem) =
     interface ISaveFlag with
@@ -52,7 +67,6 @@ type StandardFlagSet(flags: StandardFlagItem[]) =
         member this.IsSet flag = this.IsSet flag
 
 type SaveFlags(flagSets: ISaveFlagSet[]) =
-    let mutable _flagSets = Set.empty
 
     let mutable _flagSets =
         if isNull(flagSets) then
@@ -61,6 +75,25 @@ type SaveFlags(flagSets: ISaveFlagSet[]) =
             flagSets |> Set.ofArray
 
     new() = SaveFlags(null)
+
+    new(serializedData: string, flagResolver: string -> Dictionary<string, ISaveFlagSet> -> Dictionary<string, ISaveFlagSet>) =
+        //let flagResolver = serviceProvider.GetService(typeof<AmazonWebServiceInterface>())
+        // MG remove reference to DependencyInjection package
+        let flagsDictionary =
+            let flagItems = serializedData.Split(",")
+            flagItems
+            |> Seq.fold (fun acc item ->
+                flagResolver item acc
+            ) (Dictionary(2))   // one key-value pair for each known module flagset type (e.g. StandardFlagSet, AWSlagSet, ...)
+
+        if flagsDictionary.Count > 0 then
+            let flagSets =
+                flagsDictionary
+                |> Seq.map (fun kvp -> kvp.Value)
+                |> Seq.toArray
+            SaveFlags(flagSets)
+        else
+            SaveFlags()
 
     override this.ToString(): string = System.String.Join(", ", (flagSets |> Seq.map(fun flagSet -> flagSet.Identifier)))
     member this.AddFlagSet (flagSet: ISaveFlagSet) = if not (_flagSets.Contains flagSet) then _flagSets <- _flagSets.Add flagSet

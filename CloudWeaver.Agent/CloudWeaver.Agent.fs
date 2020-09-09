@@ -47,12 +47,14 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
                     match event with
                     | TaskEvent.InvokingFunction -> writer.WritePropertyName("TaskEvent.InvokingFunction"); JsonSerializer.Serialize(writer, "InvokingFunction")
                     | TaskEvent.SetArgument arg ->
-                        writer.WritePropertyName("TaskEvent.SetArgument");
-                        writer.WriteStartObject()
                         match arg with
-                        | TaskResponse.SetArgument responseArg -> responseArg.Serialize(writer)
+                        | TaskResponse.SetArgument responseArg ->
+                            writer.WriteString("Tag", JsonEncodedText.Encode(responseArg.ModuleTag.AsString()))     // store the module for the argument type
+                            writer.WritePropertyName("TaskEvent.SetArgument");
+                            writer.WriteStartObject()
+                            responseArg.Serialize(writer)
+                            writer.WriteEndObject()
                         | _ -> invalidArg "event" (sprintf "Unexpected event stack set-argument type: %A" arg)
-                        writer.WriteEndObject()
                     | TaskEvent.ForEachTask stack -> writer.WritePropertyName("TaskEvent.ForEachTask"); JsonSerializer.Serialize(writer, stack)
                     | TaskEvent.ForEachDataItem consumable -> writer.WritePropertyName("TaskEvent.ForEachDataItem"); JsonSerializer.Serialize(writer, consumable)
                         // MG consumable as RetainingStack<T>
@@ -74,17 +76,66 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         loggedCount <- events.Count
         unloggedSerializedData
 
-    let setLoggedEvents (blocks: List<byte[]>) =
+    let setLoggedEvents (blocks: List<byte[]>) (moduleLookup: Func<string, Func<string, string, IShareIntraModule>>) =
         
         let options = new JsonDocumentOptions(AllowTrailingCommas = true)
 
-        blocks
-        |> Seq.iter (fun block ->
-            let sequence = ReadOnlyMemory<byte>(block)
-            use document = JsonDocument.Parse(sequence, options)
-            document.RootElement.EnumerateObject()
-            |> Seq.iter (fun property -> Console.WriteLine(property))
-        )
+        //blocks
+        //|> Seq.iter (fun block ->
+        //    let sequence = ReadOnlyMemory<byte>(block)
+        //    use document = JsonDocument.Parse(sequence, options)
+
+        //    // expecting a single child object
+        //    document.RootElement.EnumerateObject()
+        //    |> Seq.iter (fun property -> Console.WriteLine(property.Name))
+        //)
+
+        let events =
+            blocks
+            |> Seq.map (fun block ->
+                let stack = new Stack<TaskEvent>(blocks.Count)
+                let sequence = ReadOnlyMemory<byte>(block)
+                use document = JsonDocument.Parse(sequence, options)
+
+                // expecting a single child object
+                document.RootElement.EnumerateObject()
+                |> Seq.fold (fun (acc: string option) (property: JsonProperty) -> 
+                    match property.Name with
+                    | "Tag" ->
+                        let moduleTag = property.Value.GetString()
+                        Some(moduleTag)
+                    | "TaskEvent.InvokingFunction" -> stack.Push(TaskEvent.InvokingFunction); None
+                    | "TaskEvent.SetArgument" ->
+                        if acc.IsSome then
+                            let resolveProperty = moduleLookup.Invoke(acc.Value)
+                            let wrappedArg =
+                                property.Value.EnumerateObject()
+                                |> Seq.map (fun property -> resolveProperty.Invoke(property.Name, property.Value.GetRawText()))
+                                |> Seq.exactlyOne
+                            let event = TaskEvent.SetArgument (TaskResponse.SetArgument wrappedArg)
+                            stack.Push(event); None
+                        else
+                            invalidOp "Error parsing TaskEvent.SetArgument"
+                    | "TaskEvent.ForEachTask" ->
+                        let taskItems = JsonSerializer.Deserialize<IEnumerable<TaskItem>>(property.Value.GetRawText())
+                        let data = RetainingStack(taskItems)
+                        stack.Push(TaskEvent.ForEachTask data); None
+                    | "TaskEvent.ForEachDataItem" ->
+                        let taskItems = JsonSerializer.Deserialize<IEnumerable<TaskItem>>(property.Value.GetRawText())
+                        let data = RetainingStack(taskItems)
+                        stack.Push(TaskEvent.ForEachTask data); None
+                    | "TaskEvent.Task" ->
+                        let data = JsonSerializer.Deserialize<TaskItem>(property.Value.GetRawText())
+                        stack.Push(TaskEvent.Task data); None
+                    | "TaskEvent.SelectArgument" -> stack.Push(TaskEvent.SelectArgument); None
+                    | "TaskEvent.ClearArguments" -> stack.Push(TaskEvent.ClearArguments); None
+                    | "TaskEvent.FunctionCompleted" -> stack.Push(TaskEvent.FunctionCompleted); None
+                    | _ -> invalidArg "property.Name" (sprintf "TaskEvent property %s was not recognized" property.Name)
+                ) None
+            )
+
+        events
+        |> Seq.toArray
 
     /// Get the last ForEachTask RetainingStack on the event stack (if there is one)
     let getCurrentTaskLoopStack () =
@@ -170,7 +221,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
             taskResponses.Value.Add(response)
         match response with
         | TaskResponse.SetArgument _ -> addArgumentEvent self response
-        | TaskResponse.SetBoundaryArgument _ -> addArgumentEvent self response
+        //| TaskResponse.SetBoundaryArgument _ -> addArgumentEvent self response
         
         // resolve requests for common arguments immediately (other requests get passed to the UI)
         | TaskResponse.RequestArgument arg when knownArguments.IsKnownArgument(arg) ->
@@ -266,8 +317,8 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
     member this.GetUnloggedEvents () =
         getUnloggedEvents ()
 
-    member this.SetLoggedEvents blocks =
-        setLoggedEvents blocks
+    member this.SetLoggedEvents blocks moduleLookup =
+        setLoggedEvents blocks moduleLookup
 
     member this.LastCallResponseList () = if retainResponses then taskResponses.Value else new List<TaskResponse>()
 
