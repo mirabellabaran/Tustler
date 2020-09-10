@@ -30,8 +30,8 @@ namespace Tustler.Helpers
             {
                 var flagSetLookup = new Dictionary<string, Func<string, Dictionary<string, ISaveFlagSet>, Dictionary<string, ISaveFlagSet>>>()
                     {
-                        { "StandardFlagSet", FoldInStandardValue },
-                        { "AWSFlagSet", FoldInAWSValue }
+                        { "StandardFlag", FoldInStandardValue },
+                        { "AWSFlag", FoldInAWSValue }
                     };
                 return new ModuleResolver(flagSetLookup).Deserialize;
             }
@@ -51,9 +51,7 @@ namespace Tustler.Helpers
 
         public IShareIntraModule Deserialize(string propertyName, string jsonString)
         {
-            var resolver = _flagSetLookup[propertyName];
-
-            return StandardShareIntraModule.Deserialize(propertyName, jsonString, resolver);
+            return StandardShareIntraModule.Deserialize(propertyName, jsonString, _flagSetLookup);
         }
 
         static Dictionary<string, ISaveFlagSet> FoldInStandardValue(string serializedFlagItem, Dictionary<string, ISaveFlagSet> source)
@@ -63,11 +61,13 @@ namespace Tustler.Helpers
                 var flagItem = StandardFlagItem.Create(serializedFlagItem);
                 var standardFlag = new StandardFlag(flagItem);
 
-                var standardFlagSet = source["StandardFlagSet"] as StandardFlagSet;
-                if (!(standardFlagSet!.IsSet(standardFlag)))
+                if (!source.ContainsKey("StandardFlagSet"))
                 {
-                    standardFlagSet.SetFlag(standardFlag);
+                    source.Add("StandardFlagSet", new StandardFlagSet());
                 }
+
+                var standardFlagSet = source["StandardFlagSet"] as StandardFlagSet;
+                standardFlagSet.SetFlag(standardFlag);
             }
 
             return source;
@@ -80,11 +80,13 @@ namespace Tustler.Helpers
                 var flagItem = AWSFlagItem.Create(serializedFlagItem);
                 var awsFlag = new AWSFlag(flagItem);
 
-                var awsFlagSet = source["AWSFlagSet"] as AWSFlagSet;
-                if (!(awsFlagSet!.IsSet(awsFlag)))
+                if (!source.ContainsKey("AWSFlagSet"))
                 {
-                    awsFlagSet.SetFlag(awsFlag);
+                    source.Add("AWSFlagSet", new AWSFlagSet());
                 }
+
+                var awsFlagSet = source["AWSFlagSet"] as AWSFlagSet;
+                awsFlagSet.SetFlag(awsFlag);
             }
 
             return source;

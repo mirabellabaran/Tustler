@@ -2,6 +2,7 @@
 
 open System.Collections.Generic
 open Microsoft.FSharp.Reflection
+open System
 
 type ISaveFlag =
     inherit System.IComparable
@@ -12,6 +13,7 @@ type ISaveFlagSet =
     abstract member Identifier: string with get
     abstract member SetFlag: ISaveFlag -> unit
     abstract member IsSet: ISaveFlag -> bool
+    abstract member ToString: unit -> string
 
 type StandardFlagItem =
     | SaveTaskName
@@ -65,6 +67,7 @@ type StandardFlagSet(flags: StandardFlagItem[]) =
         member this.Identifier with get() = this.Identifier
         member this.SetFlag flag = this.SetFlag flag
         member this.IsSet flag = this.IsSet flag
+        override this.ToString(): string = System.String.Join(", ", (_set |> Seq.map(fun flag -> sprintf "%s.%s" this.Identifier flag.Identifier)))
 
 type SaveFlags(flagSets: ISaveFlagSet[]) =
 
@@ -76,14 +79,23 @@ type SaveFlags(flagSets: ISaveFlagSet[]) =
 
     new() = SaveFlags(null)
 
-    new(serializedData: string, flagResolver: string -> Dictionary<string, ISaveFlagSet> -> Dictionary<string, ISaveFlagSet>) =
-        //let flagResolver = serviceProvider.GetService(typeof<AmazonWebServiceInterface>())
-        // MG remove reference to DependencyInjection package
+    new(serializedData: string, flagResolverDictionary) =
+
+        let getResolver flagSet (flagResolverDictionary: Dictionary<string, Func<string, Dictionary<string, ISaveFlagSet>, Dictionary<string, ISaveFlagSet>>>) =
+            let resolver (wrappedResolver: Func<string, Dictionary<string, ISaveFlagSet>, Dictionary<string, ISaveFlagSet>>) (serializedFlagItem: string) (flagSets: Dictionary<string, ISaveFlagSet>) : Dictionary<string, ISaveFlagSet> =
+                wrappedResolver.Invoke(serializedFlagItem, flagSets)
+            let resolverFunc = flagResolverDictionary.[flagSet]
+            resolver resolverFunc
+
         let flagsDictionary =
-            let flagItems = serializedData.Split(",")
-            flagItems
+            serializedData.Split(",")
+            |> Seq.map (fun flagItem -> flagItem.Trim())
             |> Seq.fold (fun acc item ->
-                flagResolver item acc
+                let flagSet, flagItem =
+                    let parts = item.Split(".")
+                    parts.[0], parts.[1]
+                let flagResolver = getResolver flagSet flagResolverDictionary
+                flagResolver flagItem acc
             ) (Dictionary(2))   // one key-value pair for each known module flagset type (e.g. StandardFlagSet, AWSlagSet, ...)
 
         if flagsDictionary.Count > 0 then
@@ -95,7 +107,7 @@ type SaveFlags(flagSets: ISaveFlagSet[]) =
         else
             SaveFlags()
 
-    override this.ToString(): string = System.String.Join(", ", (flagSets |> Seq.map(fun flagSet -> flagSet.Identifier)))
+    override this.ToString(): string = System.String.Join(", ", (flagSets |> Seq.map(fun flagSet -> flagSet.ToString())))
     member this.AddFlagSet (flagSet: ISaveFlagSet) = if not (_flagSets.Contains flagSet) then _flagSets <- _flagSets.Add flagSet
     member this.IsSet flag =
         _flagSets

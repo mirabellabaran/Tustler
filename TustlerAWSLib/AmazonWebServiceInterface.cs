@@ -8,12 +8,35 @@ namespace TustlerAWSLib
 {
     public class AmazonWebServiceInterface
     {
-        public readonly RuntimeOptions options;
+        private RuntimeOptions options;
+
+        /// <summary>
+        /// For serialization
+        /// </summary>
+        public AmazonWebServiceInterface()
+        {
+        }
 
         public AmazonWebServiceInterface(RuntimeOptions options)
         {
-            this.options = options;
+            this.RuntimeOptions = options;
+        }
 
+        public RuntimeOptions RuntimeOptions
+        {
+            get
+            {
+                return options;
+            }
+            set
+            {
+                options = value;
+                Reinitialize();
+            }
+        }
+
+        public void Reinitialize()
+        {
             if (options.IsMocked)
             {
                 EnableMocking(options);
@@ -21,25 +44,6 @@ namespace TustlerAWSLib
             else
             {
                 DisableMocking();
-            }
-        }
-
-        public bool IsMocked
-        {
-            get
-            {
-                return S3 is MockS3;
-            }
-            set
-            {
-                if (value)
-                {
-                    EnableMocking(options);
-                }
-                else
-                {
-                    DisableMocking();
-                }
             }
         }
 

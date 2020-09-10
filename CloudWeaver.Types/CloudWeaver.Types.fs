@@ -48,13 +48,26 @@ type IShowValue =
     abstract member ToString: unit -> string
 
 /// A task in the overall task sequence (tasks may be sequentially dependant or independant)
-type TaskItem = {
-    ModuleName: string          // the fully qualified name of the type containing the task function
-    TaskName: string;           // the task function name of the task
-    Description: string;
-}
-with
+type TaskItem(moduleName: string, taskName: string, description: string) =
+    let mutable _moduleName = moduleName
+    let mutable _taskName = taskName
+    let mutable _description = description
+
+    member this.ModuleName with get() = _moduleName and set(value) = _moduleName <- value
+    member this.TaskName with get() = _taskName and set(value) = _taskName <- value
+    member this.Description with get() = _description and set(value) = _description <- value
+
+    new() = TaskItem(null, null, null)
     override this.ToString() = sprintf "TaskItem: %s %s %s" this.ModuleName this.TaskName this.Description
+
+///// A task in the overall task sequence (tasks may be sequentially dependant or independant)
+//type TaskItem = {
+//    ModuleName: string          // the fully qualified name of the type containing the task function
+//    TaskName: string;           // the task function name of the task
+//    Description: string;
+//}
+//with
+//    override this.ToString() = sprintf "TaskItem: %s %s %s" this.ModuleName this.TaskName this.Description
 
 /// Responses returned by Task Functions
 [<RequireQualifiedAccess>]
@@ -91,12 +104,12 @@ type TaskResponse =
         | TaskComplete str -> (sprintf "TaskComplete: %s" str)
         | TaskPrompt str -> (sprintf "TaskPrompt: %s" str)
         | TaskSelect str -> (sprintf "TaskSelect: %s" str)
-        | TaskMultiSelect taskItems -> (sprintf "TaskMultiSelect: %s" (System.String.Join(", ", (Seq.map (fun item -> item.TaskName) taskItems))))
-        | TaskSequence taskItems -> (sprintf "TaskSequence: %s" (System.String.Join(", ", (Seq.map (fun item -> item.TaskName) taskItems))))
+        | TaskMultiSelect taskItems -> (sprintf "TaskMultiSelect: %s" (System.String.Join(", ", (Seq.map (fun (item: TaskItem) -> item.TaskName) taskItems))))
+        | TaskSequence taskItems -> (sprintf "TaskSequence: %s" (System.String.Join(", ", (Seq.map (fun (item: TaskItem) -> item.TaskName) taskItems))))
         | TaskContinue delay -> (sprintf "TaskContinue: %d (ms)" delay)
         | TaskArgumentSave -> "TaskArgumentSave"
         | Notification notification -> (sprintf "Notification: %s" (notification.ToString()))
-        | BeginLoopSequence (consumable, taskItems) -> (sprintf "BeginLoopSequence (%d items): %s" consumable.Total (System.String.Join(", ", (Seq.map (fun item -> item.TaskName) taskItems))))
+        | BeginLoopSequence (consumable, taskItems) -> (sprintf "BeginLoopSequence (%d items): %s" consumable.Total (System.String.Join(", ", (Seq.map (fun (item: TaskItem) -> item.TaskName) taskItems))))
         | ShowValue showValue -> (sprintf "ShowValue: %s" (showValue.ToString()))
         | SetArgument arg -> (sprintf "SetArgument: %s" (arg.ToString()))
         //| SetBoundaryArgument arg -> (sprintf "SetBoundaryArgument: %s" (arg.ToString()))
@@ -197,7 +210,7 @@ and StandardShareIntraModule(arg: StandardArgument) =
 
     member this.Argument with get() = arg
 
-    static member Deserialize propertyName (jsonString:string) (flagResolver: Func<string, Dictionary<string, ISaveFlagSet>, Dictionary<string, ISaveFlagSet>>) =   //(flagResolver: Func<string, ISaveFlagSet[], ISaveFlagSet[]>) =
+    static member Deserialize propertyName (jsonString:string) (flagResolverDictionary: Dictionary<string, Func<string, Dictionary<string, ISaveFlagSet>, Dictionary<string, ISaveFlagSet>>>) =
         let standardArgument =
             match propertyName with
             | "SetNotificationsList" ->
@@ -221,13 +234,10 @@ and StandardShareIntraModule(arg: StandardArgument) =
                         None
                 StandardArgument.SetWorkingDirectory data
             | "SetSaveFlags" ->
-                let resolver (serializedFlagItem: string) (flagSets: Dictionary<string, ISaveFlagSet>) : Dictionary<string, ISaveFlagSet> =
-                    //List.ofArray (flagResolver.Invoke(serializedFlagItem, List.toArray flagSets))
-                    flagResolver.Invoke(serializedFlagItem, flagSets)
                 let flags =
                     if jsonString.Length > 0 then
                         let serializedData = JsonSerializer.Deserialize<string>(jsonString)
-                        Some(SaveFlags(serializedData, resolver))
+                        Some(SaveFlags(serializedData, flagResolverDictionary))
                     else
                         None
                 StandardArgument.SetSaveFlags flags

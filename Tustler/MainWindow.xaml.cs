@@ -299,7 +299,8 @@ namespace Tustler
         {
             var app = App.Current as App;
             var awsInterface = app.ServiceProvider.GetService(typeof(AmazonWebServiceInterface)) as AmazonWebServiceInterface;
-            awsInterface.IsMocked = isMocked;
+            awsInterface.RuntimeOptions.IsMocked = isMocked;
+            awsInterface.Reinitialize();
 
             this.IsMocked = isMocked;
         }

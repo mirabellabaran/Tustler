@@ -111,7 +111,7 @@ and AWSShareIntraModule(arg: AWSArgument) =
             JsonSerializer.SerializeToUtf8Bytes(arg)
         member this.Serialize writer =
             match arg with
-            | SetAWSInterface _awsInterface -> writer.WritePropertyName("SetAWSInterface"); JsonSerializer.Serialize(writer, "")    // don't serialize the value
+            | SetAWSInterface awsInterface -> writer.WritePropertyName("SetAWSInterface"); JsonSerializer.Serialize<AmazonWebServiceInterface>(writer, awsInterface)
             | SetBucket bucket -> writer.WritePropertyName("SetBucket"); JsonSerializer.Serialize<Bucket>(writer, bucket)
             | SetBucketsModel bucketViewModel -> writer.WritePropertyName("SetBucketsModel"); JsonSerializer.Serialize<BucketViewModel>(writer, bucketViewModel)
             | SetS3MediaReference s3MediaReference -> writer.WritePropertyName("SetFileUpload"); JsonSerializer.Serialize<S3MediaReference>(writer, s3MediaReference)
@@ -136,10 +136,9 @@ and AWSShareIntraModule(arg: AWSArgument) =
     static member Deserialize propertyName (jsonString:string) =
         let awsArgument =
             match propertyName with
-            | "SetNotificationsList" ->
-                invalidArg "propertyName" "NotificationsList should not be serialized"
             | "SetAWSInterface" ->
-                invalidArg "propertyName" "AWSInterface should not be serialized"
+                let data = JsonSerializer.Deserialize<AmazonWebServiceInterface>(jsonString)
+                AWSArgument.SetAWSInterface data
             | "SetBucket" ->
                 let data = JsonSerializer.Deserialize<Bucket>(jsonString)
                 AWSArgument.SetBucket data
@@ -153,8 +152,9 @@ and AWSShareIntraModule(arg: AWSArgument) =
                 let data = JsonSerializer.Deserialize<string>(jsonString)
                 AWSArgument.SetTranscriptionJobName data
             | "SetTranscriptJSON" ->
-                let data = JsonSerializer.Deserialize<ReadOnlyMemory<byte>>(jsonString)
-                AWSArgument.SetTranscriptJSON data
+                let data = JsonSerializer.Deserialize<byte[]>(jsonString)
+                let rom = ReadOnlyMemory<byte>(data)
+                AWSArgument.SetTranscriptJSON rom
             | "SetTranscriptionDefaultTranscript" ->
                 let data = JsonSerializer.Deserialize<string>(jsonString)
                 AWSArgument.SetTranscriptionDefaultTranscript data
@@ -257,14 +257,14 @@ type AWSFlagItem =
     | TranslateSaveTranslation              // save a translated text item
     with
     static member GetNames () =
-        FSharpType.GetUnionCases typeof<StandardFlagItem>
+        FSharpType.GetUnionCases typeof<AWSFlagItem>
         |> Seq.map (fun caseInfo ->
             caseInfo.Name
         )
         |> Seq.toArray
     static member Create name =
         let unionCase =
-            FSharpType.GetUnionCases typeof<StandardFlagItem>
+            FSharpType.GetUnionCases typeof<AWSFlagItem>
             |> Seq.find (fun unionCase -> unionCase.Name = name)
         FSharpValue.MakeUnion (unionCase, Array.empty) :?> AWSFlagItem
 
@@ -305,6 +305,7 @@ type AWSFlagSet(flags: AWSFlagItem[]) =
         member this.Identifier with get() = this.Identifier
         member this.SetFlag flag = this.SetFlag flag
         member this.IsSet flag = this.IsSet flag
+        override this.ToString(): string = System.String.Join(", ", (_set |> Seq.map(fun flag -> sprintf "%s.%s" this.Identifier flag.Identifier)))
 
 /// The set of all possible argument types (passed to Task functions) that are of interest to the AWS module
 type TaskArgumentRecord = {
@@ -788,8 +789,8 @@ module public Tasks =
         seq {
             // show the sub-task names (the TaskName is used for function selection)
             yield TaskResponse.TaskMultiSelect ([|
-                { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "CleanTranscriptionJobHistory"; Description = "Transcription Job History" };
-                { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "SomeSubTask"; Description = "Other" }
+                TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "CleanTranscriptionJobHistory", Description = "Transcription Job History");
+                TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "SomeSubTask", Description = "Other");
             |])
         }
 
@@ -1066,12 +1067,12 @@ module public Tasks =
                 // restored from a previous session OR resolved by request to the UI
                 yield TaskResponse.TaskArgumentSave     // save the resolved arguments (if not already saved)
                 yield TaskResponse.TaskSequence ([|
-                    { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "UploadMediaFile"; Description = "Upload a media file to transcribe" };
-                    { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "StartTranscription"; Description = "Start a transcription job" };
-                    { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "MonitorTranscription"; Description = "Monitor the transcription job" }
-                    { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "DownloadTranscriptFile"; Description = "Download the transcription job output file from S3" }
-                    { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "ExtractTranscript"; Description = "Extract the transcript from the transcription job output file" }
-                    { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "SaveTranscript"; Description = "Save the extracted transcript to a file" }
+                    TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "UploadMediaFile", Description = "Upload a media file to transcribe");
+                    TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "StartTranscription", Description = "Start a transcription job");
+                    TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "MonitorTranscription", Description = "Monitor the transcription job");
+                    TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "DownloadTranscriptFile", Description = "Download the transcription job output file from S3");
+                    TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "ExtractTranscript", Description = "Extract the transcript from the transcription job output file");
+                    TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "SaveTranscript", Description = "Save the extracted transcript to a file");
                 |])
                 yield TaskResponse.TaskComplete ""
             else
@@ -1269,7 +1270,7 @@ module public Tasks =
                     //new TustlerServicesLib.SentenceChunker(sentences)
                     //TustlerServicesLib.SentenceChunker.FromFile(textFilePath)
 
-                    if awsInterface.IsMocked then
+                    if awsInterface.RuntimeOptions.IsMocked then
                         // set a small chunk size for testing (needs to be longer than the test sentence length for the chunker to work correctly)
                         let chunkSize = 40
                         new TustlerServicesLib.SentenceChunker(defaultTranscript, chunkSize)
@@ -1384,8 +1385,8 @@ module public Tasks =
                 // call the translate and save tasks for each of multiple target languages
                 let targetLanguages = resolvedRecord.TranslationTargetLanguages.Value
                 let taskSequence = ([|
-                    { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "TranslateText"; Description = "Translate text into a specified language" };
-                    { ModuleName = "CloudWeaver.AWS.Tasks"; TaskName = "SaveTranslation"; Description = "Save some translated text" };
+                    TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "TranslateText", Description = "Translate text into a specified language" );
+                    TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "SaveTranslation", Description = "Save some translated text");
                 |])
                 yield TaskResponse.BeginLoopSequence (targetLanguages, taskSequence)
 

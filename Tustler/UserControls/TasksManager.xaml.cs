@@ -266,7 +266,12 @@ namespace Tustler.UserControls
                 // set the save flags
                 var saveFlags = new SaveFlags(new ISaveFlagSet[]
                 {
-                    new AWSFlagSet(new AWSFlagItem[] {
+                    new StandardFlagSet(new StandardFlagItem[]
+                    {
+                        StandardFlagItem.SaveTaskName
+                    }),
+                    new AWSFlagSet(new AWSFlagItem[]
+                    {
                         AWSFlagItem.TranscribeSaveJSONTranscript,
                         AWSFlagItem.TranscribeSaveDefaultTranscript,
                         AWSFlagItem.TranslateSaveTranslation
@@ -297,7 +302,7 @@ namespace Tustler.UserControls
             await agent.RunTask(currentTask, responseStream).ConfigureAwait(false);
 
             // update the log file
-            await LogEventsAsync().ConfigureAwait(false);
+            //await LogEventsAsync().ConfigureAwait(false);
 
             // Once the previous call to RunTask() has run to completion start the next task (if any)
             if (taskQueue.Count > 0)
@@ -312,11 +317,14 @@ namespace Tustler.UserControls
             }
             else
             {
-                // task is complete
-                if (logFile is object)
+                // task is complete OR waiting on a response to be resolved via the UI (e.g. RequestArgument, TaskMultiSelect)
+                if (!agent.IsAwaitingResponse)
                 {
-                    logFile.Close();
-                    logFile = null;
+                    if (logFile is object)
+                    {
+                        logFile.Close();
+                        logFile = null;
+                    }
                 }
             }
         }

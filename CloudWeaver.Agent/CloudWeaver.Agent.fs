@@ -12,6 +12,7 @@ open System.Text.Json
 type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool) =
 
     let mutable loggedCount = 0
+    let mutable uiResponsePending = false
 
     let standardVariables = StandardVariables()
 
@@ -80,20 +81,10 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         
         let options = new JsonDocumentOptions(AllowTrailingCommas = true)
 
-        //blocks
-        //|> Seq.iter (fun block ->
-        //    let sequence = ReadOnlyMemory<byte>(block)
-        //    use document = JsonDocument.Parse(sequence, options)
-
-        //    // expecting a single child object
-        //    document.RootElement.EnumerateObject()
-        //    |> Seq.iter (fun property -> Console.WriteLine(property.Name))
-        //)
-
-        let events =
+        let loggedEvents =
             blocks
             |> Seq.map (fun block ->
-                let stack = new Stack<TaskEvent>(blocks.Count)
+                let mutable taskEvent = None
                 let sequence = ReadOnlyMemory<byte>(block)
                 use document = JsonDocument.Parse(sequence, options)
 
@@ -104,7 +95,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
                     | "Tag" ->
                         let moduleTag = property.Value.GetString()
                         Some(moduleTag)
-                    | "TaskEvent.InvokingFunction" -> stack.Push(TaskEvent.InvokingFunction); None
+                    | "TaskEvent.InvokingFunction" -> taskEvent <- Some(TaskEvent.InvokingFunction); None
                     | "TaskEvent.SetArgument" ->
                         if acc.IsSome then
                             let resolveProperty = moduleLookup.Invoke(acc.Value)
@@ -113,29 +104,34 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
                                 |> Seq.map (fun property -> resolveProperty.Invoke(property.Name, property.Value.GetRawText()))
                                 |> Seq.exactlyOne
                             let event = TaskEvent.SetArgument (TaskResponse.SetArgument wrappedArg)
-                            stack.Push(event); None
+                            taskEvent <- Some(event); None
                         else
                             invalidOp "Error parsing TaskEvent.SetArgument"
                     | "TaskEvent.ForEachTask" ->
                         let taskItems = JsonSerializer.Deserialize<IEnumerable<TaskItem>>(property.Value.GetRawText())
                         let data = RetainingStack(taskItems)
-                        stack.Push(TaskEvent.ForEachTask data); None
+                        taskEvent <- Some(TaskEvent.ForEachTask data); None
                     | "TaskEvent.ForEachDataItem" ->
                         let taskItems = JsonSerializer.Deserialize<IEnumerable<TaskItem>>(property.Value.GetRawText())
                         let data = RetainingStack(taskItems)
-                        stack.Push(TaskEvent.ForEachTask data); None
+                        taskEvent <- Some(TaskEvent.ForEachTask data); None
                     | "TaskEvent.Task" ->
                         let data = JsonSerializer.Deserialize<TaskItem>(property.Value.GetRawText())
-                        stack.Push(TaskEvent.Task data); None
-                    | "TaskEvent.SelectArgument" -> stack.Push(TaskEvent.SelectArgument); None
-                    | "TaskEvent.ClearArguments" -> stack.Push(TaskEvent.ClearArguments); None
-                    | "TaskEvent.FunctionCompleted" -> stack.Push(TaskEvent.FunctionCompleted); None
+                        taskEvent <- Some(TaskEvent.Task data); None
+                    | "TaskEvent.SelectArgument" -> taskEvent <- Some(TaskEvent.SelectArgument); None
+                    | "TaskEvent.ClearArguments" -> taskEvent <- Some(TaskEvent.ClearArguments); None
+                    | "TaskEvent.FunctionCompleted" -> taskEvent <- Some(TaskEvent.FunctionCompleted); None
                     | _ -> invalidArg "property.Name" (sprintf "TaskEvent property %s was not recognized" property.Name)
                 ) None
-            )
+                |> ignore
 
-        events
-        |> Seq.toArray
+                taskEvent
+            )
+            |> Seq.choose id
+            |> Seq.toArray
+
+        events.Clear()
+        events.AddRange(loggedEvents)
 
     /// Get the last ForEachTask RetainingStack on the event stack (if there is one)
     let getCurrentTaskLoopStack () =
@@ -227,15 +223,10 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         | TaskResponse.RequestArgument arg when knownArguments.IsKnownArgument(arg) ->
             events.Add(knownArguments.GetKnownArgument(arg))
             callTaskEvent.Trigger(self, taskInfo)
-            //recallTaskEvent.Trigger(self, EventArgs())    // receiver should set the TaskName and call RunTask
-        | TaskResponse.TaskSelect _ ->
-            events.Add(TaskEvent.SelectArgument)
-            newUIResponseEvent.Trigger(self, response)
         | TaskResponse.TaskSequence taskSequence -> addTaskSequenceEvent taskSequence
         | TaskResponse.TaskContinue delayMilliseconds ->
             Async.AwaitTask (Task.Delay(delayMilliseconds)) |> Async.RunSynchronously
             callTaskEvent.Trigger(self, taskInfo)
-            //recallTaskEvent.Trigger(self, EventArgs())
         | TaskResponse.TaskComplete _ ->
             newUIResponseEvent.Trigger(self, response)
             nextTask self
@@ -246,8 +237,16 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
             // therefore a copy is passed to iterate over)
             let eventsCopy = events.ToArray()
             saveArgumentsEvent.Trigger(self, eventsCopy)
-
-        | _ -> newUIResponseEvent.Trigger(self, response)    // receiver would typically call Dispatcher.InvokeAsync to invoke a function to add the response to the user interface
+        | _ ->
+            let pendingUIResponse =
+                match response with
+                | TaskResponse.RequestArgument _ -> true
+                | TaskResponse.TaskMultiSelect _ -> true
+                | TaskResponse.TaskPrompt _ -> true
+                | TaskResponse.TaskSelect _ -> events.Add(TaskEvent.SelectArgument); true
+                | _ -> false
+            uiResponsePending <- pendingUIResponse
+            newUIResponseEvent.Trigger(self, response)    // receiver would typically call Dispatcher.InvokeAsync to invoke a function to add the response to the user interface
 
     let processor self taskInfo responses =
         async {
@@ -277,6 +276,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
     /// Process the responses from the current task function
     member this.RunTask taskInfo (responses: seq<TaskResponse>) =
         events.Add(TaskEvent.InvokingFunction)
+        uiResponsePending <- false
 
         // collect responses from just the current call to the task function
         if retainResponses then taskResponses.Value.Clear()
@@ -293,6 +293,9 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         events.Add(TaskEvent.ClearArguments)
         events.Add(TaskEvent.SelectArgument)
         events.Add(TaskEvent.SetArgument(response))
+
+    member this.IsAwaitingResponse with get () =
+        uiResponsePending
 
     member this.AddArgument response =
         events.Add(TaskEvent.SetArgument(response))

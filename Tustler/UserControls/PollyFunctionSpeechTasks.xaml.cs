@@ -151,7 +151,7 @@ namespace Tustler.UserControls
             // wait one minute then requery the input queue
             if (timer == null)
             {
-                var seconds = awsInterface.IsMocked ? 10 : 60;
+                var seconds = awsInterface.RuntimeOptions.IsMocked ? 10 : 60;
                 timer = new DispatcherTimer(TimeSpan.FromSeconds(seconds), DispatcherPriority.ApplicationIdle, DispatcherTimer_Tick, Dispatcher.CurrentDispatcher);
             }
 
