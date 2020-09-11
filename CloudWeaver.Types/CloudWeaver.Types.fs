@@ -63,20 +63,11 @@ type TaskItem(moduleName: string, taskName: string, description: string) =
     new() = TaskItem(null, null, null)
     override this.ToString() = sprintf "TaskItem: %s %s %s" this.ModuleName this.TaskName this.Description
 
-///// A task in the overall task sequence (tasks may be sequentially dependant or independant)
-//type TaskItem = {
-//    ModuleName: string          // the fully qualified name of the type containing the task function
-//    TaskName: string;           // the task function name of the task
-//    Description: string;
-//}
-//with
-//    override this.ToString() = sprintf "TaskItem: %s %s %s" this.ModuleName this.TaskName this.Description
-
 /// Responses returned by Task Functions
 [<RequireQualifiedAccess>]
 type TaskResponse =
     | TaskInfo of string
-    | TaskComplete of string
+    | TaskComplete of string * DateTime
     | TaskPrompt of string                  // prompt the user to continue (a single Continue button is displayed along with the prompt message)
     | TaskSelect of string                  // prompt the user to select an item (this is also a truncation point for subsequent reselection)
     | TaskMultiSelect of IEnumerable<TaskItem>       // user selects zero or more sub-tasks to perform
@@ -104,7 +95,7 @@ type TaskResponse =
             System.String.Join(", ", strings)
         match this with
         | TaskInfo str -> (sprintf "TaskInfo: %s" str)
-        | TaskComplete str -> (sprintf "TaskComplete: %s" str)
+        | TaskComplete (str, dt) -> (sprintf "TaskComplete: %s (%A)" str dt)
         | TaskPrompt str -> (sprintf "TaskPrompt: %s" str)
         | TaskSelect str -> (sprintf "TaskSelect: %s" str)
         | TaskMultiSelect taskItems -> (sprintf "TaskMultiSelect: %s" (System.String.Join(", ", (Seq.map (fun (item: TaskItem) -> item.TaskName) taskItems))))

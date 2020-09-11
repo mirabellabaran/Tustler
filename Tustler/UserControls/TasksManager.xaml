@@ -122,7 +122,10 @@
         </DataTemplate>
 
         <DataTemplate x:Key="TaskCompleteTemplate" DataType="{x:Type fsharp:TaskResponse}">
-            <TextBlock Foreground="LimeGreen" FontWeight="Bold" Text="{Binding Path=Item}" Margin="10,0,0,0" />
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Foreground="LimeGreen" FontWeight="Bold" Text="{Binding Path=Item1}" Margin="10,0,0,0" />
+                <TextBlock Foreground="LimeGreen" FontWeight="Bold" Text="{Binding Path=Item2, StringFormat=on {0:MMMM dd HH:mm}}" Margin="5,0,0,0" />
+            </StackPanel>
         </DataTemplate>
 
         <DataTemplate x:Key="TaskPromptTemplate" DataType="{x:Type fsharp:TaskResponse}">

@@ -409,7 +409,7 @@ namespace CloudWeaver.AWS.Test
             static IEnumerable<TaskResponse> PurgeFunction(InfiniteList<MaybeResponse> resolvable_arguments)
             {
                 // five more TaskComplete responses (six total)
-                return Enumerable.Range(0, 5).Select(i => TaskResponse.NewTaskComplete(i.ToString()));
+                return Enumerable.Range(0, 5).Select(i => TaskResponse.NewTaskComplete(i.ToString(), DateTime.Now));
             }
 
             var result = await CallTaskAsync(taskName, taskFunction, agent);
