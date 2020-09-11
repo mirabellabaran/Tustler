@@ -1056,6 +1056,7 @@ module public Tasks =
 
     /// Upload and transcribe some audio
     /// The function is called multiple times from the UI until all arguments are resolved
+    [<EnableLogging>]
     let TranscribeAudio (resolvable_arguments: InfiniteList<MaybeResponse>) =
         
         seq {

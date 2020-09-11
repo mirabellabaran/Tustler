@@ -77,7 +77,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         loggedCount <- events.Count
         unloggedSerializedData
 
-    let setLoggedEvents (blocks: List<byte[]>) (moduleLookup: Func<string, Func<string, string, IShareIntraModule>>) =
+    let setLoggedEvents self (blocks: List<byte[]>) (moduleLookup: Func<string, Func<string, string, IShareIntraModule>>) =
         
         let options = new JsonDocumentOptions(AllowTrailingCommas = true)
 
@@ -128,10 +128,50 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
                 taskEvent
             )
             |> Seq.choose id
-            |> Seq.toArray
+            //|> Seq.toArray
 
         events.Clear()
         events.AddRange(loggedEvents)
+
+        // find the last task and call it
+        let callLastTask () =
+            let lastTask =
+                events
+                |> Seq.tryFindBack (fun evt ->
+                    match evt with
+                    | TaskEvent.Task _ -> true
+                    | _ -> false
+                )
+
+            let nextTask =
+                match lastTask with
+                | Some(TaskEvent.Task taskInfo) -> Some(taskInfo)
+                | _ -> None
+
+            if nextTask.IsSome then
+                standardVariables.SetValue(StandardRequest.RequestTaskItem, nextTask.Value)   // update task item variable
+                callTaskEvent.Trigger(self, nextTask.Value)
+            else
+                let response = TaskResponse.TaskInfo "Log Replay: No Task event set prior to current SetArgument or InvokingFunction event"
+                newUIResponseEvent.Trigger(self, response)
+            
+        // match the last event
+        // events are saved in blocks so the last event is limited to only the following:
+        let lastEvent = events.[events.Count - 1]
+        match lastEvent with
+        | TaskEvent.SetArgument _ ->
+            callLastTask ()
+        | TaskEvent.InvokingFunction ->
+            // top of stack for functions with delays such as MonitorTranscription
+            callLastTask ()
+        | TaskEvent.Task taskInfo ->
+            callTaskEvent.Trigger(self, taskInfo)
+        | TaskEvent.FunctionCompleted ->
+            let response = TaskResponse.TaskInfo "Log Replay: Nothing to show as the previous logged run completed successfully"
+            newUIResponseEvent.Trigger(self, response)
+        | _ ->
+            let response = TaskResponse.TaskInfo (sprintf "Log Replay: Unexpected event at top of stack: %A" lastEvent)
+            newUIResponseEvent.Trigger(self, response)
 
     /// Get the last ForEachTask RetainingStack on the event stack (if there is one)
     let getCurrentTaskLoopStack () =
@@ -178,7 +218,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         events.Add(TaskEvent.Task(nextTask))
 
         // update task item variable
-        standardVariables.SetValue(StandardRequest.RequestTaskItem, nextTask);
+        standardVariables.SetValue(StandardRequest.RequestTaskItem, nextTask)
         
         callTaskEvent.Trigger(self, nextTask)
 
@@ -321,7 +361,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         getUnloggedEvents ()
 
     member this.SetLoggedEvents blocks moduleLookup =
-        setLoggedEvents blocks moduleLookup
+        setLoggedEvents this blocks moduleLookup
 
     member this.LastCallResponseList () = if retainResponses then taskResponses.Value else new List<TaskResponse>()
 

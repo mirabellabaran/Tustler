@@ -10,11 +10,12 @@ namespace Tustler.Models
     /// </summary>
     public class TaskFunctionSpecifier : IElementTag
     {
-        public TaskFunctionSpecifier(string assemblyName, string moduleName, string taskName)
+        public TaskFunctionSpecifier(string assemblyName, string moduleName, string taskName, bool enableLogging)
         {
             this.AssemblyName = assemblyName;
             this.ModuleName = moduleName;
             this.TaskName = taskName;
+            this.IsLoggingEnabled = enableLogging;
         }
 
         public string TagDescription => "taskfunction";
@@ -24,6 +25,8 @@ namespace Tustler.Models
         public string ModuleName { get; }
 
         public string TaskName { get; }
+
+        public bool IsLoggingEnabled { get; }
 
         public string TaskFullPath
         {

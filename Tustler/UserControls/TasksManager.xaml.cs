@@ -40,6 +40,7 @@ namespace Tustler.UserControls
         private const string EventStackArgumentRestoreName = "defaultargs.json";
 
         private FileStream? logFile;
+        private bool isLoggingEnabled;
 
         private readonly NotificationsList notificationsList;
         private readonly AmazonWebServiceInterface awsInterface;
@@ -93,6 +94,16 @@ namespace Tustler.UserControls
             set { SetValue(TaskSpecifierProperty, value); }
         }
 
+        /// <summary>
+        /// The name of the root task called when this user control is constructed
+        /// </summary>
+        /// <remarks>This remains constant throughout the task run (unlike the TaskSpecifier) and can be used to generate the working directory path</remarks>
+        public string RootTaskName
+        {
+            get;
+            set;
+        }
+
         public Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> TaskFunction
         {
             get;
@@ -104,6 +115,7 @@ namespace Tustler.UserControls
             InitializeComponent();
 
             this.logFile = null;
+            this.isLoggingEnabled = false;
 
             this.taskFunctionLookup = new Dictionary<string, TaskFunctionSpecifier>(taskFunctions.Select(tfs => new KeyValuePair<string, TaskFunctionSpecifier>(tfs.TaskFullPath, tfs)));
             this.taskQueue = new Queue<TaskFunctionSpecifier>();
@@ -117,6 +129,7 @@ namespace Tustler.UserControls
 
             this.taskResponses = new ObservableCollection<TaskResponse>();
             this.TaskFunction = AWSTasks.MinimalMethod;
+            this.RootTaskName = "MinimalMethod";
 
             agent = new Agent(knownArguments, false);
 
@@ -172,6 +185,8 @@ namespace Tustler.UserControls
             using (var writer = new Utf8JsonWriter(stream, options))
             {
                 writer.WriteStartObject();
+                writer.WritePropertyName("Items");
+                writer.WriteStartArray();
                 foreach (var evt in events)
                 {
                     if (evt is TaskEvent.SetArgument arg)
@@ -180,13 +195,17 @@ namespace Tustler.UserControls
                         switch (response)
                         {
                             case TaskResponse.SetArgument responseArg:
+                                writer.WriteStartObject();
+                                writer.WriteString("Tag", JsonEncodedText.Encode(responseArg.Item.ModuleTag.AsString()));     // store the module for the argument type
                                 responseArg.Item.Serialize(writer);
+                                writer.WriteEndObject();
                                 break;
                             default:
                                 throw new ArgumentException($"Unexpected event stack set-argument type: {response}");
                         }
                     }
                 }
+                writer.WriteEndArray();
                 writer.WriteEndObject();
             }
 
@@ -213,7 +232,7 @@ namespace Tustler.UserControls
             e.CanExecute = true;// !(TaskArguments is null) && TaskArguments.IsComplete();
         }
 
-        private void StartTask_Executed(object sender, ExecutedRoutedEventArgs e)
+        private async void StartTask_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             try
             {
@@ -233,10 +252,29 @@ namespace Tustler.UserControls
 
                         using var stream = File.OpenRead(serializedDataPath);
                         using JsonDocument document = JsonDocument.Parse(stream, options);
-                        foreach (var property in document.RootElement.EnumerateObject())
+                        foreach (var child in document.RootElement.EnumerateObject())
                         {
-                            TaskResponse response = TaskResponse.NewSetArgument(AWSShareIntraModule.Deserialize(property.Name, property.Value.GetRawText()));
-                            agent.AddArgument(response);
+                            if (child.Name == "Items")
+                            {
+                                foreach (var arrayItem in child.Value.EnumerateArray())
+                                {
+                                    var moduleTag = string.Empty;
+                                    foreach (var property in arrayItem.EnumerateObject())
+                                    {
+                                        if (property.Name == "Tag")
+                                        {
+                                            moduleTag = property.Value.GetString();
+                                        }
+                                        else
+                                        {
+                                            var propertyResolver = Helpers.ModuleResolver.ModuleLookup(moduleTag);
+                                            var resolvedModule = propertyResolver(property.Name, property.Value.GetRawText());
+                                            TaskResponse response = TaskResponse.NewSetArgument(resolvedModule);
+                                            agent.AddArgument(response);
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -245,6 +283,8 @@ namespace Tustler.UserControls
                     Directory.CreateDirectory(taskFolderPath);
                 }
 
+                lbTaskResponses.ItemsSource = taskResponses;
+
                 // close the log file
                 if (logFile is object)
                 {
@@ -252,20 +292,18 @@ namespace Tustler.UserControls
                     logFile = null;
                 }
 
-                var logFilePath = Path.Combine(taskFolderPath, LogFileName);
-                if (File.Exists(logFilePath))
+                this.isLoggingEnabled = TaskSpecifier.IsLoggingEnabled;
+
+                async Task StartNew()
                 {
-                    UnLogEvents(logFilePath);
-                }
+                    agent.SetWorkingDirectory(new DirectoryInfo(taskFolderPath));
 
-                agent.SetWorkingDirectory(new DirectoryInfo(taskFolderPath));
+                    // set a default task identifier
+                    agent.SetTaskIdentifier(Guid.NewGuid().ToString());
 
-                // set a default task identifier
-                agent.SetTaskIdentifier(Guid.NewGuid().ToString());
-
-                // set the save flags
-                var saveFlags = new SaveFlags(new ISaveFlagSet[]
-                {
+                    // set the save flags
+                    var saveFlags = new SaveFlags(new ISaveFlagSet[]
+                    {
                     new StandardFlagSet(new StandardFlagItem[]
                     {
                         StandardFlagItem.SaveTaskName
@@ -276,18 +314,44 @@ namespace Tustler.UserControls
                         AWSFlagItem.TranscribeSaveDefaultTranscript,
                         AWSFlagItem.TranslateSaveTranslation
                     })
-                });
-                agent.SetSaveFlags(saveFlags);
+                    });
+                    agent.SetSaveFlags(saveFlags);
 
-                RunTask();
+                    await RunTask().ConfigureAwait(false);
+                }
+
+                if (this.isLoggingEnabled)
+                {
+                    //var logFilePath = Path.Combine(taskFolderPath, "637354693450070938-log.bin");
+                    //var logFilePath = Path.Combine(taskFolderPath, "637354676138930293-log.bin");
+                    var logFilePath = Path.Combine(taskFolderPath, "637354733302481717-log.bin");
+                    if (File.Exists(logFilePath))
+                    {
+                        UnLogEvents(logFilePath);
+
+                        // check the queue for new task function specifiers
+                        await CheckQueue().ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await StartNew().ConfigureAwait(false);
+                    }
+                }
+                else
+                {
+                    await StartNew().ConfigureAwait(false);
+                }
             }
             finally
             {
-                Mouse.OverrideCursor = null;
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    Mouse.OverrideCursor = null;
+                });
             }
         }
 
-        private async void RunTask()
+        private async Task RunTask()
         {
             // generate an arguments stack (by default an infinite enumerable of Nothing arguments)
             var args = new InfiniteList<MaybeResponse>(MaybeResponse.Nothing);
@@ -296,23 +360,29 @@ namespace Tustler.UserControls
 
             notificationsList.Clear();      // cleared for each function invocation
             var responseStream = TaskFunction(args);
-            lbTaskResponses.ItemsSource = taskResponses;
 
             var currentTask = new TaskItem(this.TaskSpecifier.ModuleName, this.TaskSpecifier.TaskName, string.Empty);
             await agent.RunTask(currentTask, responseStream).ConfigureAwait(false);
 
-            // update the log file
-            //await LogEventsAsync().ConfigureAwait(false);
+            if (this.isLoggingEnabled)
+            {
+                // update the log file
+                await LogEventsAsync().ConfigureAwait(false);
+            }
 
             // Once the previous call to RunTask() has run to completion start the next task (if any)
+            await CheckQueue().ConfigureAwait(false);
+        }
+
+        private async Task CheckQueue()
+        {
             if (taskQueue.Count > 0)
             {
                 var nextTaskSpecifier = taskQueue.Dequeue();
-                await Dispatcher.InvokeAsync(() =>
+                await Dispatcher.InvokeAsync(async () =>
                 {
                     this.TaskSpecifier = nextTaskSpecifier;
-
-                    RunTask();
+                    await RunTask().ConfigureAwait(false);
                 });
             }
             else
@@ -337,7 +407,8 @@ namespace Tustler.UserControls
 
                 if (logFile is null)
                 {
-                    var logFilePath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.TaskSpecifier.TaskName, LogFileName);
+                    var logFileName = $"{DateTime.Now.Ticks}-{LogFileName}";
+                    var logFilePath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.RootTaskName, logFileName);
                     logFile = File.Open(logFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
                 }
 
@@ -353,32 +424,34 @@ namespace Tustler.UserControls
 
         private void UnLogEvents(string logFilePath)
         {
-            var localReadLogFile = File.Open(logFilePath, FileMode.Open, FileAccess.Read, FileShare.None);
-
             var blocks = new List<byte[]>(30);
-            var buffer = new byte[1024];
-            var span = new Span<byte>(buffer);
-            var bytesRemaining = localReadLogFile.Length;
 
-            while (bytesRemaining > 0)
+            using (var localReadLogFile = File.Open(logFilePath, FileMode.Open, FileAccess.Read, FileShare.None))
             {
-                var n = localReadLogFile.Read(buffer, 0, 4);
-                var slice = span.Slice(0, 4);
-                var blockLength = BitConverter.ToInt32(slice);
-                if (blockLength < 1024)
+                var buffer = new byte[1024];
+                var span = new Span<byte>(buffer);
+                var bytesRemaining = localReadLogFile.Length;
+
+                while (bytesRemaining > 0)
                 {
-                    n += localReadLogFile.Read(buffer, 0, blockLength);
-                    slice = span.Slice(0, blockLength);
-                    blocks.Add(slice.ToArray());
+                    var n = localReadLogFile.Read(buffer, 0, 4);
+                    var slice = span.Slice(0, 4);
+                    var blockLength = BitConverter.ToInt32(slice);
+                    if (blockLength < 1024)
+                    {
+                        n += localReadLogFile.Read(buffer, 0, blockLength);
+                        slice = span.Slice(0, blockLength);
+                        blocks.Add(slice.ToArray());
+                    }
+
+                    if (n == 0)
+                        break;
+
+                    bytesRemaining -= n;
                 }
 
-                if (n == 0)
-                    break;
-
-                bytesRemaining -= n;
+                localReadLogFile.Close();
             }
-
-            localReadLogFile.Close();
 
             agent.SetLoggedEvents(blocks, Helpers.ModuleResolver.ModuleLookup);
         }
@@ -644,9 +717,9 @@ namespace Tustler.UserControls
                         throw new ArgumentException($"RunSelectBucketMiniTask: Unknown argument type");
                 }
 
-                await Dispatcher.InvokeAsync(() =>
+                await Dispatcher.InvokeAsync(async () =>
                 {
-                    RunTask();
+                    await RunTask().ConfigureAwait(false);
                 });
             }
 
@@ -654,9 +727,9 @@ namespace Tustler.UserControls
             {
                 // disable the Continue button and restart the task
                 if (e.OriginalSource is TaskContinue ctrl) ctrl.IsButtonEnabled = false;
-                await Dispatcher.InvokeAsync(() =>
+                await Dispatcher.InvokeAsync(async () =>
                 {
-                    RunTask();
+                    await RunTask().ConfigureAwait(false);
                 });
             }
 
@@ -676,12 +749,12 @@ namespace Tustler.UserControls
                 if (subtasks.Count > 0)
                 {
                     agent.StartNewTask(subtasks);       // this will invoke the callback that adds the next task to the queue
-                    await Dispatcher.InvokeAsync(() =>
+                    await Dispatcher.InvokeAsync(async () =>
                     {
                         var nextTaskSpecifier = taskQueue.Dequeue();
                         this.TaskSpecifier = nextTaskSpecifier;
 
-                        RunTask();
+                        await RunTask().ConfigureAwait(false);
                     });
                 }
             }

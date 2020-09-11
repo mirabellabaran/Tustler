@@ -369,7 +369,8 @@ namespace Tustler
 
                 return methods
                     .Select(mi => {
-                        var specifier = new TaskFunctionSpecifier(assembly.GetName().Name, module.FullName, mi.Name);
+                        var enableLogging = Attribute.IsDefined(mi, typeof(EnableLogging));
+                        var specifier = new TaskFunctionSpecifier(assembly.GetName().Name, module.FullName, mi.Name, enableLogging);
                         var hideFromUI = Attribute.IsDefined(mi, typeof(HideFromUI));
                         return (specifier, hideFromUI);
                     });
@@ -549,9 +550,11 @@ namespace Tustler
                         break;
                     case "task":
                         var allTaskFunctions = taskFunctions.Select(data => data.specifier).ToArray();
+                        var specifier = (initial as TaskFunctionSpecifier);
                         var uc = new TasksManager(allTaskFunctions, awsInterface)
                         {
-                            TaskSpecifier = (initial as TaskFunctionSpecifier)
+                            TaskSpecifier = specifier,
+                            RootTaskName = specifier.TaskName
                         };
                         panControlsContainer.Children.Add(uc);
                         break;
