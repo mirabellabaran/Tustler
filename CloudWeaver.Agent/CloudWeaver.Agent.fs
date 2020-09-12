@@ -3,7 +3,6 @@
 open System
 open System.Collections.Generic
 open TustlerServicesLib
-open System.Collections.Concurrent
 open System.Threading.Tasks
 open CloudWeaver.Types
 open System.IO
@@ -30,108 +29,8 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
     // the responses generated from the last task function call (useful for testing purposes)
     let taskResponses = if retainResponses then Some(new List<TaskResponse>()) else None
 
-    let getUnloggedEvents () =
-        
-        let options = JsonWriterOptions(Indented = false)
-
-        let unloggedSerializedData =
-            events
-            |> Seq.skip loggedCount
-            |> Seq.map (fun event ->
-
-                // serialize each event as its own JSON data (not part of the same JSON document)
-                // this is so that the log file can be closed without calling WriteEndObject or WriteEndArray
-                use stream = new MemoryStream()
-                let result = using (new Utf8JsonWriter(stream, options)) (fun writer ->
-
-                    writer.WriteStartObject()
-                    match event with
-                    | TaskEvent.InvokingFunction -> writer.WritePropertyName("TaskEvent.InvokingFunction"); JsonSerializer.Serialize(writer, "InvokingFunction")
-                    | TaskEvent.SetArgument arg ->
-                        match arg with
-                        | TaskResponse.SetArgument responseArg ->
-                            writer.WriteString("Tag", JsonEncodedText.Encode(responseArg.ModuleTag.AsString()))     // store the module for the argument type
-                            writer.WritePropertyName("TaskEvent.SetArgument");
-                            writer.WriteStartObject()
-                            responseArg.Serialize(writer)
-                            writer.WriteEndObject()
-                        | _ -> invalidArg "event" (sprintf "Unexpected event stack set-argument type: %A" arg)
-                    | TaskEvent.ForEachTask stack -> writer.WritePropertyName("TaskEvent.ForEachTask"); JsonSerializer.Serialize(writer, stack)
-                    | TaskEvent.ForEachDataItem consumable -> writer.WritePropertyName("TaskEvent.ForEachDataItem"); JsonSerializer.Serialize(writer, consumable)
-                        // MG consumable as RetainingStack<T>
-                    | TaskEvent.Task taskItem -> writer.WritePropertyName("TaskEvent.Task"); JsonSerializer.Serialize(writer, taskItem)
-                    | TaskEvent.SelectArgument -> writer.WritePropertyName("TaskEvent.SelectArgument"); JsonSerializer.Serialize(writer, "SelectArgument")
-                    | TaskEvent.ClearArguments -> writer.WritePropertyName("TaskEvent.ClearArguments"); JsonSerializer.Serialize(writer, "ClearArguments")
-                    | TaskEvent.FunctionCompleted -> writer.WritePropertyName("TaskEvent.FunctionCompleted"); JsonSerializer.Serialize(writer, "FunctionCompleted")
-                    | _ -> invalidArg "event" (sprintf "Unexpected event stack type: %A" event)
-
-                    writer.WriteEndObject()
-                    writer.Flush()
-                    stream.ToArray()
-                )
-
-                result
-            )
-            |> Seq.toArray
-
-        loggedCount <- events.Count
-        unloggedSerializedData
-
-    let setLoggedEvents self (blocks: List<byte[]>) (moduleLookup: Func<string, Func<string, string, IShareIntraModule>>) =
-        
-        let options = new JsonDocumentOptions(AllowTrailingCommas = true)
-
-        let loggedEvents =
-            blocks
-            |> Seq.map (fun block ->
-                let mutable taskEvent = None
-                let sequence = ReadOnlyMemory<byte>(block)
-                use document = JsonDocument.Parse(sequence, options)
-
-                // expecting a single child object
-                document.RootElement.EnumerateObject()
-                |> Seq.fold (fun (acc: string option) (property: JsonProperty) -> 
-                    match property.Name with
-                    | "Tag" ->
-                        let moduleTag = property.Value.GetString()
-                        Some(moduleTag)
-                    | "TaskEvent.InvokingFunction" -> taskEvent <- Some(TaskEvent.InvokingFunction); None
-                    | "TaskEvent.SetArgument" ->
-                        if acc.IsSome then
-                            let resolveProperty = moduleLookup.Invoke(acc.Value)
-                            let wrappedArg =
-                                property.Value.EnumerateObject()
-                                |> Seq.map (fun property -> resolveProperty.Invoke(property.Name, property.Value.GetRawText()))
-                                |> Seq.exactlyOne
-                            let event = TaskEvent.SetArgument (TaskResponse.SetArgument wrappedArg)
-                            taskEvent <- Some(event); None
-                        else
-                            invalidOp "Error parsing TaskEvent.SetArgument"
-                    | "TaskEvent.ForEachTask" ->
-                        let taskItems = JsonSerializer.Deserialize<IEnumerable<TaskItem>>(property.Value.GetRawText())
-                        let data = RetainingStack(taskItems)
-                        taskEvent <- Some(TaskEvent.ForEachTask data); None
-                    | "TaskEvent.ForEachDataItem" ->
-                        let taskItems = JsonSerializer.Deserialize<IEnumerable<TaskItem>>(property.Value.GetRawText())
-                        let data = RetainingStack(taskItems)
-                        taskEvent <- Some(TaskEvent.ForEachTask data); None
-                    | "TaskEvent.Task" ->
-                        let data = JsonSerializer.Deserialize<TaskItem>(property.Value.GetRawText())
-                        taskEvent <- Some(TaskEvent.Task data); None
-                    | "TaskEvent.SelectArgument" -> taskEvent <- Some(TaskEvent.SelectArgument); None
-                    | "TaskEvent.ClearArguments" -> taskEvent <- Some(TaskEvent.ClearArguments); None
-                    | "TaskEvent.FunctionCompleted" -> taskEvent <- Some(TaskEvent.FunctionCompleted); None
-                    | _ -> invalidArg "property.Name" (sprintf "TaskEvent property %s was not recognized" property.Name)
-                ) None
-                |> ignore
-
-                taskEvent
-            )
-            |> Seq.choose id
-            //|> Seq.toArray
-
-        events.Clear()
-        events.AddRange(loggedEvents)
+    /// Replace the events stack with the specified logged events and continue execution
+    let continueWith self loggedEvents =
 
         // find the last task and call it
         let callLastTask () =
@@ -155,6 +54,9 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
                 let response = TaskResponse.TaskInfo "Log Replay: No Task event set prior to current SetArgument or InvokingFunction event"
                 newUIResponseEvent.Trigger(self, response)
             
+        events.Clear()
+        events.AddRange(loggedEvents)
+
         // match the last event
         // events are saved in blocks so the last event is limited to only the following:
         let lastEvent = events.[events.Count - 1]
@@ -343,6 +245,9 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
     member this.AddEvent evt =
         events.Add(evt)
 
+    member this.AddEvents evts =
+        events.AddRange(evts)
+
     member this.SetWorkingDirectory (directoryPath: DirectoryInfo) =
         standardVariables.SetValue(StandardRequest.RequestWorkingDirectory, directoryPath);
 
@@ -357,11 +262,14 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         | TaskEvent.FunctionCompleted -> true
         | _ -> false
 
-    member this.GetUnloggedEvents () =
-        getUnloggedEvents ()
+    /// Replace the events stack and continue execution with the new stack
+    member this.ContinueWith loggedEvents =
+        continueWith this loggedEvents
 
-    member this.SetLoggedEvents blocks moduleLookup =
-        setLoggedEvents this blocks moduleLookup
+    member this.SerializeUnloggedEventsAsBytes () =
+        let unloggedSerializedData = CloudWeaver.Serialization.SerializeEventsAsBytes events loggedCount
+        loggedCount <- events.Count
+        unloggedSerializedData
 
     member this.LastCallResponseList () = if retainResponses then taskResponses.Value else new List<TaskResponse>()
 

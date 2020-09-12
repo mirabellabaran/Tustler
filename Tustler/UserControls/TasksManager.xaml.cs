@@ -175,41 +175,9 @@ namespace Tustler.UserControls
                 Directory.CreateDirectory(taskFolderPath);
             }
 
-            var options = new JsonWriterOptions
-            {
-                Indented = true
-            };
-
-            using var stream = new MemoryStream();
-            using (var writer = new Utf8JsonWriter(stream, options))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName("Items");
-                writer.WriteStartArray();
-                foreach (var evt in events)
-                {
-                    if (evt is TaskEvent.SetArgument arg)
-                    {
-                        var response = arg.Item;
-                        switch (response)
-                        {
-                            case TaskResponse.SetArgument responseArg:
-                                writer.WriteStartObject();
-                                writer.WriteString("Tag", JsonEncodedText.Encode(responseArg.Item.ModuleTag.AsString()));     // store the module for the argument type
-                                responseArg.Item.Serialize(writer);
-                                writer.WriteEndObject();
-                                break;
-                            default:
-                                throw new ArgumentException($"Unexpected event stack set-argument type: {response}");
-                        }
-                    }
-                }
-                writer.WriteEndArray();
-                writer.WriteEndObject();
-            }
+            var newData = Serialization.SerializeEventsAsJSON(events);
 
             // compare current version (if any)
-            var newData = stream.ToArray();
             var serializedDataPath = Path.Combine(taskFolderPath, EventStackArgumentRestoreName);
             if (File.Exists(serializedDataPath))
             {
@@ -251,30 +219,8 @@ namespace Tustler.UserControls
 
                         using var stream = File.OpenRead(serializedDataPath);
                         using JsonDocument document = JsonDocument.Parse(stream, options);
-                        foreach (var child in document.RootElement.EnumerateObject())
-                        {
-                            if (child.Name == "Items")
-                            {
-                                foreach (var arrayItem in child.Value.EnumerateArray())
-                                {
-                                    var moduleTag = string.Empty;
-                                    foreach (var property in arrayItem.EnumerateObject())
-                                    {
-                                        if (property.Name == "Tag")
-                                        {
-                                            moduleTag = property.Value.GetString();
-                                        }
-                                        else
-                                        {
-                                            var propertyResolver = Helpers.ModuleResolver.ModuleLookup(moduleTag);
-                                            var resolvedModule = propertyResolver(property.Name, property.Value.GetRawText());
-                                            TaskResponse response = TaskResponse.NewSetArgument(resolvedModule);
-                                            agent.AddArgument(response);
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        var taskEvents = Serialization.DeserializeEventsFromJSON(document, Helpers.ModuleResolver.ModuleLookup);
+                        agent.AddEvents(taskEvents);
                     }
                 }
                 else
@@ -402,7 +348,7 @@ namespace Tustler.UserControls
         {
             await Dispatcher.InvokeAsync(() =>
             {
-                var unloggedEvents = agent.GetUnloggedEvents();
+                var unloggedEvents = agent.SerializeUnloggedEventsAsBytes();
 
                 if (logFile is null)
                 {
@@ -452,7 +398,8 @@ namespace Tustler.UserControls
                 localReadLogFile.Close();
             }
 
-            agent.SetLoggedEvents(blocks, Helpers.ModuleResolver.ModuleLookup);
+            var loggedEvents = Serialization.DeserializeEventsFromBytes(blocks, Helpers.ModuleResolver.ModuleLookup);
+            agent.ContinueWith(loggedEvents);
         }
 
         private async void Agent_NewUIResponse(object? sender, TaskResponse response)
