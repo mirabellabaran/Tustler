@@ -17,7 +17,8 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
 
     let callTaskEvent = new Event<EventHandler<_>, _>()
     let newUIResponseEvent = new Event<EventHandler<_>, _>()
-    let saveArgumentsEvent = new Event<EventHandler<_>, _>()
+    let saveEventsEvent = new Event<EventHandler<_>, _>()       // save some or all events as a JSON document
+    let snapshotEventsEvent = new Event<EventHandler<_>, _>()       // save all events in binary log format
     let errorEvent = new Event<EventHandler<_>, _>()
 
     do
@@ -173,12 +174,29 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
             newUIResponseEvent.Trigger(self, response)
             nextTask self
         | TaskResponse.BeginLoopSequence (consumable, taskSequence) -> addDataSequenceEvent consumable taskSequence
-        | TaskResponse.TaskArgumentSave ->
+        | TaskResponse.TaskSaveEvents filter ->
             // the event handler should asynchronously invoke a function to save the supplied event stack arguments
             // (note that by the time this function is invoked, the events stack may be in the process of being modified via new incoming responses
             // therefore a copy is passed to iterate over)
-            let eventsCopy = events.ToArray()
-            saveArgumentsEvent.Trigger(self, eventsCopy)
+            let eventsCopy =
+                match filter with
+                | SaveEventsFilter.AllEvents -> events.ToArray()
+                | SaveEventsFilter.ArgumentsOnly ->
+                    events
+                    |> Seq.filter (fun evt ->
+                        match evt with
+                        | TaskEvent.SetArgument _ -> true
+                        | _ -> false
+                    )
+                    |> Seq.toArray
+            saveEventsEvent.Trigger(self, eventsCopy)
+        | TaskResponse.TaskSnapshotEvents events ->
+            snapshotEventsEvent.Trigger(self, events)
+        | TaskResponse.TaskReadJSONFile fileInfo ->
+            ()
+        | TaskResponse.TaskReadLogFile fileInfo ->
+            ()
+
         | _ ->
             let pendingUIResponse =
                 match response with
@@ -283,7 +301,10 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
     member this.NewUIResponse:IEvent<EventHandler<TaskResponse>, TaskResponse> = newUIResponseEvent.Publish
 
     [<CLIEvent>]
-    member this.SaveArguments:IEvent<EventHandler<TaskEvent[]>, TaskEvent[]> = saveArgumentsEvent.Publish
+    member this.SaveEvents:IEvent<EventHandler<TaskEvent[]>, TaskEvent[]> = saveEventsEvent.Publish
+
+    [<CLIEvent>]
+    member this.SnapshotEvents:IEvent<EventHandler<TaskEvent[]>, TaskEvent[]> = snapshotEventsEvent.Publish
 
     [<CLIEvent>]
     member this.Error:IEvent<EventHandler<ApplicationErrorInfo>, ApplicationErrorInfo> = errorEvent.Publish

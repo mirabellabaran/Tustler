@@ -53,6 +53,7 @@ module public Tasks =
                         | SetTaskItem _ -> Some(StandardRequestIntraModule(RequestTaskItem) :> IRequestIntraModule)
                         | SetWorkingDirectory _ -> Some(StandardRequestIntraModule(RequestWorkingDirectory) :> IRequestIntraModule)
                         | SetSaveFlags _ -> Some(StandardRequestIntraModule(RequestSaveFlags) :> IRequestIntraModule)
+                        | SetEvents _ -> Some(StandardRequestIntraModule(RequestEvents) :> IRequestIntraModule)
                     | _ -> None     // ignore request types from other modules
                 | _ -> None
             )
@@ -107,38 +108,6 @@ module public Tasks =
     /// Get any notifications generated from the last AWS call (errors or informational messages)
     let private getNotificationResponse (notifications: NotificationsList) =
         Seq.map (fun note -> TaskResponse.Notification note) notifications.Notifications
-        
-    //let private checkTaskFolder taskName = ()
-
-    //let private CheckFileExistsReplaceWithFilePath (fn:TaskFunction) = fn
-
-    //let private CheckFileExistsReplaceWithContents (fn:TaskFunction) = fn
-
-    //let private ReplaceWithConstant (fn:TaskFunction) =
-    //    match fn with
-    //    | TaskFunction.GetBuckets _ ->
-    //        let bucket = Bucket(Name="Poop", CreationDate=System.DateTime.Now)
-    //        (TaskFunction.GetBuckets (fun s3Interface notifications -> async { return new ObservableCollection<Bucket>( seq { bucket } ) }))
-    //    | TaskFunction.GetBucketItems _ ->
-    //        let bucketItems = [|
-    //            BucketItem(Key="AAA", Size=33L, LastModified=System.DateTime.Now, Owner="Me")
-    //            BucketItem(Key="BBB", Size=44L, LastModified=System.DateTime.Now, Owner="Me")
-    //        |]
-    //        (TaskFunction.GetBucketItems (fun s3Interface notifications string -> async { return new BucketItemsCollection( bucketItems ) }))
-
-
-    //let AAA (arguments: ITaskArgumentCollection) (args: InfiniteList<MaybeResponse>) =
-
-    //    let awsInterface = (arguments :?> NotificationsOnlyArguments).AWSInterface
-    //    let notifications = (arguments :?> NotificationsOnlyArguments).Notifications
-
-    //    seq {
-    //        let model = S3.getBucketItems awsInterface notifications "tator" |> Async.RunSynchronously
-    //        yield! getNotificationResponse notifications
-    //        yield TaskResponse.BucketItemsModel model
-
-    //        yield TaskResponse.TaskComplete "Finished"
-    //    }        
 
     // A minimal method that does nothing
     [<HideFromUI>]
@@ -563,7 +532,7 @@ module public Tasks =
             if resolvedRecord.S3Bucket.IsSome && resolvedRecord.FileMediaReference.IsSome
                 && resolvedRecord.TranscriptionLanguageCode.IsSome && resolvedRecord.TranscriptionVocabularyName.IsSome then
                 // restored from a previous session OR resolved by request to the UI
-                yield TaskResponse.TaskArgumentSave     // save the resolved arguments (if not already saved)
+                yield TaskResponse.TaskSaveEvents SaveEventsFilter.ArgumentsOnly     // save the resolved arguments (if not already saved)
                 yield TaskResponse.TaskSequence ([|
                     TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "UploadMediaFile", Description = "Upload a media file to transcribe");
                     TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "StartTranscription", Description = "Start a transcription job");
@@ -904,4 +873,31 @@ module public Tasks =
                     TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory));
                     TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
                 |]
+        }
+
+    /// Save a collection of events as a JSON document
+    let SaveEventsAsJSON (resolvable_arguments: InfiniteList<MaybeResponse>) =
+
+        let saveEvents argsRecord =
+            let notifications = argsRecord.Notifications.Value
+            let events = argsRecord.Events.Value
+
+            seq {
+
+                //    yield (AWSArgument.SetTranscriptionDefaultTranscript defaultTranscript).toSetArgumentTaskResponse()
+
+                yield TaskResponse.TaskComplete ("Saved event data", DateTime.Now)
+            }
+
+        seq {
+            let defaultArgs = TaskArgumentRecord.Init ()
+            let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+
+            if resolvedRecord.Notifications.IsSome && resolvedRecord.Events.IsSome then
+                yield! saveEvents resolvedRecord
+            else
+                yield! resolveByRequest resolvable_arguments [|
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestNotifications));
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestEvents));
+                    |]
         }

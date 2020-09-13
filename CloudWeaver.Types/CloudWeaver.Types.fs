@@ -63,9 +63,26 @@ type TaskItem(moduleName: string, taskName: string, description: string) =
     new() = TaskItem(null, null, null)
     override this.ToString() = sprintf "TaskItem: %s %s %s" this.ModuleName this.TaskName this.Description
 
-/// Responses returned by Task Functions
+type SaveEventsFilter =
+    | AllEvents
+    | ArgumentsOnly
+
+/// The event types allowed on the event stack
 [<RequireQualifiedAccess>]
-type TaskResponse =
+type TaskEvent =
+    | InvokingFunction
+    | SetArgument of TaskResponse
+    | ForEachTask of RetainingStack<TaskItem>
+    | ForEachDataItem of IConsumable
+    | Task of TaskItem     // the name and description of the task
+    | SelectArgument
+    | ClearArguments
+    | FunctionCompleted
+
+/// Responses returned by Task Functions
+and
+    [<RequireQualifiedAccess>]
+    TaskResponse =
     | TaskInfo of string
     | TaskComplete of string * DateTime
     | TaskPrompt of string                  // prompt the user to continue (a single Continue button is displayed along with the prompt message)
@@ -73,7 +90,10 @@ type TaskResponse =
     | TaskMultiSelect of IEnumerable<TaskItem>       // user selects zero or more sub-tasks to perform
     | TaskSequence of IEnumerable<TaskItem>          // a sequence of tasks that flow from one to the next without any intervening UI
     | TaskContinue of int                               // re-invoke the current function after the specified number of milliseconds
-    | TaskArgumentSave                                  // save any arguments set on the event stack for subsequent sessions
+    | TaskSaveEvents of SaveEventsFilter                // save all events (or all argument events) on the event stack as a JSON document for subsequent sessions
+    | TaskSnapshotEvents of TaskEvent[]                 // save the specified events in binary log format
+    | TaskReadJSONFile of FileInfo                      // generate a collection of TaskEvent instances frome JSON serialized data
+    | TaskReadLogFile of FileInfo                       // generate a collection of TaskEvent instances frome binary serialized data
     
     | Notification of Notification
     | BeginLoopSequence of IConsumable * IEnumerable<TaskItem>  // execute the task sequence for each consumable data item (the specified tasks are inside the loop)
@@ -101,26 +121,16 @@ type TaskResponse =
         | TaskMultiSelect taskItems -> (sprintf "TaskMultiSelect: %s" (System.String.Join(", ", (Seq.map (fun (item: TaskItem) -> item.TaskName) taskItems))))
         | TaskSequence taskItems -> (sprintf "TaskSequence: %s" (System.String.Join(", ", (Seq.map (fun (item: TaskItem) -> item.TaskName) taskItems))))
         | TaskContinue delay -> (sprintf "TaskContinue: %d (ms)" delay)
-        | TaskArgumentSave -> "TaskArgumentSave"
+        | TaskSaveEvents filter -> (sprintf "TaskSaveEvents: %A" filter)
+        | TaskSnapshotEvents events -> (sprintf "TaskSnapshotEvents (%d events)" events.Length)
+        | TaskReadJSONFile fileInfo -> (sprintf "TaskReadJSONFile: %s" fileInfo.FullName)
+        | TaskReadLogFile fileInfo -> (sprintf "TaskReadLogFile: %s" fileInfo.FullName)
         | Notification notification -> (sprintf "Notification: %s" (notification.ToString()))
         | BeginLoopSequence (consumable, taskItems) -> (sprintf "BeginLoopSequence (%d items): %s" consumable.Total (System.String.Join(", ", (Seq.map (fun (item: TaskItem) -> item.TaskName) taskItems))))
         | ShowValue showValue -> (sprintf "ShowValue: %s" (showValue.ToString()))
         | SetArgument arg -> (sprintf "SetArgument: %s" (arg.ToString()))
         //| SetBoundaryArgument arg -> (sprintf "SetBoundaryArgument: %s" (arg.ToString()))
         | RequestArgument request -> (sprintf "RequestArgument: %s" (request.ToString()))
-
-    
-/// The event types allowed on the event stack
-[<RequireQualifiedAccess>]
-type TaskEvent =
-    | InvokingFunction
-    | SetArgument of TaskResponse
-    | ForEachTask of RetainingStack<TaskItem>
-    | ForEachDataItem of IConsumable
-    | Task of TaskItem     // the name and description of the task
-    | SelectArgument
-    | ClearArguments
-    | FunctionCompleted
 
 /// A simpler option type for use in C# space
 [<RequireQualifiedAccess>]
@@ -158,6 +168,7 @@ type StandardRequest =
     | RequestTaskItem           // the current task function name and description (one of the user-selected items from the MultiSelect list)
     | RequestWorkingDirectory   // the filesystem folder where values specific to the current task function can be written and read
     | RequestSaveFlags          // a set of flags controlling the saving of intermediate results
+    | RequestEvents             // a collection of TaskEvents in binary log format
     with
     override this.ToString() =
         match this with
@@ -166,6 +177,7 @@ type StandardRequest =
         | RequestTaskItem -> "RequestTaskItem"
         | RequestWorkingDirectory -> "RequestWorkingDirectory"
         | RequestSaveFlags -> "RequestSaveFlags"
+        | RequestEvents -> "RequestEvents"
 
 /// Arguments common to all modules
 type StandardArgument =
@@ -174,6 +186,7 @@ type StandardArgument =
     | SetTaskItem of TaskItem option
     | SetWorkingDirectory of DirectoryInfo option
     | SetSaveFlags of SaveFlags option
+    | SetEvents of byte[]
     with
     override this.ToString() =
         match this with
@@ -182,6 +195,7 @@ type StandardArgument =
         | SetTaskItem taskItem -> (sprintf "SetTaskItem: %s" (if taskItem.IsSome then taskItem.Value.ToString() else "None"))
         | SetWorkingDirectory dirInfo -> (sprintf "SetWorkingDirectory: %s" (if dirInfo.IsSome then dirInfo.Value.ToString() else "None"))
         | SetSaveFlags saveFlgs -> (sprintf "SetSaveFlags: %s" (if saveFlgs.IsSome then saveFlgs.Value.ToString() else "None"))
+        | SetEvents data -> (sprintf "SetEvents: (%d bytes)" data.Length)
 
     member this.toTaskResponse() = TaskResponse.SetArgument (StandardShareIntraModule(this))
     member this.toTaskEvent() = TaskEvent.SetArgument(this.toTaskResponse());
@@ -201,6 +215,7 @@ and StandardShareIntraModule(arg: StandardArgument) =
             | SetTaskItem taskItem -> writer.WritePropertyName("SetTaskItem"); JsonSerializer.Serialize(writer, taskItem)
             | SetWorkingDirectory dir -> writer.WritePropertyName("SetWorkingDirectory"); JsonSerializer.Serialize(writer, if dir.IsSome then dir.Value.FullName else "")
             | SetSaveFlags flags -> writer.WritePropertyName("SetSaveFlags"); JsonSerializer.Serialize(writer, if flags.IsSome then flags.Value.ToString() else "")
+            | SetEvents data -> writer.WritePropertyName("SetEvents"); JsonSerializer.Serialize<byte[]>(writer, data)
 
     member this.Argument with get() = arg
 
@@ -235,6 +250,9 @@ and StandardShareIntraModule(arg: StandardArgument) =
                     else
                         None
                 StandardArgument.SetSaveFlags flags
+            | "SetEvents" ->
+                let data = JsonSerializer.Deserialize<byte[]>(jsonString)
+                StandardArgument.SetEvents data
             | _ -> invalidArg "propertyName" (sprintf "Property %s was not recognized" propertyName)
 
         StandardShareIntraModule(standardArgument)

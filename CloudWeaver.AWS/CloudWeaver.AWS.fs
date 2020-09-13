@@ -321,7 +321,7 @@ type TaskArgumentRecord = {
     TranscriptionLanguageCode: string option                            // the language code for a transcription audio source
     TranscriptionVocabularyName: string option                          // the name of an optional transcription vocabulary
 
-    // arguments generated in response to proevious Task function calls
+    // arguments generated in response to previous Task function calls
     TaskItem: TaskItem option
     S3MediaReference: S3MediaReference option                           // a reference to an uploaded media file
     TranscriptionJobName: string option                                 // job name used when starting a new transcription job
@@ -334,6 +334,8 @@ type TaskArgumentRecord = {
     TranslationTargetLanguages: RetainingStack<LanguageCode> option     // the translation target languages
     TranslationTerminologyNames: List<string> option                    // optional list of terminologies
     TranslationSegments: SentenceChunker option                         // chunks of translated text (broken on sentence boundaries)
+
+    Events: byte[] option                                               // a collection of TaskEvents
 }
 type TaskArgumentRecord with
     static member Init () =
@@ -362,6 +364,8 @@ type TaskArgumentRecord with
             TranslationTargetLanguages = None;
             TranslationTerminologyNames = None;
             TranslationSegments = None;
+
+            Events = None;
         }
     member x.InitialArgs = 4
     member x.Update response =
@@ -393,6 +397,7 @@ type TaskArgumentRecord with
                 | SetTaskIdentifier taskId -> { x with TaskIdentifier = taskId }
                 | SetWorkingDirectory workingDirectory -> { x with WorkingDirectory = workingDirectory }
                 | SetSaveFlags saveFlags -> { x with SaveFlags = saveFlags}
+                | SetEvents data -> { x with Events = Some(data) }
             | _ -> x    // the request is not of type AWSShareIntraModule or StandardShareIntraModule therefore don't process it
 
         | _ -> invalidArg "response" "Expected SetArgument in AWSTaskArgumentRecord Update method"

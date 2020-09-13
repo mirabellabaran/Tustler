@@ -133,7 +133,7 @@ namespace Tustler.UserControls
             agent = new Agent(knownArguments, false);
 
             agent.NewUIResponse += Agent_NewUIResponse;
-            agent.SaveArguments += Agent_SaveArguments;
+            agent.SaveEvents += Agent_SaveEvents;
             agent.CallTask += Agent_CallTask;
             agent.Error += Agent_Error;
         }
@@ -165,9 +165,9 @@ namespace Tustler.UserControls
         }
 
         /// <summary>
-        /// Serialize all arguments set on the event stack for later restore
+        /// Serialize all events (or just all SetArgument events) on the event stack for later restore
         /// </summary>
-        private void SaveArguments(TaskEvent[] events)
+        private void SaveArgumentsAsJSON(TaskEvent[] events)
         {
             var taskFolderPath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.TaskSpecifier.TaskName);
             if (!Directory.Exists(taskFolderPath))
@@ -192,6 +192,69 @@ namespace Tustler.UserControls
             {
                 File.WriteAllBytes(serializedDataPath, newData);
             }
+        }
+
+        private void SaveArgumentsAsBinary(TaskEvent[] events)
+        {
+
+        }
+
+        private async Task LogEventsAsync()
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                var unloggedEvents = agent.SerializeUnloggedEventsAsBytes();
+
+                if (logFile is null)
+                {
+                    var logFileName = $"{DateTime.Now.Ticks}-{LogFileName}";
+                    var logFilePath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.RootTaskName, logFileName);
+                    logFile = File.Open(logFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+                }
+
+                foreach (var data in unloggedEvents)
+                {
+                    var header = BitConverter.GetBytes(data.Length);
+                    logFile.Write(header, 0, header.Length);
+                    logFile.Write(data, 0, data.Length);
+                }
+                logFile.Flush();
+            });
+        }
+
+        private void UnLogEvents(string logFilePath)
+        {
+            var blocks = new List<byte[]>(30);
+
+            using (var localReadLogFile = File.Open(logFilePath, FileMode.Open, FileAccess.Read, FileShare.None))
+            {
+                var buffer = new byte[1024];
+                var span = new Span<byte>(buffer);
+                var bytesRemaining = localReadLogFile.Length;
+
+                while (bytesRemaining > 0)
+                {
+                    var n = localReadLogFile.Read(buffer, 0, 4);
+                    var slice = span.Slice(0, 4);
+                    var blockLength = BitConverter.ToInt32(slice);
+                    if (blockLength < 1024)
+                    {
+                        n += localReadLogFile.Read(buffer, 0, blockLength);
+                        slice = span.Slice(0, blockLength);
+                        blocks.Add(slice.ToArray());
+                    }
+
+                    if (n == 0)
+                        break;
+
+                    bytesRemaining -= n;
+                }
+
+                localReadLogFile.Close();
+            }
+
+            var loggedEvents = Serialization.DeserializeEventsFromBytes(blocks, Helpers.ModuleResolver.ModuleLookup);
+            agent.ContinueWith(loggedEvents);
         }
 
         private void StartTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -344,64 +407,6 @@ namespace Tustler.UserControls
             }
         }
 
-        private async Task LogEventsAsync()
-        {
-            await Dispatcher.InvokeAsync(() =>
-            {
-                var unloggedEvents = agent.SerializeUnloggedEventsAsBytes();
-
-                if (logFile is null)
-                {
-                    var logFileName = $"{DateTime.Now.Ticks}-{LogFileName}";
-                    var logFilePath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.RootTaskName, logFileName);
-                    logFile = File.Open(logFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
-                }
-
-                foreach (var data in unloggedEvents)
-                {
-                    var header = BitConverter.GetBytes(data.Length);
-                    logFile.Write(header, 0, header.Length);
-                    logFile.Write(data, 0, data.Length);
-                }
-                logFile.Flush();
-            });
-        }
-
-        private void UnLogEvents(string logFilePath)
-        {
-            var blocks = new List<byte[]>(30);
-
-            using (var localReadLogFile = File.Open(logFilePath, FileMode.Open, FileAccess.Read, FileShare.None))
-            {
-                var buffer = new byte[1024];
-                var span = new Span<byte>(buffer);
-                var bytesRemaining = localReadLogFile.Length;
-
-                while (bytesRemaining > 0)
-                {
-                    var n = localReadLogFile.Read(buffer, 0, 4);
-                    var slice = span.Slice(0, 4);
-                    var blockLength = BitConverter.ToInt32(slice);
-                    if (blockLength < 1024)
-                    {
-                        n += localReadLogFile.Read(buffer, 0, blockLength);
-                        slice = span.Slice(0, blockLength);
-                        blocks.Add(slice.ToArray());
-                    }
-
-                    if (n == 0)
-                        break;
-
-                    bytesRemaining -= n;
-                }
-
-                localReadLogFile.Close();
-            }
-
-            var loggedEvents = Serialization.DeserializeEventsFromBytes(blocks, Helpers.ModuleResolver.ModuleLookup);
-            agent.ContinueWith(loggedEvents);
-        }
-
         private async void Agent_NewUIResponse(object? sender, TaskResponse response)
         {
             await Dispatcher.InvokeAsync(() =>
@@ -411,13 +416,13 @@ namespace Tustler.UserControls
             });
         }
 
-        private async void Agent_SaveArguments(object? sender, TaskEvent[] events)
+        private async void Agent_SaveEvents(object? sender, TaskEvent[] events)
         {
             await Dispatcher.InvokeAsync(() =>
             {
                 // by the time this is invoked, the events stack may be in the process of being modified via new incoming responses
                 // therefore pass a copy to iterate over
-                SaveArguments(events);
+                SaveArgumentsAsJSON(events);
             });
         }
 
