@@ -100,8 +100,11 @@ namespace Tustler
         private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             Exception ex = e.ExceptionObject as Exception;
-
             log.Error($"CurrentDomain_UnhandledException: IsTerminating = {e.IsTerminating}", ex);
+
+            var taskLogger = ServiceProvider.GetService<TaskLogger>();
+            taskLogger.Dispose();
+
             Application.Current.Shutdown();
         }
     }
