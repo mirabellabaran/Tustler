@@ -11,6 +11,7 @@ open System.IO
 open AWSInterface
 open System.Text.RegularExpressions
 open System.Threading.Tasks
+open System.Text.Json
 
 [<CloudWeaverTaskFunctionModule>]
 module public Tasks =
@@ -42,6 +43,7 @@ module public Tasks =
                         | SetTranscriptionVocabularyName _ -> Some(AWSRequestIntraModule(RequestTranscriptionVocabularyName) :> IRequestIntraModule)
                         | SetTranslationTerminologyNames _ -> Some(AWSRequestIntraModule(RequestTranslationTerminologyNames) :> IRequestIntraModule)
                         | SetTranslationSegments _ -> Some(AWSRequestIntraModule(RequestTranslationSegments) :> IRequestIntraModule)
+                        | SetSubtitleFilePath _ -> Some(AWSRequestIntraModule(RequestSubtitleFilePath) :> IRequestIntraModule)
 
                         // ignore: these are resolved internally within a task function (therefore no Request is ever generated)
                         | SetBucketsModel _ -> None
@@ -53,7 +55,11 @@ module public Tasks =
                         | SetTaskItem _ -> Some(StandardRequestIntraModule(RequestTaskItem) :> IRequestIntraModule)
                         | SetWorkingDirectory _ -> Some(StandardRequestIntraModule(RequestWorkingDirectory) :> IRequestIntraModule)
                         | SetSaveFlags _ -> Some(StandardRequestIntraModule(RequestSaveFlags) :> IRequestIntraModule)
-                        | SetEvents _ -> Some(StandardRequestIntraModule(RequestEvents) :> IRequestIntraModule)
+                        | SetJsonEvents _ -> Some(StandardRequestIntraModule(RequestJsonEvents) :> IRequestIntraModule)
+                        | SetLogFormatEvents _ -> Some(StandardRequestIntraModule(RequestLogFormatEvents) :> IRequestIntraModule)
+                        | SetJsonFilePath _ -> Some(StandardRequestIntraModule(RequestJsonFilePath) :> IRequestIntraModule)
+                        | SetLogFormatFilePath _ -> Some(StandardRequestIntraModule(RequestLogFormatFilePath) :> IRequestIntraModule)
+
                     | _ -> None     // ignore request types from other modules
                 | _ -> None
             )
@@ -598,6 +604,7 @@ module public Tasks =
         let createSubTitles argsRecord =
             let notifications = argsRecord.Notifications.Value
             let transcriptJSON = argsRecord.TranscriptJSON.Value
+            let subtitleFilePath = argsRecord.SubtitleFilePath.Value
 
             seq {
                 let timingData = TustlerAWSLib.Utilities.TranscriptParser.ParseWordTimingData(transcriptJSON, notifications) |> Async.AwaitTask |> Async.RunSynchronously
@@ -607,8 +614,7 @@ module public Tasks =
                 let subTitles = makeSubtitles timingData
                 // TODO remove spaces before commas; deal with ellipses and other special cases; split sentences that run too long
 
-                //if not (isNull defaultTranscript) then
-                //    yield (AWSArgument.SetTranscriptionDefaultTranscript defaultTranscript).toSetArgumentTaskResponse()
+                File.WriteAllLines(subtitleFilePath.FullName, subTitles)
 
                 yield TaskResponse.TaskComplete ("Created subtitle data", DateTime.Now)
             }
@@ -617,11 +623,12 @@ module public Tasks =
             let defaultArgs = TaskArgumentRecord.Init ()
             let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
 
-            if resolvedRecord.Notifications.IsSome && resolvedRecord.TranscriptJSON.IsSome then
+            if resolvedRecord.Notifications.IsSome && resolvedRecord.TranscriptJSON.IsSome && resolvedRecord.SubtitleFilePath.IsSome then
                 yield! createSubTitles resolvedRecord
             else
                 yield! resolveByRequest resolvable_arguments [|
                     TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestNotifications));
+                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestSubtitleFilePath));
                     TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptJSON));
                     |]
         }
@@ -751,6 +758,8 @@ module public Tasks =
 
                 // send TaskResponse messages to show progress
                 yield! processChunks translator chunker
+                if notifications.Notifications.Count > 0 then
+                    yield! getNotificationResponse notifications
 
                 yield (AWSArgument.SetTranslationSegments chunker).toSetArgumentTaskResponse()
 
@@ -875,29 +884,84 @@ module public Tasks =
                 |]
         }
 
-    /// Save a collection of events as a JSON document
-    let SaveEventsAsJSON (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    /// Convert the task events in a JSON document file to binary log format and save the result
+    let ConvertJsonLogToLogFormat (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
-        let saveEvents argsRecord =
+        let convertToLogFormat argsRecord =
             let notifications = argsRecord.Notifications.Value
-            let events = argsRecord.Events.Value
+            let jsonFilePath = argsRecord.JsonFilePath.Value
+            let binaryFilePath = argsRecord.LogFormatFilePath.Value
 
-            seq {
+            let logFormatEvents = argsRecord.LogFormatEvents
 
-                //    yield (AWSArgument.SetTranscriptionDefaultTranscript defaultTranscript).toSetArgumentTaskResponse()
+            if logFormatEvents.IsNone then
+                try
+                    let jsonData = File.ReadAllBytes(jsonFilePath.FullName)
+                    let options = new JsonDocumentOptions(AllowTrailingCommas = true)
+                    let document = JsonDocument.Parse(ReadOnlyMemory(jsonData), options)
 
-                yield TaskResponse.TaskComplete ("Saved event data", DateTime.Now)
-            }
+                    seq {
+                        yield TaskResponse.TaskConvertToBinary document
+                    }
+                with
+                | :? JsonException as ex ->
+                    seq {
+                        notifications.HandleError("ConvertJsonLogToLogFormat", "Document parsing error", ex)
+                        yield! getNotificationResponse notifications
+                        yield TaskResponse.TaskComplete ("Task completed with errors", DateTime.Now)
+                    }
+            else
+                File.WriteAllBytes(binaryFilePath.FullName, logFormatEvents.Value)
+                seq {
+                    yield TaskResponse.TaskComplete ("Saved event data in binary log format", DateTime.Now)
+                }
 
         seq {
             let defaultArgs = TaskArgumentRecord.Init ()
             let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
 
-            if resolvedRecord.Notifications.IsSome && resolvedRecord.Events.IsSome then
-                yield! saveEvents resolvedRecord
+            if resolvedRecord.Notifications.IsSome && resolvedRecord.JsonFilePath.IsSome && resolvedRecord.LogFormatFilePath.IsSome then
+                yield! convertToLogFormat resolvedRecord
             else
                 yield! resolveByRequest resolvable_arguments [|
                     TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestNotifications));
-                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestEvents));
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestLogFormatFilePath));
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestJsonFilePath));
+                    |]
+        }
+
+    /// Convert the task events in a binary log format file to a JSON document and save the result
+    let ConvertLogFormatToJsonLog (resolvable_arguments: InfiniteList<MaybeResponse>) =
+
+        let convertToJson argsRecord =
+            //let notifications = argsRecord.Notifications.Value
+            let logFormatFilePath = argsRecord.LogFormatFilePath.Value
+            let jsonFilePath = argsRecord.JsonFilePath.Value
+
+            let jsonEvents = argsRecord.JsonEvents
+
+            if jsonEvents.IsNone then
+                let logFormatData = File.ReadAllBytes(logFormatFilePath.FullName)
+
+                seq {
+                    yield TaskResponse.TaskConvertToJson logFormatData
+                }
+            else
+                File.WriteAllBytes(jsonFilePath.FullName, jsonEvents.Value)
+                seq {
+                    yield TaskResponse.TaskComplete ("Saved event data as JSON", DateTime.Now)
+                }
+
+        seq {
+            let defaultArgs = TaskArgumentRecord.Init ()
+            let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+
+            if resolvedRecord.Notifications.IsSome && resolvedRecord.JsonFilePath.IsSome && resolvedRecord.LogFormatFilePath.IsSome then
+                yield! convertToJson resolvedRecord
+            else
+                yield! resolveByRequest resolvable_arguments [|
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestNotifications));
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestJsonFilePath));
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestLogFormatFilePath));
                     |]
         }

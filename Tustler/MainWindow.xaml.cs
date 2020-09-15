@@ -19,6 +19,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
+using Tustler.Helpers;
 using Tustler.Models;
 using Tustler.UserControls;
 using TustlerAWSLib;
@@ -38,6 +39,8 @@ namespace Tustler
         private (TaskFunctionSpecifier specifier, bool hideFromUI)[] taskFunctions;     // all known task functions (with the HideFromUI attribute status)
 
         private readonly AmazonWebServiceInterface awsInterface;
+        private readonly TaskLogger taskLogger;
+
         private bool isCollapsed;  // true if the notifications area is in a collapsed state
 
         public static readonly DependencyProperty IsMockedProperty = DependencyProperty.Register("IsMocked", typeof(bool), typeof(MainWindow), new PropertyMetadata(false, PropertyChangedCallback));
@@ -55,11 +58,13 @@ namespace Tustler
             }
         }
 
-        public MainWindow(AmazonWebServiceInterface awsInterface, RuntimeOptions options)
+        public MainWindow(AmazonWebServiceInterface awsInterface, RuntimeOptions options, TaskLogger logger)
         {
             InitializeComponent();
 
             this.awsInterface = awsInterface;
+            this.taskLogger = logger;
+
             this.taskFunctions = null;
 
             this.IsMocked = (options is object) ? options.IsMocked : false;
@@ -551,11 +556,7 @@ namespace Tustler
                     case "task":
                         var allTaskFunctions = taskFunctions.Select(data => data.specifier).ToArray();
                         var specifier = (initial as TaskFunctionSpecifier);
-                        var uc = new TasksManager(allTaskFunctions, awsInterface)
-                        {
-                            TaskSpecifier = specifier,
-                            RootTaskName = specifier.TaskName
-                        };
+                        var uc = new TasksManager(allTaskFunctions, awsInterface, taskLogger, specifier);
                         panControlsContainer.Children.Add(uc);
                         break;
                 }

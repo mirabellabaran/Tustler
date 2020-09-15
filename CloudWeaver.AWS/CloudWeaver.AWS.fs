@@ -76,6 +76,7 @@ type AWSArgument =
     | SetTranslationTargetLanguages of RetainingStack<LanguageCode>
     | SetTranslationTerminologyNames of List<string>
     | SetTranslationSegments of SentenceChunker
+    | SetSubtitleFilePath of FileInfo
     with
     member this.toSetArgumentTaskResponse() = TaskResponse.SetArgument (AWSShareIntraModule(this))
     member this.toTaskEvent() = TaskEvent.SetArgument(this.toSetArgumentTaskResponse());
@@ -97,6 +98,7 @@ type AWSArgument =
         | SetTranslationTargetLanguages languages -> (sprintf "SetTranslationTargetLanguages: %s" (System.String.Join(", ", (Seq.map (fun (lang:LanguageCode) -> lang.Code) languages))))
         | SetTranslationTerminologyNames terminologyNames -> (sprintf "SetTranslationTerminologyNames: %s" (System.String.Join(", ", terminologyNames)))
         | SetTranslationSegments chunker -> (sprintf "SetTranslationSegments: %s" (chunker.ToString()))
+        | SetSubtitleFilePath fileInfo -> (sprintf "SetSubtitleFilePath: %s" fileInfo.FullName)
 
 
 /// Wrapper for the arguments used by this module
@@ -125,6 +127,7 @@ and AWSShareIntraModule(arg: AWSArgument) =
             | SetTranslationTargetLanguages languages -> writer.WritePropertyName("SetTranslationTargetLanguages"); JsonSerializer.Serialize<IEnumerable<LanguageCode>>(writer, languages)
             | SetTranslationTerminologyNames terminologyNames -> writer.WritePropertyName("SetTranslationTerminologyNames"); JsonSerializer.Serialize<IEnumerable<string>>(writer, terminologyNames)
             | SetTranslationSegments chunker -> writer.WritePropertyName("SetTranslationSegments"); JsonSerializer.Serialize<SentenceChunker>(writer, chunker)
+            | SetSubtitleFilePath fileInfo -> writer.WritePropertyName("SetSubtitleFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
 
     member this.Argument with get() = arg
 
@@ -180,6 +183,13 @@ and AWSShareIntraModule(arg: AWSArgument) =
             | "SetTranslationTerminologyNames" ->
                 let data = JsonSerializer.Deserialize<IEnumerable<string>>(jsonString)
                 AWSArgument.SetTranslationTerminologyNames (new List<string>(data))
+            | "SetTranslationSegments" ->
+                let data = JsonSerializer.Deserialize<SentenceChunker>(jsonString)
+                AWSArgument.SetTranslationSegments data
+            | "SetSubtitleFilePath" ->
+                let path = JsonSerializer.Deserialize<string>(jsonString)
+                let fileInfo = new FileInfo(path)
+                AWSArgument.SetSubtitleFilePath fileInfo
             | _ -> invalidArg "propertyName" (sprintf "Property %s was not recognized" propertyName)
 
         AWSShareIntraModule(awsArgument)
@@ -200,6 +210,7 @@ type AWSRequest =
     | RequestTranslationTargetLanguages
     | RequestTranslationTerminologyNames
     | RequestTranslationSegments
+    | RequestSubtitleFilePath   // the path to a file that stores subtitles
     with
     override this.ToString() =
         match this with
@@ -217,6 +228,7 @@ type AWSRequest =
         | RequestTranslationTargetLanguages -> "RequestTranslationTargetLanguages"
         | RequestTranslationTerminologyNames -> "RequestTranslationTerminologyNames"
         | RequestTranslationSegments -> "RequestTranslationSegments"
+        | RequestSubtitleFilePath -> "RequestSubtitleFilePath"
 
 /// Wrapper for the requests used by this module
 type AWSRequestIntraModule(awsRequest: AWSRequest) =
@@ -335,7 +347,12 @@ type TaskArgumentRecord = {
     TranslationTerminologyNames: List<string> option                    // optional list of terminologies
     TranslationSegments: SentenceChunker option                         // chunks of translated text (broken on sentence boundaries)
 
-    Events: byte[] option                                               // a collection of TaskEvents
+    SubtitleFilePath: FileInfo option                                   // the path to a file storing subtitles
+
+    JsonEvents: byte[] option                                           // an array of bytes representing a collection of TaskEvents in JSON document format
+    LogFormatEvents: byte[] option                                      // an array of bytes representing a collection of TaskEvents in binary log format
+    JsonFilePath: FileInfo option                                       // the path to a file storing TaskEvents in JSON document format
+    LogFormatFilePath: FileInfo option                                  // the path to a file storing TaskEvents in binary log format
 }
 type TaskArgumentRecord with
     static member Init () =
@@ -365,7 +382,12 @@ type TaskArgumentRecord with
             TranslationTerminologyNames = None;
             TranslationSegments = None;
 
-            Events = None;
+            SubtitleFilePath = None;
+
+            JsonEvents = None;
+            LogFormatEvents = None;
+            JsonFilePath = None;
+            LogFormatFilePath = None;
         }
     member x.InitialArgs = 4
     member x.Update response =
@@ -390,6 +412,7 @@ type TaskArgumentRecord with
                 | SetTranslationTargetLanguages languages -> { x with TranslationTargetLanguages = Some(languages) }
                 | SetTranslationTerminologyNames terminologyNames -> { x with TranslationTerminologyNames = Some(terminologyNames) }
                 | SetTranslationSegments chunker -> { x with TranslationSegments = Some(chunker) }
+                | SetSubtitleFilePath fileInfo -> { x with SubtitleFilePath = Some(fileInfo) }
             | :? StandardShareIntraModule as stdRequestIntraModule ->
                 match stdRequestIntraModule.Argument with
                 | SetNotificationsList notifications -> { x with Notifications = Some(notifications) }
@@ -397,7 +420,10 @@ type TaskArgumentRecord with
                 | SetTaskIdentifier taskId -> { x with TaskIdentifier = taskId }
                 | SetWorkingDirectory workingDirectory -> { x with WorkingDirectory = workingDirectory }
                 | SetSaveFlags saveFlags -> { x with SaveFlags = saveFlags}
-                | SetEvents data -> { x with Events = Some(data) }
+                | SetJsonEvents data -> { x with JsonEvents = Some(data) }
+                | SetLogFormatEvents data -> { x with LogFormatEvents = Some(data) }
+                | SetJsonFilePath fileInfo -> { x with JsonFilePath = Some(fileInfo) }
+                | SetLogFormatFilePath fileInfo -> { x with LogFormatFilePath = Some(fileInfo) }
             | _ -> x    // the request is not of type AWSShareIntraModule or StandardShareIntraModule therefore don't process it
 
         | _ -> invalidArg "response" "Expected SetArgument in AWSTaskArgumentRecord Update method"

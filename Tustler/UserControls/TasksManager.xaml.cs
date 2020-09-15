@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Tustler.Helpers;
 using Tustler.Helpers.UIServices;
 using Tustler.Models;
 using Tustler.UserControls.TaskMemberControls;
@@ -35,14 +36,11 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class TasksManager : UserControl
     {
-        private const string LogFileName = "log.bin";
         private const string EventStackArgumentRestoreName = "defaultargs.json";
-
-        private FileStream? logFile;
-        private bool isLoggingEnabled;
 
         private readonly NotificationsList notificationsList;
         private readonly AmazonWebServiceInterface awsInterface;
+        private readonly TaskLogger taskLogger;
 
         private readonly Dictionary<string, TaskFunctionSpecifier> taskFunctionLookup;
         private readonly Queue<TaskFunctionSpecifier> taskQueue;
@@ -81,6 +79,9 @@ namespace Tustler.UserControls
                         "TranslateText" => AWSTasks.TranslateText,
                         "SaveTranslation" => AWSTasks.SaveTranslation,
 
+                        "ConvertJsonLogToLogFormat" => AWSTasks.ConvertJsonLogToLogFormat,
+                        "ConvertLogFormatToJsonLog" => AWSTasks.ConvertLogFormatToJsonLog,
+
                         _ => throw new ArgumentException($"Unknown task name '{taskSpecifier?.TaskName}'"),
                     };
                 }
@@ -93,15 +94,21 @@ namespace Tustler.UserControls
             set { SetValue(TaskSpecifierProperty, value); }
         }
 
-        /// <summary>
-        /// The name of the root task called when this user control is constructed
-        /// </summary>
-        /// <remarks>This remains constant throughout the task run (unlike the TaskSpecifier) and can be used to generate the working directory path</remarks>
-        public string RootTaskName
-        {
-            get;
-            set;
-        }
+        ///// <summary>
+        ///// The name of the root task called when this user control is constructed
+        ///// </summary>
+        ///// <remarks>This remains constant throughout the task run (unlike the TaskSpecifier) and can be used to generate the working directory path</remarks>
+        //public string RootTaskName
+        //{
+        //    get
+        //    {
+        //        return this.RootTaskName;
+        //    }
+        //    set
+        //    {
+        //        RootTaskName = value;
+        //    }
+        //}
 
         public Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> TaskFunction
         {
@@ -109,32 +116,40 @@ namespace Tustler.UserControls
             internal set;
         }
 
-        public TasksManager(TaskFunctionSpecifier[] taskFunctions, AmazonWebServiceInterface awsInterface)
+        public TasksManager(TaskFunctionSpecifier[] taskFunctions, AmazonWebServiceInterface awsInterface, TaskLogger logger, TaskFunctionSpecifier rootSpecifier)
         {
             InitializeComponent();
 
-            this.logFile = null;
-            this.isLoggingEnabled = false;
 
             this.taskFunctionLookup = new Dictionary<string, TaskFunctionSpecifier>(taskFunctions.Select(tfs => new KeyValuePair<string, TaskFunctionSpecifier>(tfs.TaskFullPath, tfs)));
             this.taskQueue = new Queue<TaskFunctionSpecifier>();
 
+            if (awsInterface is null) throw new ArgumentNullException(nameof(awsInterface));
+            if (logger is null) throw new ArgumentNullException(nameof(logger));
+
             this.awsInterface = awsInterface;
+            this.taskLogger = logger;
             this.notificationsList = new NotificationsList();
+
+            this.TaskFunction = AWSTasks.MinimalMethod;
+            this.TaskSpecifier = rootSpecifier;
+            this.taskLogger.StartLogging(this.TaskSpecifier);
 
             KnownArgumentsCollection knownArguments = new KnownArgumentsCollection();
             knownArguments.AddModule(new StandardKnownArguments(notificationsList));
             knownArguments.AddModule(new AWSKnownArguments(awsInterface));
 
             this.taskResponses = new ObservableCollection<TaskResponse>();
-            this.TaskFunction = AWSTasks.MinimalMethod;
-            this.RootTaskName = "MinimalMethod";
+
+            //this.RootTaskName = "MinimalMethod";
 
             agent = new Agent(knownArguments, false);
 
             agent.NewUIResponse += Agent_NewUIResponse;
             agent.SaveEvents += Agent_SaveEvents;
             agent.CallTask += Agent_CallTask;
+            agent.ConvertToJson += Agent_ConvertToJson;
+            agent.ConvertToBinary += Agent_ConvertToBinary;
             agent.Error += Agent_Error;
         }
 
@@ -145,11 +160,7 @@ namespace Tustler.UserControls
 
         private void UserControl_Unloaded(object sender, RoutedEventArgs e)
         {
-            if (logFile is object)
-            {
-                logFile.Close();
-                logFile = null;
-            }
+            taskLogger.Dispose();
         }
 
         private void ShowGlobalMessage(string message, string detail)
@@ -194,66 +205,22 @@ namespace Tustler.UserControls
             }
         }
 
-        private void SaveArgumentsAsBinary(TaskEvent[] events)
-        {
-
-        }
-
         private async Task LogEventsAsync()
         {
             await Dispatcher.InvokeAsync(() =>
             {
                 var unloggedEvents = agent.SerializeUnloggedEventsAsBytes();
 
-                if (logFile is null)
-                {
-                    var logFileName = $"{DateTime.Now.Ticks}-{LogFileName}";
-                    var logFilePath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.RootTaskName, logFileName);
-                    logFile = File.Open(logFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
-                }
-
-                foreach (var data in unloggedEvents)
-                {
-                    var header = BitConverter.GetBytes(data.Length);
-                    logFile.Write(header, 0, header.Length);
-                    logFile.Write(data, 0, data.Length);
-                }
-                logFile.Flush();
+                var data = EventLoggingUtilities.BlockArrayToByteArray(unloggedEvents);
+                this.taskLogger.AddToLog(data);
             });
         }
 
         private void UnLogEvents(string logFilePath)
         {
-            var blocks = new List<byte[]>(30);
-
-            using (var localReadLogFile = File.Open(logFilePath, FileMode.Open, FileAccess.Read, FileShare.None))
-            {
-                var buffer = new byte[1024];
-                var span = new Span<byte>(buffer);
-                var bytesRemaining = localReadLogFile.Length;
-
-                while (bytesRemaining > 0)
-                {
-                    var n = localReadLogFile.Read(buffer, 0, 4);
-                    var slice = span.Slice(0, 4);
-                    var blockLength = BitConverter.ToInt32(slice);
-                    if (blockLength < 1024)
-                    {
-                        n += localReadLogFile.Read(buffer, 0, blockLength);
-                        slice = span.Slice(0, blockLength);
-                        blocks.Add(slice.ToArray());
-                    }
-
-                    if (n == 0)
-                        break;
-
-                    bytesRemaining -= n;
-                }
-
-                localReadLogFile.Close();
-            }
-
-            var loggedEvents = Serialization.DeserializeEventsFromBytes(blocks, Helpers.ModuleResolver.ModuleLookup);
+            var data = File.ReadAllBytes(logFilePath);
+            var blocks = EventLoggingUtilities.ByteArrayToBlockArray(data);
+            var loggedEvents = Serialization.DeserializeEventsFromBytes(blocks, ModuleResolver.ModuleLookup);
             agent.ContinueWith(loggedEvents);
         }
 
@@ -282,7 +249,7 @@ namespace Tustler.UserControls
 
                         using var stream = File.OpenRead(serializedDataPath);
                         using JsonDocument document = JsonDocument.Parse(stream, options);
-                        var taskEvents = Serialization.DeserializeEventsFromJSON(document, Helpers.ModuleResolver.ModuleLookup);
+                        var taskEvents = Serialization.DeserializeEventsFromJSON(document, ModuleResolver.ModuleLookup);
                         agent.AddEvents(taskEvents);
                     }
                 }
@@ -292,15 +259,6 @@ namespace Tustler.UserControls
                 }
 
                 lbTaskResponses.ItemsSource = taskResponses;
-
-                // close the log file
-                if (logFile is object)
-                {
-                    logFile.Close();
-                    logFile = null;
-                }
-
-                this.isLoggingEnabled = TaskSpecifier.IsLoggingEnabled;
 
                 async Task StartNew()
                 {
@@ -328,7 +286,7 @@ namespace Tustler.UserControls
                     await RunTask().ConfigureAwait(false);
                 }
 
-                if (this.isLoggingEnabled)
+                if (this.taskLogger.IsLoggingEnabled)
                 {
                     //var logFilePath = Path.Combine(taskFolderPath, "637354693450070938-log.bin");
                     //var logFilePath = Path.Combine(taskFolderPath, "637354676138930293-log.bin");
@@ -372,7 +330,7 @@ namespace Tustler.UserControls
             var currentTask = new TaskItem(this.TaskSpecifier.ModuleName, this.TaskSpecifier.TaskName, string.Empty);
             await agent.RunTask(currentTask, responseStream).ConfigureAwait(false);
 
-            if (this.isLoggingEnabled)
+            if (this.taskLogger.IsLoggingEnabled)
             {
                 // update the log file
                 await LogEventsAsync().ConfigureAwait(false);
@@ -395,14 +353,11 @@ namespace Tustler.UserControls
             }
             else
             {
-                // task is complete OR waiting on a response to be resolved via the UI (e.g. RequestArgument, TaskMultiSelect)
+                // the task is either complete OR waiting on a response to be resolved via the UI (e.g. RequestArgument, TaskMultiSelect)
+                // if complete then stop logging
                 if (!agent.IsAwaitingResponse)
                 {
-                    if (logFile is object)
-                    {
-                        logFile.Close();
-                        logFile = null;
-                    }
+                    this.taskLogger.StopLogging();
                 }
             }
         }
@@ -434,6 +389,28 @@ namespace Tustler.UserControls
             // Instead, just enqueue the next task specifier and run the task later (see RunTask)
             var taskPath = TaskFunctionSpecifier.FullPathFromTaskItem(task);
             taskQueue.Enqueue(this.taskFunctionLookup[taskPath]);      // will throw if task path is unknown
+        }
+
+        private async void Agent_ConvertToBinary(object? sender, JsonDocument document)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                var taskEvents = Serialization.DeserializeEventsFromJSON(document, ModuleResolver.ModuleLookup);
+                var blocks = Serialization.SerializeEventsAsBytes(taskEvents, 0);
+                var data = EventLoggingUtilities.BlockArrayToByteArray(blocks);
+                agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetLogFormatEvents(data))));
+            });
+        }
+
+        private async void Agent_ConvertToJson(object? sender, byte[] data)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                var blocks = EventLoggingUtilities.ByteArrayToBlockArray(data);
+                var taskEvents = Serialization.DeserializeEventsFromBytes(blocks, ModuleResolver.ModuleLookup);
+                var serializedData = Serialization.SerializeEventsAsJSON(taskEvents);
+                agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetJsonEvents(serializedData))));
+            });
         }
 
         private async void Agent_Error(object? sender, Notification errorInfo)

@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using Tustler.Helpers;
 using Tustler.Models;
 using TustlerAWSLib;
 using TustlerInterfaces;
@@ -75,6 +76,7 @@ namespace Tustler
         private void ConfigureServices(IServiceCollection services)
         {
             // dependent services
+            services.AddSingleton<TaskLogger>();
             services.AddSingleton<RuntimeOptions>();
             services.AddSingleton<AmazonWebServiceInterface>();
             services.AddSingleton<MainWindow>();

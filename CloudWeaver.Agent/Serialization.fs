@@ -103,25 +103,22 @@ module public Serialization =
         
         let options = JsonWriterOptions(Indented = false)
 
-        let unloggedSerializedData =
-            events
-            |> Seq.skip skipCount
-            |> Seq.map (fun event ->
+        events
+        |> Seq.skip skipCount
+        |> Seq.map (fun event ->
 
-                // serialize each event as its own JSON data (not part of the same JSON document)
-                // this is so that the log file can be closed without calling WriteEndObject or WriteEndArray
-                use stream = new MemoryStream()
-                let result = using (new Utf8JsonWriter(stream, options)) (fun writer ->
-                    SerializeEvent event writer
-                    writer.Flush()
-                    stream.ToArray()
-                )
-
-                result
+            // serialize each event as its own JSON data (not part of the same JSON document)
+            // this is so that the log file can be closed without calling WriteEndObject or WriteEndArray
+            use stream = new MemoryStream()
+            let result = using (new Utf8JsonWriter(stream, options)) (fun writer ->
+                SerializeEvent event writer
+                writer.Flush()
+                stream.ToArray()
             )
-            |> Seq.toArray
 
-        unloggedSerializedData
+            result
+        )
+        |> Seq.toArray
 
     /// Serialize the provided events as a JSON document
     let DeserializeEventsFromJSON (document:JsonDocument) moduleLookup =

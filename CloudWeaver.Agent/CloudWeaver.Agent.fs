@@ -18,7 +18,9 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
     let callTaskEvent = new Event<EventHandler<_>, _>()
     let newUIResponseEvent = new Event<EventHandler<_>, _>()
     let saveEventsEvent = new Event<EventHandler<_>, _>()       // save some or all events as a JSON document
-    let snapshotEventsEvent = new Event<EventHandler<_>, _>()       // save all events in binary log format
+    let convertToJsonEvent = new Event<EventHandler<_>, _>()    // convert events in binary log format to JSON document format
+    let convertToBinaryEvent = new Event<EventHandler<_>, _>()  // convert events in JSON document format to binary log format
+
     let errorEvent = new Event<EventHandler<_>, _>()
 
     do
@@ -190,12 +192,10 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
                     )
                     |> Seq.toArray
             saveEventsEvent.Trigger(self, eventsCopy)
-        | TaskResponse.TaskSnapshotEvents events ->
-            snapshotEventsEvent.Trigger(self, events)
-        | TaskResponse.TaskReadJSONFile fileInfo ->
-            ()
-        | TaskResponse.TaskReadLogFile fileInfo ->
-            ()
+        | TaskResponse.TaskConvertToJson data ->
+            convertToJsonEvent.Trigger(self, data)
+        | TaskResponse.TaskConvertToBinary document ->
+            convertToBinaryEvent.Trigger(self, document)
 
         | _ ->
             let pendingUIResponse =
@@ -304,7 +304,10 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
     member this.SaveEvents:IEvent<EventHandler<TaskEvent[]>, TaskEvent[]> = saveEventsEvent.Publish
 
     [<CLIEvent>]
-    member this.SnapshotEvents:IEvent<EventHandler<TaskEvent[]>, TaskEvent[]> = snapshotEventsEvent.Publish
+    member this.ConvertToJson:IEvent<EventHandler<byte[]>, byte[]> = convertToJsonEvent.Publish
+
+    [<CLIEvent>]
+    member this.ConvertToBinary:IEvent<EventHandler<JsonDocument>, JsonDocument> = convertToBinaryEvent.Publish
 
     [<CLIEvent>]
     member this.Error:IEvent<EventHandler<ApplicationErrorInfo>, ApplicationErrorInfo> = errorEvent.Publish

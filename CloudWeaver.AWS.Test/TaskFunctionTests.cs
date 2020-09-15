@@ -490,15 +490,19 @@ namespace CloudWeaver.AWS.Test
         [TestMethod]
         public async Task TestCreateSubTitles()
         {
+            const string TestDataFolderName = "TestData";
             const string transcriptJSONTestFilename = "SallyRide d2a8856b.json";
+            const string subTitleFilename = "test_subtitles.txt";
 
             var taskName = "CreateSubTitles";
             Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.CreateSubTitles;
             var agent = InitializeTest(taskName, WorkingDirectory, null);
 
-            var transcriptJSONTestFilePath = Path.Combine(WorkingDirectory, transcriptJSONTestFilename);
+            var transcriptJSONTestFilePath = Path.Combine(WorkingDirectory, TestDataFolderName, transcriptJSONTestFilename);
             var contents = File.ReadAllBytes(transcriptJSONTestFilePath);
             var jsonData = new ReadOnlyMemory<byte>(contents);
+
+            var subTitleFileInfo = new FileInfo(Path.Combine(WorkingDirectory, TestDataFolderName, subTitleFilename));
 
             var result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
@@ -507,13 +511,133 @@ namespace CloudWeaver.AWS.Test
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestSubtitleFilePath)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetSubtitleFilePath(subTitleFileInfo))));
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestNotifications)" });
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
-            Assert.IsTrue(result.Length == 2);
+            Assert.IsTrue(result.Length == 1);
             Assert.IsTrue(CheckAllStartWith(result, new string[] {
-                    "SetArgument: AWSShareIntraModule(SetTranscriptionDefaultTranscript: You know, Sally Ride is such",
-                    "TaskComplete: Extracted transcript data"
+                    "TaskComplete: Created subtitle data"
+                }));
+
+            var lines = File.ReadAllLines(subTitleFileInfo.FullName);
+            Assert.IsTrue(lines.Length == 7);
+            Assert.IsTrue(CheckAllStartWith(lines, new string[] {
+                    "[1.51] You know , Sally Ride",
+                    "[7.25] She's obviously going",
+                    "[22.88] But Sally is part",
+                    "[29.94] Really showed that",
+                    "[36.94] And then ,",
+                    "[47.72] Just , in example , exemplary legacy",
+                    "[50.06] Ah , that last way beyond her."
+                }));
+        }
+
+        [TestMethod]
+        public async Task TestConvertJsonLogToLogFormat()
+        {
+            const string TestDataFolderName = "TestData";
+
+            const string jsonFileFilename = "test.json";
+            const string logFileFilename = "test-out.bin";
+
+            var taskName = "ConvertJsonLogToLogFormat";
+            Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.ConvertJsonLogToLogFormat;
+            var agent = InitializeTest(taskName, WorkingDirectory, null);
+
+            void Agent_ConvertToBinary(object sender, System.Text.Json.JsonDocument document)
+            {
+                var taskEvents = Serialization.DeserializeEventsFromJSON(document, ModuleResolver.ModuleLookup);
+                var blocks = Serialization.SerializeEventsAsBytes(taskEvents, 0);
+                var data = EventLoggingUtilities.BlockArrayToByteArray(blocks);
+                agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetLogFormatEvents(data))));
+            }
+
+            agent.ConvertToBinary += Agent_ConvertToBinary;
+
+            var jsonFilePath = new FileInfo(Path.Combine(WorkingDirectory, TestDataFolderName, jsonFileFilename));
+            var logFilePath = new FileInfo(Path.Combine(WorkingDirectory, TestDataFolderName, logFileFilename));
+
+            var result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestJsonFilePath)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetJsonFilePath(jsonFilePath))));
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestLogFormatFilePath)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetLogFormatFilePath(logFilePath))));
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestNotifications)" });
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            Assert.IsTrue(CheckAllStartWith(result, new string[] {
+                    "TaskConvertToBinary {document}"
+                }));
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            Assert.IsTrue(CheckAllStartWith(result, new string[] {
+                    "TaskComplete: Saved event data in binary log format"
+                }));
+        }
+
+        [TestMethod]
+        public async Task TestConvertLogFormatToJsonLog()
+        {
+            const string TestDataFolderName = "TestData";
+
+            const string logFileFilename = "test.bin";
+            const string jsonFileFilename = "test-out.json";
+
+            var taskName = "ConvertLogFormatToJsonLog";
+            Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.ConvertLogFormatToJsonLog;
+            var agent = InitializeTest(taskName, WorkingDirectory, null);
+
+            void Agent_ConvertToJson(object sender, byte[] data)
+            {
+                var blocks = EventLoggingUtilities.ByteArrayToBlockArray(data);
+                var taskEvents = Serialization.DeserializeEventsFromBytes(blocks, ModuleResolver.ModuleLookup);
+                var serializedData = Serialization.SerializeEventsAsJSON(taskEvents);
+                agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetJsonEvents(serializedData))));
+            }
+
+            agent.ConvertToJson += Agent_ConvertToJson;
+
+            var jsonFilePath = new FileInfo(Path.Combine(WorkingDirectory, TestDataFolderName, jsonFileFilename));
+            var logFilePath = new FileInfo(Path.Combine(WorkingDirectory, TestDataFolderName, logFileFilename));
+
+            var result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestLogFormatFilePath)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetLogFormatFilePath(logFilePath))));
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestJsonFilePath)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetJsonFilePath(jsonFilePath))));
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestNotifications)" });
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            Assert.IsTrue(CheckAllStartWith(result, new string[] {
+                    "TaskConvertToJson: (5146 bytes)"
+                }));
+
+            result = await CallTaskAsync(taskName, taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            Assert.IsTrue(CheckAllStartWith(result, new string[] {
+                    "TaskComplete: Saved event data as JSON"
                 }));
         }
 
