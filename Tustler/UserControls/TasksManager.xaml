@@ -10,7 +10,7 @@
              xmlns:uc="clr-namespace:Tustler.UserControls"
              xmlns:uctask="clr-namespace:Tustler.UserControls.TaskMemberControls"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded" Unloaded="UserControl_Unloaded">
+             d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static uc:TaskCommands.StartTask}" CanExecute="StartTask_CanExecute" Executed="StartTask_Executed" />
         <CommandBinding Command="{x:Static uc:TaskCommands.StartMiniTask}" CanExecute="StartMiniTask_CanExecute" Executed="StartMiniTask_Executed" />
@@ -423,6 +423,14 @@
 
         <DataTemplate x:Key="FileMediaReferenceRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
             <uctask:RequestFileMediaReference Command="{x:Static uc:TaskCommands.UIResponse}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="LogFormatFilePathRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <uctask:RequestFilePath FileExtensionDescription="Binary log format files" FileExtension="bin" Command="{x:Static uc:TaskCommands.UIResponse}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="JsonFilePathRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <uctask:RequestFilePath FileExtensionDescription="JSON files" FileExtension="json" Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
 
         <DataTemplate x:Key="S3MediaReferenceRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">

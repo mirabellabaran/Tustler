@@ -117,9 +117,9 @@ module public Tasks =
 
     // A minimal method that does nothing
     [<HideFromUI>]
-    let MinimalMethod (_args: InfiniteList<MaybeResponse>) = seq { yield TaskResponse.TaskInfo "Minimal method" }
+    let MinimalMethod (queryMode: TaskFunctionQueryMode) (_args: InfiniteList<MaybeResponse>) = seq { yield TaskResponse.TaskInfo "Minimal method" }
 
-    let S3FetchItems (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let S3FetchItems (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         //let getBuckets awsInterface (notifications: NotificationsList) =
         //    S3.getBuckets awsInterface notifications
@@ -176,7 +176,7 @@ module public Tasks =
         }
 
     [<HideFromUI>]
-    let CleanTranscriptionJobHistory (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let CleanTranscriptionJobHistory (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         let hasDeleteableJobs (model: TranscriptionJobsViewModel) =
             let empty =
@@ -248,7 +248,7 @@ module public Tasks =
         }
 
     [<HideFromUI>]
-    let SomeSubTask (_args: InfiniteList<MaybeResponse>) =
+    let SomeSubTask (queryMode: TaskFunctionQueryMode) (_args: InfiniteList<MaybeResponse>) =
 
         seq {
             yield TaskResponse.TaskInfo "Doing SomeSubTask"
@@ -256,7 +256,7 @@ module public Tasks =
             yield TaskResponse.TaskComplete ("Finished SomeSubTask", DateTime.Now)
         }
 
-    let Cleanup (args: InfiniteList<MaybeResponse>) =
+    let Cleanup (queryMode: TaskFunctionQueryMode) (args: InfiniteList<MaybeResponse>) =
 
         seq {
             // show the sub-task names (the TaskName is used for function selection)
@@ -267,7 +267,7 @@ module public Tasks =
         }
 
     [<HideFromUI>]
-    let UploadMediaFile (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let UploadMediaFile (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         let uploadMediaFile argsRecord =
             let awsInterface = argsRecord.AWSInterface.Value
@@ -303,7 +303,7 @@ module public Tasks =
         }
 
     [<HideFromUI>]
-    let StartTranscription (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let StartTranscription (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         let startTranscription argsRecord =
             let awsInterface = argsRecord.AWSInterface.Value
@@ -343,7 +343,7 @@ module public Tasks =
         }
 
     [<HideFromUI>]
-    let MonitorTranscription (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let MonitorTranscription (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         let monitorTranscription argsRecord =
             let awsInterface = argsRecord.AWSInterface.Value
@@ -382,7 +382,7 @@ module public Tasks =
         }
 
     [<HideFromUI>]
-    let DownloadTranscriptFile (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let DownloadTranscriptFile (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         let (|CompiledMatch|_|) pattern input =
             if input = null then None
@@ -460,7 +460,7 @@ module public Tasks =
         }
 
     [<HideFromUI>]
-    let ExtractTranscript (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let ExtractTranscript (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         let extractTranscript argsRecord =
             let notifications = argsRecord.Notifications.Value
@@ -490,7 +490,7 @@ module public Tasks =
         }
 
     [<HideFromUI>]
-    let SaveTranscript (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let SaveTranscript (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         let saveTranscript argsRecord =
             
@@ -529,7 +529,7 @@ module public Tasks =
     /// Upload and transcribe some audio
     /// The function is called multiple times from the UI until all arguments are resolved
     [<EnableLogging>]
-    let TranscribeAudio (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let TranscribeAudio (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
         
         seq {
             let defaultArgs = TaskArgumentRecord.Init ()
@@ -562,7 +562,7 @@ module public Tasks =
         }
 
 
-    let CreateSubTitles (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let CreateSubTitles (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         // Subtitle lines need to:
         //  last for at least three seconds
@@ -635,7 +635,7 @@ module public Tasks =
 
 
     [<HideFromUI>]
-    let TranslateText (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let TranslateText (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         // translate a chunk and return the number of attempts (retries)
         let processChunk (translator: (int * string) -> Task<struct (bool * bool)>) (chunk:KeyValuePair<int, string>) numRetriesLastChunk maxDelayLastChunk =
@@ -793,7 +793,7 @@ module public Tasks =
         }
 
     [<HideFromUI>]
-    let SaveTranslation (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let SaveTranslation (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         let saveTranslation argsRecord =
             let taskId = argsRecord.TaskIdentifier.Value
@@ -847,7 +847,7 @@ module public Tasks =
 
     /// Translate text into multiple languages
     //[<HideFromUI>]
-    let MultiLanguageTranslateText (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let MultiLanguageTranslateText (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
         
         seq {
             let defaultArgs = TaskArgumentRecord.Init ()
@@ -885,7 +885,7 @@ module public Tasks =
         }
 
     /// Convert the task events in a JSON document file to binary log format and save the result
-    let ConvertJsonLogToLogFormat (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let ConvertJsonLogToLogFormat (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         let convertToLogFormat argsRecord =
             let notifications = argsRecord.Notifications.Value
@@ -916,22 +916,26 @@ module public Tasks =
                     yield TaskResponse.TaskComplete ("Saved event data in binary log format", DateTime.Now)
                 }
 
-        seq {
-            let defaultArgs = TaskArgumentRecord.Init ()
-            let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+        match queryMode with
+        | Description -> Seq.singleton (TaskResponse.TaskDescription "Convert a JSON event log into binary log format")
+        | Outputs -> Seq.empty
+        | Invoke ->
+                seq {
+                    let defaultArgs = TaskArgumentRecord.Init ()
+                    let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
 
-            if resolvedRecord.Notifications.IsSome && resolvedRecord.JsonFilePath.IsSome && resolvedRecord.LogFormatFilePath.IsSome then
-                yield! convertToLogFormat resolvedRecord
-            else
-                yield! resolveByRequest resolvable_arguments [|
-                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestNotifications));
-                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestLogFormatFilePath));
-                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestJsonFilePath));
-                    |]
-        }
+                    if resolvedRecord.Notifications.IsSome && resolvedRecord.JsonFilePath.IsSome && resolvedRecord.LogFormatFilePath.IsSome then
+                        yield! convertToLogFormat resolvedRecord
+                    else
+                        yield! resolveByRequest resolvable_arguments [|
+                            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestNotifications));
+                            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestLogFormatFilePath));
+                            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestJsonFilePath));
+                            |]
+                }
 
     /// Convert the task events in a binary log format file to a JSON document and save the result
-    let ConvertLogFormatToJsonLog (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let ConvertLogFormatToJsonLog (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         let convertToJson argsRecord =
             //let notifications = argsRecord.Notifications.Value

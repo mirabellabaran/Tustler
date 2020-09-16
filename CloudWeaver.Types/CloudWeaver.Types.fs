@@ -17,6 +17,11 @@ type EnableLogging() = inherit System.Attribute()
 // an attribute for decorating a Task Function; tells the UI not to show task functions that are decorated with this attribute (those that are called as sub-tasks)
 type HideFromUI() = inherit System.Attribute()
 
+type TaskFunctionQueryMode =
+    | Description               // show a description of the task function
+    | Outputs                   // show the task function outputs
+    | Invoke                    // run the task function and generate outputs
+
 type ModuleTag =
     | Tag of string
     with
@@ -83,8 +88,9 @@ type TaskEvent =
 and
     [<RequireQualifiedAccess>]
     TaskResponse =
-    | TaskInfo of string
-    | TaskComplete of string * DateTime
+    | TaskDescription of string             // show a description of the task function
+    | TaskInfo of string                    // display arbitrary information to the UI
+    | TaskComplete of string * DateTime     // indicate completion of the current (sub)task (with relevant information and a timestamp)
     | TaskPrompt of string                  // prompt the user to continue (a single Continue button is displayed along with the prompt message)
     | TaskSelect of string                  // prompt the user to select an item (this is also a truncation point for subsequent reselection)
     | TaskMultiSelect of IEnumerable<TaskItem>       // user selects zero or more sub-tasks to perform

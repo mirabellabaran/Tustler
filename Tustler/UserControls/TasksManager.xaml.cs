@@ -110,7 +110,7 @@ namespace Tustler.UserControls
         //    }
         //}
 
-        public Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> TaskFunction
+        public Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> TaskFunction
         {
             get;
             internal set;
@@ -156,11 +156,6 @@ namespace Tustler.UserControls
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
             ShowGlobalMessage("Parameter set", $"Task name set to {TaskSpecifier.TaskName}");
-        }
-
-        private void UserControl_Unloaded(object sender, RoutedEventArgs e)
-        {
-            taskLogger.Dispose();
         }
 
         private void ShowGlobalMessage(string message, string detail)
@@ -325,7 +320,7 @@ namespace Tustler.UserControls
             agent.PrepareFunctionArguments(args);
 
             notificationsList.Clear();      // cleared for each function invocation
-            var responseStream = TaskFunction(args);
+            var responseStream = TaskFunction(TaskFunctionQueryMode.Invoke, args);
 
             var currentTask = new TaskItem(this.TaskSpecifier.ModuleName, this.TaskSpecifier.TaskName, string.Empty);
             await agent.RunTask(currentTask, responseStream).ConfigureAwait(false);
@@ -568,6 +563,9 @@ namespace Tustler.UserControls
                     case RequestTranslationTerminologyNames ctrl:
                         ctrl.IsButtonEnabled = false;
                         break;
+                    case RequestFilePath ctrl:
+                        ctrl.IsEnabled = false;
+                        break;
                 }
 
                 // the user has selected an item that sets an argument
@@ -640,6 +638,19 @@ namespace Tustler.UserControls
                     case UITaskArgument.TranslationTerminologyNames translationTerminologyNamesArg:
                         var translationTerminologyNames = new List<string>(translationTerminologyNamesArg.Item);
                         agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationTerminologyNames(translationTerminologyNames))));
+                        break;
+                    case UITaskArgument.FilePath filePathArg:
+                        var fileInfo = filePathArg.Item1;
+                        var extension = filePathArg.Item2;
+                        switch (extension)
+                        {
+                            case "bin":
+                                agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetLogFormatFilePath(fileInfo))));
+                                break;
+                            case "json":
+                                agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetJsonFilePath(fileInfo))));
+                                break;
+                        }
                         break;
                     default:
                         throw new ArgumentException($"RunSelectBucketMiniTask: Unknown argument type");

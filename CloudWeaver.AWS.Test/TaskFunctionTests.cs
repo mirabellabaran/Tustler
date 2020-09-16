@@ -23,7 +23,7 @@ namespace CloudWeaver.AWS.Test
         public async Task TestUploadMediaFile()
         {
             var taskName = "UploadMediaFile";   // used as both the name of the task function and the task identifier
-            Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.UploadMediaFile;
+            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.UploadMediaFile;
             var agent = InitializeTest(taskName, WorkingDirectory, null);
 
             var mediaFilePath = Path.Combine(WorkingDirectory, "SallyRide2.wav");
@@ -60,7 +60,7 @@ namespace CloudWeaver.AWS.Test
         public async Task TestStartTranscription()
         {
             var taskName = "StartTranscription";
-            Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.StartTranscription;
+            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.StartTranscription;
             var agent = InitializeTest(taskName, WorkingDirectory, null);
 
             var vocabularyName = "Bob";
@@ -103,7 +103,7 @@ namespace CloudWeaver.AWS.Test
         public async Task TestMonitorTranscription()
         {
             var taskName = "MonitorTranscription";
-            Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.MonitorTranscription;
+            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.MonitorTranscription;
             var agent = InitializeTest(taskName, WorkingDirectory, null);
 
             var transcriptionJobName = "myJob1";    // first of three mocked jobs
@@ -134,7 +134,7 @@ namespace CloudWeaver.AWS.Test
         public async Task TestDownloadTranscriptFile()
         {
             var taskName = "DownloadTranscriptFile";
-            Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.DownloadTranscriptFile;
+            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.DownloadTranscriptFile;
             var saveFlags = new SaveFlags(new ISaveFlagSet[]
             {
                 new AWSFlagSet(new AWSFlagItem[] {
@@ -186,7 +186,7 @@ namespace CloudWeaver.AWS.Test
             const string transcriptJSONTestFilename = "SallyRide d2a8856b.json";
 
             var taskName = "ExtractTranscript";
-            Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.ExtractTranscript;
+            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.ExtractTranscript;
             var agent = InitializeTest(taskName, WorkingDirectory, null);
 
             var transcriptJSONTestFilePath = Path.Combine(WorkingDirectory, transcriptJSONTestFilename);
@@ -214,7 +214,7 @@ namespace CloudWeaver.AWS.Test
         public async Task TestSaveTranscript()
         {
             var taskName = "SaveTranscript";
-            Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.SaveTranscript;
+            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.SaveTranscript;
             var saveFlags = new SaveFlags(new ISaveFlagSet[]
             {
                 new AWSFlagSet(new AWSFlagItem[] {
@@ -253,7 +253,7 @@ namespace CloudWeaver.AWS.Test
         public async Task TestTranslateText()
         {
             var taskName = "TranslateText";
-            Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.TranslateText;
+            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.TranslateText;
             var agent = InitializeTest(taskName, WorkingDirectory, null);
 
             var languageCodeSource = "en";
@@ -319,7 +319,7 @@ namespace CloudWeaver.AWS.Test
         public async Task TestSaveTranslation()
         {
             var taskName = "SaveTranslation";
-            Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.SaveTranslation;
+            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.SaveTranslation;
             var saveFlags = new SaveFlags(new ISaveFlagSet[]
             {
                 new AWSFlagSet(new AWSFlagItem[] {
@@ -375,7 +375,7 @@ namespace CloudWeaver.AWS.Test
         public async Task TestMultiLanguageTranslateText()
         {
             var taskName = "MultiLanguageTranslateText";
-            Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.MultiLanguageTranslateText;
+            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.MultiLanguageTranslateText;
             var saveFlags = new SaveFlags(new ISaveFlagSet[]
             {
                 new AWSFlagSet(new AWSFlagItem[] {
@@ -406,7 +406,7 @@ namespace CloudWeaver.AWS.Test
                 taskList.Add(task.TaskName);
             };
 
-            static IEnumerable<TaskResponse> PurgeFunction(InfiniteList<MaybeResponse> resolvable_arguments)
+            static IEnumerable<TaskResponse> PurgeFunction(TaskFunctionQueryMode queryMode, InfiniteList<MaybeResponse> resolvable_arguments)
             {
                 // five more TaskComplete responses (six total)
                 return Enumerable.Range(0, 5).Select(i => TaskResponse.NewTaskComplete(i.ToString(), DateTime.Now));
@@ -495,7 +495,7 @@ namespace CloudWeaver.AWS.Test
             const string subTitleFilename = "test_subtitles.txt";
 
             var taskName = "CreateSubTitles";
-            Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.CreateSubTitles;
+            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.CreateSubTitles;
             var agent = InitializeTest(taskName, WorkingDirectory, null);
 
             var transcriptJSONTestFilePath = Path.Combine(WorkingDirectory, TestDataFolderName, transcriptJSONTestFilename);
@@ -546,7 +546,7 @@ namespace CloudWeaver.AWS.Test
             const string logFileFilename = "test-out.bin";
 
             var taskName = "ConvertJsonLogToLogFormat";
-            Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.ConvertJsonLogToLogFormat;
+            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.ConvertJsonLogToLogFormat;
             var agent = InitializeTest(taskName, WorkingDirectory, null);
 
             void Agent_ConvertToBinary(object sender, System.Text.Json.JsonDocument document)
@@ -598,7 +598,7 @@ namespace CloudWeaver.AWS.Test
             const string jsonFileFilename = "test-out.json";
 
             var taskName = "ConvertLogFormatToJsonLog";
-            Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.ConvertLogFormatToJsonLog;
+            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.ConvertLogFormatToJsonLog;
             var agent = InitializeTest(taskName, WorkingDirectory, null);
 
             void Agent_ConvertToJson(object sender, byte[] data)
@@ -664,7 +664,7 @@ namespace CloudWeaver.AWS.Test
             return resultItems.Zip(testItems, (resultItem, testItem) => resultItem.StartsWith(testItem)).All(test => test);
         }
 
-        private static async Task<string[]> CallTaskAsync(string taskName, Func<InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction, Agent agent)
+        private static async Task<string[]> CallTaskAsync(string taskName, Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction, Agent agent)
         {
             // generate an arguments stack (by default an infinite enumerable of Nothing arguments)
             var args = new InfiniteList<MaybeResponse>(MaybeResponse.Nothing);
@@ -673,7 +673,7 @@ namespace CloudWeaver.AWS.Test
             agent.PrepareFunctionArguments(args);
 
             // call the function
-            var responseStream = taskFunction(args);
+            var responseStream = taskFunction(TaskFunctionQueryMode.Invoke, args);
 
             var currentTask = new TaskItem("CloudWeaver.AWS.Tasks", taskName, string.Empty);
 
