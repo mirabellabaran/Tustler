@@ -198,6 +198,7 @@ and AWSShareIntraModule(arg: AWSArgument) =
 type AWSRequest =
     | RequestAWSInterface
     | RequestBucket
+    | RequestBucketsModel
     | RequestFileMediaReference
     | RequestS3MediaReference
     | RequestTranscriptionJobName
@@ -205,6 +206,7 @@ type AWSRequest =
     | RequestTranscriptURI
     | RequestTranscriptionLanguageCode
     | RequestTranscriptionVocabularyName
+    | RequestTranscriptionJobsModel
     | RequestTranscriptionDefaultTranscript
     | RequestTranslationLanguageCodeSource
     | RequestTranslationTargetLanguages
@@ -216,10 +218,12 @@ type AWSRequest =
         match this with
         | RequestAWSInterface -> "RequestAWSInterface"
         | RequestBucket -> "RequestBucket"
+        | RequestBucketsModel -> "RequestBucketsModel"
         | RequestFileMediaReference -> "RequestFileMediaReference"
         | RequestS3MediaReference -> "RequestS3MediaReference"
         | RequestTranscriptionJobName -> "RequestTranscriptionJobName"
         | RequestTranscriptJSON -> "RequestTranscriptJSON"
+        | RequestTranscriptionJobsModel -> "RequestTranscriptionJobsModel"
         | RequestTranscriptionDefaultTranscript -> "RequestTranscriptionDefaultTranscript"
         | RequestTranscriptURI -> "RequestTranscriptURI"
         | RequestTranscriptionLanguageCode -> "RequestTranscriptionLanguageCode"

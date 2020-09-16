@@ -19,6 +19,7 @@ type HideFromUI() = inherit System.Attribute()
 
 type TaskFunctionQueryMode =
     | Description               // show a description of the task function
+    | Inputs                    // show the task function inputs
     | Outputs                   // show the task function outputs
     | Invoke                    // run the task function and generate outputs
 

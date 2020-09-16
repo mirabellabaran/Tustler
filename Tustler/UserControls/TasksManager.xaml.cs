@@ -131,7 +131,7 @@ namespace Tustler.UserControls
             this.taskLogger = logger;
             this.notificationsList = new NotificationsList();
 
-            this.TaskFunction = AWSTasks.MinimalMethod;
+            this.TaskFunction = AWSTasks.MinimalFunction;
             this.TaskSpecifier = rootSpecifier;
             this.taskLogger.StartLogging(this.TaskSpecifier);
 
@@ -141,7 +141,7 @@ namespace Tustler.UserControls
 
             this.taskResponses = new ObservableCollection<TaskResponse>();
 
-            //this.RootTaskName = "MinimalMethod";
+            //this.RootTaskName = "MinimalFunction";
 
             agent = new Agent(knownArguments, false);
 
