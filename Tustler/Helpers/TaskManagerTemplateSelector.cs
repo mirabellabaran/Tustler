@@ -41,8 +41,10 @@ namespace Tustler.Helpers
                         "RequestTranslationLanguageCodeSource" => element.FindResource("TranslationLanguageCodeSourceRequestTemplate") as DataTemplate,
 
                         // Note that the following FilePathRequestTemplates have the same underlying user control
-                        "RequestLogFormatFilePath" => element.FindResource("LogFormatFilePathRequestTemplate") as DataTemplate,
-                        "RequestJsonFilePath" => element.FindResource("JsonFilePathRequestTemplate") as DataTemplate,
+                        "RequestOpenLogFormatFilePath" => element.FindResource("OpenLogFormatFilePathRequestTemplate") as DataTemplate,
+                        "RequestSaveLogFormatFilePath" => element.FindResource("SaveLogFormatFilePathRequestTemplate") as DataTemplate,
+                        "RequestOpenJsonFilePath" => element.FindResource("OpenJsonFilePathRequestTemplate") as DataTemplate,
+                        "RequestSaveJsonFilePath" => element.FindResource("SaveJsonFilePathRequestTemplate") as DataTemplate,
 
                         _ => null
                     };

@@ -215,7 +215,7 @@ namespace Tustler.UserControls
         {
             var data = File.ReadAllBytes(logFilePath);
             var blocks = EventLoggingUtilities.ByteArrayToBlockArray(data);
-            var loggedEvents = Serialization.DeserializeEventsFromBytes(blocks, ModuleResolver.ModuleLookup);
+            var loggedEvents = Serialization.DeserializeEventsFromBytes(blocks);
             agent.ContinueWith(loggedEvents);
         }
 
@@ -244,7 +244,7 @@ namespace Tustler.UserControls
 
                         using var stream = File.OpenRead(serializedDataPath);
                         using JsonDocument document = JsonDocument.Parse(stream, options);
-                        var taskEvents = Serialization.DeserializeEventsFromJSON(document, ModuleResolver.ModuleLookup);
+                        var taskEvents = Serialization.DeserializeEventsFromJSON(document);
                         agent.AddEvents(taskEvents);
                     }
                 }
@@ -390,7 +390,7 @@ namespace Tustler.UserControls
         {
             await Dispatcher.InvokeAsync(() =>
             {
-                var taskEvents = Serialization.DeserializeEventsFromJSON(document, ModuleResolver.ModuleLookup);
+                var taskEvents = Serialization.DeserializeEventsFromJSON(document);
                 var blocks = Serialization.SerializeEventsAsBytes(taskEvents, 0);
                 var data = EventLoggingUtilities.BlockArrayToByteArray(blocks);
                 agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetLogFormatEvents(data))));
@@ -402,7 +402,7 @@ namespace Tustler.UserControls
             await Dispatcher.InvokeAsync(() =>
             {
                 var blocks = EventLoggingUtilities.ByteArrayToBlockArray(data);
-                var taskEvents = Serialization.DeserializeEventsFromBytes(blocks, ModuleResolver.ModuleLookup);
+                var taskEvents = Serialization.DeserializeEventsFromBytes(blocks);
                 var serializedData = Serialization.SerializeEventsAsJSON(taskEvents);
                 agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetJsonEvents(serializedData))));
             });
@@ -564,7 +564,7 @@ namespace Tustler.UserControls
                         ctrl.IsButtonEnabled = false;
                         break;
                     case RequestFilePath ctrl:
-                        ctrl.IsEnabled = false;
+                        ctrl.IsButtonEnabled = false;
                         break;
                 }
 
@@ -607,10 +607,6 @@ namespace Tustler.UserControls
                         var bucket = bucketArg.Item;
                         agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetBucket(bucket))));
                         break;
-                    //case UITaskArgument.FilePath filePathArg:
-                    //    var filePath = filePathArg.Item;
-                    //    agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetFilePath(filePath))));
-                    //    break;
                     case UITaskArgument.FileMediaReference mediaReferenceArg:
                         var mediaReference = mediaReferenceArg.Item;
                         agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetFileMediaReference(mediaReference))));
@@ -642,15 +638,24 @@ namespace Tustler.UserControls
                     case UITaskArgument.FilePath filePathArg:
                         var fileInfo = filePathArg.Item1;
                         var extension = filePathArg.Item2;
-                        switch (extension)
+                        var pickerMode = filePathArg.Item3;
+                        var arg = extension switch
                         {
-                            case "bin":
-                                agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetLogFormatFilePath(fileInfo))));
-                                break;
-                            case "json":
-                                agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetJsonFilePath(fileInfo))));
-                                break;
-                        }
+                            "bin" => pickerMode.Tag switch
+                            {
+                                FilePickerMode.Tags.Open => StandardArgument.NewSetOpenLogFormatFilePath(fileInfo),
+                                FilePickerMode.Tags.Save => StandardArgument.NewSetSaveLogFormatFilePath(fileInfo),
+                                _ => throw new NotImplementedException(),
+                            },
+                            "json" => pickerMode.Tag switch
+                            {
+                                FilePickerMode.Tags.Open => StandardArgument.NewSetOpenJsonFilePath(fileInfo),
+                                FilePickerMode.Tags.Save => StandardArgument.NewSetSaveJsonFilePath(fileInfo),
+                                _ => throw new NotImplementedException(),
+                            },
+                            _ => throw new NotImplementedException(),
+                        };
+                        agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(arg)));
                         break;
                     default:
                         throw new ArgumentException($"RunSelectBucketMiniTask: Unknown argument type");

@@ -426,8 +426,10 @@ type TaskArgumentRecord with
                 | SetSaveFlags saveFlags -> { x with SaveFlags = saveFlags}
                 | SetJsonEvents data -> { x with JsonEvents = Some(data) }
                 | SetLogFormatEvents data -> { x with LogFormatEvents = Some(data) }
-                | SetJsonFilePath fileInfo -> { x with JsonFilePath = Some(fileInfo) }
-                | SetLogFormatFilePath fileInfo -> { x with LogFormatFilePath = Some(fileInfo) }
+                | SetOpenJsonFilePath fileInfo -> { x with JsonFilePath = Some(fileInfo) }
+                | SetSaveJsonFilePath fileInfo -> { x with JsonFilePath = Some(fileInfo) }
+                | SetOpenLogFormatFilePath fileInfo -> { x with LogFormatFilePath = Some(fileInfo) }
+                | SetSaveLogFormatFilePath fileInfo -> { x with LogFormatFilePath = Some(fileInfo) }
             | _ -> x    // the request is not of type AWSShareIntraModule or StandardShareIntraModule therefore don't process it
 
         | _ -> invalidArg "response" "Expected SetArgument in AWSTaskArgumentRecord Update method"

@@ -425,12 +425,20 @@
             <uctask:RequestFileMediaReference Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
 
-        <DataTemplate x:Key="LogFormatFilePathRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
-            <uctask:RequestFilePath FileExtensionDescription="Binary log format files" FileExtension="bin" Command="{x:Static uc:TaskCommands.UIResponse}" />
+        <DataTemplate x:Key="OpenLogFormatFilePathRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <uctask:RequestFilePath PickerMode="Open" FileExtensionDescription="Binary log format files" FileExtension="bin" Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
 
-        <DataTemplate x:Key="JsonFilePathRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
-            <uctask:RequestFilePath FileExtensionDescription="JSON files" FileExtension="json" Command="{x:Static uc:TaskCommands.UIResponse}" />
+        <DataTemplate x:Key="SaveLogFormatFilePathRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <uctask:RequestFilePath PickerMode="Save" FileExtensionDescription="Binary log format files" FileExtension="bin" Command="{x:Static uc:TaskCommands.UIResponse}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="OpenJsonFilePathRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <uctask:RequestFilePath PickerMode="Open" FileExtensionDescription="JSON files" FileExtension="json" Command="{x:Static uc:TaskCommands.UIResponse}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="SaveJsonFilePathRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">
+            <uctask:RequestFilePath PickerMode="Save" FileExtensionDescription="JSON files" FileExtension="json" Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
 
         <DataTemplate x:Key="S3MediaReferenceRequestTemplate" DataType="{x:Type fsharp:TaskResponse}">

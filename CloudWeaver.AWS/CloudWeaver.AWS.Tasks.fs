@@ -57,8 +57,10 @@ module public Tasks =
                         | SetSaveFlags _ -> Some(StandardRequestIntraModule(RequestSaveFlags) :> IRequestIntraModule)
                         | SetJsonEvents _ -> Some(StandardRequestIntraModule(RequestJsonEvents) :> IRequestIntraModule)
                         | SetLogFormatEvents _ -> Some(StandardRequestIntraModule(RequestLogFormatEvents) :> IRequestIntraModule)
-                        | SetJsonFilePath _ -> Some(StandardRequestIntraModule(RequestJsonFilePath) :> IRequestIntraModule)
-                        | SetLogFormatFilePath _ -> Some(StandardRequestIntraModule(RequestLogFormatFilePath) :> IRequestIntraModule)
+                        | SetOpenJsonFilePath _ -> Some(StandardRequestIntraModule(RequestOpenJsonFilePath) :> IRequestIntraModule)
+                        | SetSaveJsonFilePath _ -> Some(StandardRequestIntraModule(RequestSaveJsonFilePath) :> IRequestIntraModule)
+                        | SetOpenLogFormatFilePath _ -> Some(StandardRequestIntraModule(RequestOpenLogFormatFilePath) :> IRequestIntraModule)
+                        | SetSaveLogFormatFilePath _ -> Some(StandardRequestIntraModule(RequestSaveLogFormatFilePath) :> IRequestIntraModule)
 
                     | _ -> None     // ignore request types from other modules
                 | _ -> None
@@ -1027,8 +1029,8 @@ module public Tasks =
 
         let inputs = [|
             TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestNotifications));
-            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestLogFormatFilePath));
-            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestJsonFilePath));
+            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveLogFormatFilePath));
+            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestOpenJsonFilePath));
             |]
 
         match queryMode with
@@ -1070,8 +1072,8 @@ module public Tasks =
 
         let inputs = [|
             TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestNotifications));
-            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestJsonFilePath));
-            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestLogFormatFilePath));
+            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveJsonFilePath));
+            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestOpenLogFormatFilePath));
             |]
 
         match queryMode with

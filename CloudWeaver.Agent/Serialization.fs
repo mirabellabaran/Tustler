@@ -34,7 +34,7 @@ module public Serialization =
 
         writer.WriteEndObject()
 
-    let private DeserializeEvent (serializedTaskEvent: JsonElement) (moduleLookup: Func<string, Func<string, string, IShareIntraModule>>) =
+    let private DeserializeEvent (serializedTaskEvent: JsonElement) =
         let mutable taskEvent = None
 
         serializedTaskEvent.EnumerateObject()
@@ -46,7 +46,7 @@ module public Serialization =
             | "TaskEvent.InvokingFunction" -> taskEvent <- Some(TaskEvent.InvokingFunction); None
             | "TaskEvent.SetArgument" ->
                 if acc.IsSome then
-                    let resolveProperty = moduleLookup.Invoke(acc.Value)
+                    let resolveProperty = ModuleResolver.ModuleLookup(acc.Value)
                     let wrappedArg =
                         property.Value.EnumerateObject()
                         |> Seq.map (fun property -> resolveProperty.Invoke(property.Name, property.Value.GetRawText()))
@@ -121,7 +121,7 @@ module public Serialization =
         |> Seq.toArray
 
     /// Serialize the provided events as a JSON document
-    let DeserializeEventsFromJSON (document:JsonDocument) moduleLookup =
+    let DeserializeEventsFromJSON (document:JsonDocument) =
 
         document.RootElement.EnumerateObject()
         |> Seq.map (fun childProperty ->
@@ -129,7 +129,7 @@ module public Serialization =
             | "Items" ->
                 childProperty.Value.EnumerateArray()
                 |> Seq.map (fun arrayItem ->
-                    DeserializeEvent arrayItem moduleLookup
+                    DeserializeEvent arrayItem
                 )
                 |> Seq.choose id
             | _ -> invalidOp "Expecting an Items array as first property of the root object"
@@ -139,7 +139,7 @@ module public Serialization =
 
     /// Deserialize the provided events using the specified module resolver to locate the correct Derserialization functions
     /// Note that each block of bytes encodes a standalone JSON document
-    let DeserializeEventsFromBytes (blocks: List<byte[]>) moduleLookup =
+    let DeserializeEventsFromBytes (blocks: List<byte[]>) =
         
         let options = new JsonDocumentOptions(AllowTrailingCommas = true)
 
@@ -149,7 +149,7 @@ module public Serialization =
             use document = JsonDocument.Parse(sequence, options)
 
             // expecting a single child object
-            DeserializeEvent (document.RootElement) moduleLookup
+            DeserializeEvent (document.RootElement)
         )
         |> Seq.choose id
         |> Seq.toArray

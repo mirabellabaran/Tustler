@@ -194,8 +194,10 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
             saveEventsEvent.Trigger(self, eventsCopy)
         | TaskResponse.TaskConvertToJson data ->
             convertToJsonEvent.Trigger(self, data)
+            callTaskEvent.Trigger(self, taskInfo)
         | TaskResponse.TaskConvertToBinary document ->
             convertToBinaryEvent.Trigger(self, document)
+            callTaskEvent.Trigger(self, taskInfo)
 
         | _ ->
             let pendingUIResponse =

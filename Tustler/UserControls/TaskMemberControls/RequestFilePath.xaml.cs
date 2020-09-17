@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,6 +23,12 @@ namespace Tustler.UserControls.TaskMemberControls
     /// </summary>
     public partial class RequestFilePath : UserControl
     {
+        public enum FilePickerMode
+        {
+            Open,
+            Save
+        }
+
         #region IsButtonEnabled DependencyProperty
         public static readonly DependencyProperty IsButtonEnabledProperty =
             DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(RequestFilePath), new PropertyMetadata(true, PropertyChangedCallback));
@@ -92,6 +99,29 @@ namespace Tustler.UserControls.TaskMemberControls
             set
             {
                 SetValue(FileExtensionProperty, value);
+            }
+        }
+        #endregion
+
+        #region FilePickerMode DependencyProperty
+        public static readonly DependencyProperty FilePickerModeProperty =
+            DependencyProperty.Register(
+                "FilePickerMode",
+                typeof(FilePickerMode),
+                typeof(RequestFilePath));
+
+        /// <summary>
+        /// The mode of file picker: Open or Save
+        /// </summary>
+        public FilePickerMode PickerMode
+        {
+            get
+            {
+                return (FilePickerMode) GetValue(FilePickerModeProperty);
+            }
+            set
+            {
+                SetValue(FilePickerModeProperty, value);
             }
         }
         #endregion
@@ -201,6 +231,8 @@ namespace Tustler.UserControls.TaskMemberControls
         public RequestFilePath()
         {
             InitializeComponent();
+
+            LayoutRoot.DataContext = this;      // child elements of LayoutRoot control use this as the context
         }
 
         private void ExecuteCommand()
@@ -225,38 +257,92 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void OpenFilePicker_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var filter = FileExtensionDescription is object && FileExtension is object?
+            static (Nullable<bool> completed, string fileName) GetOpenPickerResult(string? filter, string fileTypeDescription)
+            {
+                OpenFileDialog dlg = new OpenFileDialog
+                {
+                    Title = $"Select a source file {fileTypeDescription}",
+                    Multiselect = false,
+                    InitialDirectory = AppSettings.FileCachePath,
+                    CheckPathExists = true,
+                    Filter = filter
+                };
+
+                return (dlg.ShowDialog(), dlg.FileName);
+            }
+
+            static (Nullable<bool> completed, string fileName) GetSavePickerResult(string? filter, string fileTypeDescription)
+            {
+                SaveFileDialog dlg = new SaveFileDialog
+                {
+                    Title = $"Choose a destination {fileTypeDescription}",
+                    InitialDirectory = AppSettings.FileCachePath,
+                    AddExtension = true,
+                    Filter = filter
+                };
+
+                return (dlg.ShowDialog(), dlg.FileName);
+            }
+
+            var filter = FileExtensionDescription is object && FileExtension is object ?
                 $"{FileExtensionDescription} (*.{FileExtension}) | *.{FileExtension}" : null;   // e.g. All files(*.*) | *.*
 
-            OpenFileDialog dlg = new OpenFileDialog
+            var fileTypeDescriptionArray = FileExtensionDescription is object? FileExtensionDescription.Split(" ").SkipLast(1).ToArray() : Array.Empty<string>();
+            var fileTypeDescription = fileTypeDescriptionArray.Length > 0 ? $"({string.Join(" ", fileTypeDescriptionArray)})" : "";
+
+            // PickerMode defaults to Open; ensure this is set in XAML
+            var (completed, fileName) = PickerMode switch
             {
-                Title = "Choose a file",
-                Multiselect = false,
-                InitialDirectory = AppSettings.FileCachePath,
-                CheckPathExists = true,
-                Filter = filter
+                FilePickerMode.Open => GetOpenPickerResult(filter, fileTypeDescription),
+                FilePickerMode.Save => GetSavePickerResult(filter, fileTypeDescription),
+                _ => throw new NotImplementedException(),
             };
 
-            Nullable<bool> result = dlg.ShowDialog();
-            if (result == true)
+            if (completed.HasValue && completed == true)
             {
-                tbFilePath.Text = dlg.FileName;
+                tbFilePath.Text = fileName;
             }
         }
 
         private void Continue_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = File.Exists(tbFilePath.Text);
+            static bool CheckFilePath(string filePath)
+            {
+                var directoryPath = System.IO.Path.GetDirectoryName(filePath);
+                var fileName = System.IO.Path.GetFileName(filePath);
+                var result = false;
+
+                if (!string.IsNullOrEmpty(filePath) && !string.IsNullOrEmpty(fileName) && Directory.Exists(directoryPath))
+                {
+                    result = true;
+                }
+
+                return result;
+            }
+
+            e.CanExecute = PickerMode switch
+            {
+                FilePickerMode.Open => System.IO.Path.GetExtension(tbFilePath.Text) == $".{FileExtension}" && File.Exists(tbFilePath.Text),
+                FilePickerMode.Save => CheckFilePath(tbFilePath.Text),
+                _ => throw new NotImplementedException(),
+            };
         }
 
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var fileInfo = new FileInfo(tbFilePath.Text);
+            var filePath = System.IO.Path.HasExtension(tbFilePath.Text) ? tbFilePath.Text : System.IO.Path.ChangeExtension(tbFilePath.Text, FileExtension);
+            var fileInfo = new FileInfo(filePath);
+            var pickerMode = PickerMode switch  // the type of this variable is not a simple enum and WPF therefore has no default converter
+            {
+                FilePickerMode.Open => TustlerFSharpPlatform.FilePickerMode.Open,
+                FilePickerMode.Save => TustlerFSharpPlatform.FilePickerMode.Save,
+                _ => throw new NotImplementedException(),
+            };
 
             CommandParameter = new UITaskArguments()
             {
                 Mode = UITaskMode.Select,
-                TaskArguments = new UITaskArgument[] { UITaskArgument.NewFilePath(fileInfo, FileExtension) }
+                TaskArguments = new UITaskArgument[] { UITaskArgument.NewFilePath(fileInfo, FileExtension, pickerMode) }
             };
 
             ExecuteCommand();

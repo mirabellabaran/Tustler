@@ -98,7 +98,6 @@ and
     | TaskSequence of IEnumerable<TaskItem>          // a sequence of tasks that flow from one to the next without any intervening UI
     | TaskContinue of int                               // re-invoke the current function after the specified number of milliseconds
     | TaskSaveEvents of SaveEventsFilter                // save all events (or all argument events) on the event stack as a JSON document for subsequent sessions
-    //| TaskSnapshotEvents of TaskEvent[]                 // save the specified events in binary log format
     | TaskConvertToBinary of JsonDocument               // convert a JSON document to binary log format and set an argument (SetLogFormatEvents)
     | TaskConvertToJson of byte[]                       // convert the log format data to JSON document format and set an argument (SetJsonEvents)
 
@@ -121,6 +120,7 @@ and
                 |> Seq.map mapper
             System.String.Join(", ", strings)
         match this with
+        | TaskDescription str -> (sprintf "TaskDescription: %s" str)
         | TaskInfo str -> (sprintf "TaskInfo: %s" str)
         | TaskComplete (str, dt) -> (sprintf "TaskComplete: %s (%A)" str dt)
         | TaskPrompt str -> (sprintf "TaskPrompt: %s" str)
@@ -129,7 +129,6 @@ and
         | TaskSequence taskItems -> (sprintf "TaskSequence: %s" (System.String.Join(", ", (Seq.map (fun (item: TaskItem) -> item.TaskName) taskItems))))
         | TaskContinue delay -> (sprintf "TaskContinue: %d (ms)" delay)
         | TaskSaveEvents filter -> (sprintf "TaskSaveEvents: %A" filter)
-        //| TaskSnapshotEvents events -> (sprintf "TaskSnapshotEvents (%d events)" events.Length)
         | TaskConvertToBinary _jsonDocument -> "TaskConvertToBinary {document}"
         | TaskConvertToJson data -> (sprintf "TaskConvertToJson: (%d bytes)" data.Length)
         | Notification notification -> (sprintf "Notification: %s" (notification.ToString()))
@@ -177,8 +176,10 @@ type StandardRequest =
     | RequestSaveFlags          // a set of flags controlling the saving of intermediate results
     | RequestJsonEvents         // a byte array representing a collection of TaskEvents in JSON document format
     | RequestLogFormatEvents    // a byte array representing a collection of TaskEvents in binary log format
-    | RequestJsonFilePath       // the path to a file that stores TaskEvents in JSON document format
-    | RequestLogFormatFilePath  // the path to a file that stores TaskEvents in binary log format
+    | RequestOpenJsonFilePath       // the path to a file that stores TaskEvents in JSON document format for open/read
+    | RequestSaveJsonFilePath       // the path to a file that stores TaskEvents in JSON document format for save/write
+    | RequestOpenLogFormatFilePath  // the path to a file that stores TaskEvents in binary log format for open/read
+    | RequestSaveLogFormatFilePath  // the path to a file that stores TaskEvents in binary log format for save/write
     with
     override this.ToString() =
         match this with
@@ -189,8 +190,10 @@ type StandardRequest =
         | RequestSaveFlags -> "RequestSaveFlags"
         | RequestJsonEvents -> "RequestJsonEvents"
         | RequestLogFormatEvents -> "RequestLogFormatEvents"
-        | RequestJsonFilePath -> "RequestJsonFilePath"
-        | RequestLogFormatFilePath -> "RequestLogFormatFilePath"
+        | RequestOpenJsonFilePath -> "RequestOpenJsonFilePath"
+        | RequestSaveJsonFilePath -> "RequestSaveJsonFilePath"
+        | RequestOpenLogFormatFilePath -> "RequestOpenLogFormatFilePath"
+        | RequestSaveLogFormatFilePath -> "RequestSaveLogFormatFilePath"
 
 /// Arguments common to all modules
 type StandardArgument =
@@ -201,8 +204,10 @@ type StandardArgument =
     | SetSaveFlags of SaveFlags option
     | SetJsonEvents of byte[]
     | SetLogFormatEvents of byte[]
-    | SetJsonFilePath of FileInfo
-    | SetLogFormatFilePath of FileInfo
+    | SetOpenJsonFilePath of FileInfo
+    | SetSaveJsonFilePath of FileInfo
+    | SetOpenLogFormatFilePath of FileInfo
+    | SetSaveLogFormatFilePath of FileInfo
     with
     override this.ToString() =
         match this with
@@ -213,8 +218,10 @@ type StandardArgument =
         | SetSaveFlags saveFlgs -> (sprintf "SetSaveFlags: %s" (if saveFlgs.IsSome then saveFlgs.Value.ToString() else "None"))
         | SetJsonEvents data -> (sprintf "SetJsonEvents: (%d bytes)" data.Length)
         | SetLogFormatEvents data -> (sprintf "SetLogFormatEvents: (%d bytes)" data.Length)
-        | SetJsonFilePath fileInfo -> (sprintf "SetJsonFilePath: %s" fileInfo.FullName)
-        | SetLogFormatFilePath fileInfo -> (sprintf "SetLogFormatFilePath: %s" fileInfo.FullName)
+        | SetOpenJsonFilePath fileInfo -> (sprintf "SetOpenJsonFilePath: %s" fileInfo.FullName)
+        | SetSaveJsonFilePath fileInfo -> (sprintf "SetSaveJsonFilePath: %s" fileInfo.FullName)
+        | SetOpenLogFormatFilePath fileInfo -> (sprintf "SetOpenLogFormatFilePath: %s" fileInfo.FullName)
+        | SetSaveLogFormatFilePath fileInfo -> (sprintf "SetSaveLogFormatFilePath: %s" fileInfo.FullName)
 
     member this.toTaskResponse() = TaskResponse.SetArgument (StandardShareIntraModule(this))
     member this.toTaskEvent() = TaskEvent.SetArgument(this.toTaskResponse());
@@ -236,8 +243,10 @@ and StandardShareIntraModule(arg: StandardArgument) =
             | SetSaveFlags flags -> writer.WritePropertyName("SetSaveFlags"); JsonSerializer.Serialize(writer, if flags.IsSome then flags.Value.ToString() else "")
             | SetJsonEvents data -> writer.WritePropertyName("SetJsonEvents"); JsonSerializer.Serialize<byte[]>(writer, data)
             | SetLogFormatEvents data -> writer.WritePropertyName("SetLogFormatEvents"); JsonSerializer.Serialize<byte[]>(writer, data)
-            | SetJsonFilePath fileInfo -> writer.WritePropertyName("SetJsonFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
-            | SetLogFormatFilePath fileInfo -> writer.WritePropertyName("SetLogFormatFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
+            | SetOpenJsonFilePath fileInfo -> writer.WritePropertyName("SetOpenJsonFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
+            | SetSaveJsonFilePath fileInfo -> writer.WritePropertyName("SetSaveJsonFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
+            | SetOpenLogFormatFilePath fileInfo -> writer.WritePropertyName("SetOpenLogFormatFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
+            | SetSaveLogFormatFilePath fileInfo -> writer.WritePropertyName("SetSaveLogFormatFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
 
     member this.Argument with get() = arg
 
@@ -278,14 +287,22 @@ and StandardShareIntraModule(arg: StandardArgument) =
             | "SetLogFormatEvents" ->
                 let data = JsonSerializer.Deserialize<byte[]>(jsonString)
                 StandardArgument.SetLogFormatEvents data
-            | "SetJsonFilePath" ->
+            | "SetOpenJsonFilePath" ->
                 let path = JsonSerializer.Deserialize<string>(jsonString)
                 let fileInfo = new FileInfo(path)
-                StandardArgument.SetJsonFilePath fileInfo
-            | "SetLogFormatFilePath" ->
+                StandardArgument.SetOpenJsonFilePath fileInfo
+            | "SetSaveJsonFilePath" ->
                 let path = JsonSerializer.Deserialize<string>(jsonString)
                 let fileInfo = new FileInfo(path)
-                StandardArgument.SetLogFormatFilePath fileInfo
+                StandardArgument.SetSaveJsonFilePath fileInfo
+            | "SetOpenLogFormatFilePath" ->
+                let path = JsonSerializer.Deserialize<string>(jsonString)
+                let fileInfo = new FileInfo(path)
+                StandardArgument.SetOpenLogFormatFilePath fileInfo
+            | "SetSaveLogFormatFilePath" ->
+                let path = JsonSerializer.Deserialize<string>(jsonString)
+                let fileInfo = new FileInfo(path)
+                StandardArgument.SetSaveLogFormatFilePath fileInfo
 
             | _ -> invalidArg "propertyName" (sprintf "Property %s was not recognized" propertyName)
 

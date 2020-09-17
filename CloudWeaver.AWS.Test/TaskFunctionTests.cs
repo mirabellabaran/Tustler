@@ -365,8 +365,9 @@ namespace CloudWeaver.AWS.Test
             agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationSegments(chunker))));
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
-            Assert.IsTrue(result.Length == 1);
+            Assert.IsTrue(result.Length == 2);
             Assert.IsTrue(CheckAllStartWith(result, new string[] {
+                    "TaskInfo: Working directory is:",
                     "TaskComplete: Saved translation to"
                 }));
         }
@@ -462,13 +463,13 @@ namespace CloudWeaver.AWS.Test
             // call the purge function to exhaust the nested data and task loops
             result = await CallTaskAsync(taskName, PurgeFunction, agent);
             Assert.IsTrue(result.Length == 5);
-            CollectionAssert.AreEqual(result, new string[] {
+            Assert.IsTrue(CheckAllStartWith(result, new string[] {
                 "TaskComplete: 0",
                 "TaskComplete: 1",
                 "TaskComplete: 2",
                 "TaskComplete: 3",
                 "TaskComplete: 4",
-            });
+            }));
 
             // expecting a sequence of calls to MultiLanguageTranslateText as arguments are resolved
             // then a sequence of TranslateText, SaveTranslation for each of the three languages
@@ -551,7 +552,7 @@ namespace CloudWeaver.AWS.Test
 
             void Agent_ConvertToBinary(object sender, System.Text.Json.JsonDocument document)
             {
-                var taskEvents = Serialization.DeserializeEventsFromJSON(document, ModuleResolver.ModuleLookup);
+                var taskEvents = Serialization.DeserializeEventsFromJSON(document);
                 var blocks = Serialization.SerializeEventsAsBytes(taskEvents, 0);
                 var data = EventLoggingUtilities.BlockArrayToByteArray(blocks);
                 agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetLogFormatEvents(data))));
@@ -564,13 +565,13 @@ namespace CloudWeaver.AWS.Test
 
             var result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestJsonFilePath)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetJsonFilePath(jsonFilePath))));
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestOpenJsonFilePath)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetOpenJsonFilePath(jsonFilePath))));
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestLogFormatFilePath)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetLogFormatFilePath(logFilePath))));
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestSaveLogFormatFilePath)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetSaveLogFormatFilePath(logFilePath))));
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
@@ -604,7 +605,7 @@ namespace CloudWeaver.AWS.Test
             void Agent_ConvertToJson(object sender, byte[] data)
             {
                 var blocks = EventLoggingUtilities.ByteArrayToBlockArray(data);
-                var taskEvents = Serialization.DeserializeEventsFromBytes(blocks, ModuleResolver.ModuleLookup);
+                var taskEvents = Serialization.DeserializeEventsFromBytes(blocks);
                 var serializedData = Serialization.SerializeEventsAsJSON(taskEvents);
                 agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetJsonEvents(serializedData))));
             }
@@ -616,13 +617,13 @@ namespace CloudWeaver.AWS.Test
 
             var result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestLogFormatFilePath)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetLogFormatFilePath(logFilePath))));
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestOpenLogFormatFilePath)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetOpenLogFormatFilePath(logFilePath))));
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestJsonFilePath)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetJsonFilePath(jsonFilePath))));
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestSaveJsonFilePath)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetSaveJsonFilePath(jsonFilePath))));
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);

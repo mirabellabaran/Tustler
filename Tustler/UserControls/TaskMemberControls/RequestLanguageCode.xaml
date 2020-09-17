@@ -25,7 +25,7 @@
         </DataTemplate>
     </UserControl.Resources>
 
-    <!-- Note that the DataContext of LayoutRoot has been set to this UserControl -->
+    <!-- Note that the DataContext of LayoutRoot has been set to be this UserControl -->
     <StackPanel x:Name="LayoutRoot" Orientation="Vertical">
         <TextBlock Grid.Row="0" Grid.Column="0">
             <TextBlock.Style>

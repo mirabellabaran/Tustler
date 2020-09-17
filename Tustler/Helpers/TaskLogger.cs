@@ -47,8 +47,12 @@ namespace Tustler.Helpers
 
         public void StopLogging()
         {
-            this.taskSpecifier = null;
-            CloseLogFile();
+            if (this.taskSpecifier is object && IsLoggingEnabled)
+            {
+                this.taskSpecifier = null;
+
+                CloseLogFile();
+            }
         }
 
         public void AddToLog(byte[] data)

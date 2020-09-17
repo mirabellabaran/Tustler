@@ -11,8 +11,23 @@
         <CommandBinding Command="{x:Static uc:FilePathCommands.Continue}" CanExecute="Continue_CanExecute" Executed="Continue_Executed" />
     </UserControl.CommandBindings>
 
-    <StackPanel Orientation="Vertical">
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="Select a local file" Style="{StaticResource TextBlockPrompt}" />
+    <!-- Note that the DataContext of LayoutRoot has been set to be this UserControl -->
+    <StackPanel x:Name="LayoutRoot" Orientation="Vertical">
+        <TextBlock Grid.Row="0" Grid.Column="0">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock" BasedOn="{StaticResource TextBlockPrompt}">
+                    <Setter Property="Text" Value="Select a local file" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Path=PickerMode}" Value="Open">
+                            <Setter Property="Text" Value="Select a source file" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Path=PickerMode}" Value="Save">
+                            <Setter Property="Text" Value="Choose a file destination" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
         <Border BorderBrush="BlanchedAlmond" BorderThickness="5" CornerRadius="10" Margin="10" Padding="10">
             <Grid ShowGridLines="False">
                 <Grid.RowDefinitions>
