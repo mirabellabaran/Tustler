@@ -257,10 +257,10 @@ namespace CloudWeaver.AWS.Test
             var agent = InitializeTest(taskName, WorkingDirectory, null);
 
             var languageCodeSource = "en";
-            var languageTargets = new RetainingStack<TustlerModels.LanguageCode>(
-                new TustlerModels.LanguageCode[] {
+            var languages = new TustlerModels.LanguageCode[] {
                     new TustlerModels.LanguageCode() { Name = "French", Code = "fr" }
-                });
+                }.Select(languageCode => new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(languageCode)));
+            var languageTargets = new RetainingStack(languages);
             var terminologyNames = new List<string>()
             {
                 "Bob"
@@ -328,10 +328,10 @@ namespace CloudWeaver.AWS.Test
             });
             var agent = InitializeTest(taskName, WorkingDirectory, saveFlags);
 
-            var languageTargets = new RetainingStack<TustlerModels.LanguageCode>(
-                new TustlerModels.LanguageCode[] {
+            var languages = new TustlerModels.LanguageCode[] {
                     new TustlerModels.LanguageCode() { Name = "French", Code = "fr" }
-                });
+                }.Select(languageCode => new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(languageCode)));
+            var languageTargets = new RetainingStack(languages);
 
             var transcript = "This is a test transcript. This is a test transcript. This is a test transcript.";
             var translation = "Ceci est une transcription de test.";
@@ -386,12 +386,13 @@ namespace CloudWeaver.AWS.Test
             var agent = InitializeTest(taskName, WorkingDirectory, saveFlags);
 
             var languageCodeSource = "en";
-            var languageTargets = new RetainingStack<TustlerModels.LanguageCode>(
-                 new TustlerModels.LanguageCode[] {
-                                new TustlerModels.LanguageCode() { Name = "French", Code = "fr" },
-                                new TustlerModels.LanguageCode() { Name = "Danish", Code = "da" },
-                                new TustlerModels.LanguageCode() { Name = "German", Code = "de" }
-                 });
+            var languages = new TustlerModels.LanguageCode[] {
+                    new TustlerModels.LanguageCode() { Name = "French", Code = "fr" },
+                    new TustlerModels.LanguageCode() { Name = "Danish", Code = "da" },
+                    new TustlerModels.LanguageCode() { Name = "German", Code = "de" }
+                }.Select(languageCode => new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(languageCode)));
+            var languageTargets = new RetainingStack(languages);
+
             var terminologyNames = new List<string>()
             {
                 "Bob"
@@ -632,7 +633,7 @@ namespace CloudWeaver.AWS.Test
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
             Assert.IsTrue(CheckAllStartWith(result, new string[] {
-                    "TaskConvertToJson: (5146 bytes)"
+                    "TaskConvertToJson: (5868 bytes)"
                 }));
 
             result = await CallTaskAsync(taskName, taskFunction, agent);

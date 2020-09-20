@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="RetainingStack.fs" />
     <Compile Include="CommonUtilities.fs" />
     <Compile Include="SaveFlags.fs" />
     <Compile Include="CloudWeaver.Types.fs" />

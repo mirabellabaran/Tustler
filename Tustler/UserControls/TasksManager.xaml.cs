@@ -281,7 +281,7 @@ namespace Tustler.UserControls
                     await RunTask().ConfigureAwait(false);
                 }
 
-                if (this.taskLogger.IsLoggingEnabled)
+                if (this.taskLogger.IsLoggingEnabled && false)  // MG TODO
                 {
                     //var logFilePath = Path.Combine(taskFolderPath, "637354693450070938-log.bin");
                     //var logFilePath = Path.Combine(taskFolderPath, "637354676138930293-log.bin");
@@ -628,7 +628,8 @@ namespace Tustler.UserControls
                         agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptionVocabularyName(vocabularyName))));
                         break;
                     case UITaskArgument.TranslationTargetLanguages translationTargetLanguagesArg:
-                        var translationTargetLanguages = new RetainingStack<LanguageCode>(translationTargetLanguagesArg.Item);
+                        var languages = translationTargetLanguagesArg.Item.Select(languageCode => new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(languageCode)));
+                        var translationTargetLanguages = new RetainingStack(languages);
                         agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationTargetLanguages(translationTargetLanguages))));
                         break;
                     case UITaskArgument.TranslationTerminologyNames translationTerminologyNamesArg:
@@ -679,20 +680,20 @@ namespace Tustler.UserControls
 
             async Task RunUIResponseForEachIndependantTaskAsync(UITaskArguments parameterInfo)
             {
-                // expecting a single argument (an IEnumerable<MultiSelectArgument>)
+                // expecting a single argument (an IEnumerable<TaskItem>)
                 var subtasks = parameterInfo.TaskArguments.First() switch
                 {
-                    UITaskArgument.ForEach args => new RetainingStack<TaskItem>(args.Item, RetainingStack<TaskItem>.ItemOrdering.Independant),
+                    UITaskArgument.ForEach args => new TaskSequence(args.Item, ItemOrdering.Independant),
                     _ => throw new ArgumentException($"Unknown argument type")
                 };
 
                 // now that the user has made their selections, add those selections to the event source for later reference
                 agent.AddEvent(TaskEvent.NewForEachTask(subtasks));
 
-                // pop the first task item and set an argument on the event source
-                if (subtasks.Count > 0)
+                // start the first sub-task
+                if (subtasks.Remaining > 0)
                 {
-                    agent.StartNewTask(subtasks);       // this will invoke the callback that adds the next task to the queue
+                    agent.StartNewTask(subtasks);       // pop the first task item and set as argument; then invoke the callback that adds the next task to the queue
                     await Dispatcher.InvokeAsync(async () =>
                     {
                         var nextTaskSpecifier = taskQueue.Dequeue();

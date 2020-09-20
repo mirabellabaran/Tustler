@@ -23,9 +23,8 @@ module public Serialization =
                 responseArg.Serialize(writer)
                 writer.WriteEndObject()
             | _ -> invalidArg "event" (sprintf "Unexpected event stack set-argument type: %A" arg)
-        | TaskEvent.ForEachTask stack -> writer.WritePropertyName("TaskEvent.ForEachTask"); JsonSerializer.Serialize(writer, stack)
-        | TaskEvent.ForEachDataItem consumable -> writer.WritePropertyName("TaskEvent.ForEachDataItem"); JsonSerializer.Serialize(writer, consumable)
-            // MG consumable as RetainingStack<T>
+        | TaskEvent.ForEachTask taskSequence -> writer.WritePropertyName("TaskEvent.ForEachTask"); JsonSerializer.Serialize(writer, TaskSequenceSerializationWrapper(taskSequence))
+        | TaskEvent.ForEachDataItem consumable -> writer.WritePropertyName("TaskEvent.ForEachDataItem"); JsonSerializer.Serialize(writer, RetainingStackSerializationWrapper(consumable))
         | TaskEvent.Task taskItem -> writer.WritePropertyName("TaskEvent.Task"); JsonSerializer.Serialize(writer, taskItem)
         | TaskEvent.SelectArgument -> writer.WritePropertyName("TaskEvent.SelectArgument"); JsonSerializer.Serialize(writer, "SelectArgument")
         | TaskEvent.ClearArguments -> writer.WritePropertyName("TaskEvent.ClearArguments"); JsonSerializer.Serialize(writer, "ClearArguments")
@@ -56,13 +55,13 @@ module public Serialization =
                 else
                     invalidOp "Error parsing TaskEvent.SetArgument"
             | "TaskEvent.ForEachTask" ->
-                let taskItems = JsonSerializer.Deserialize<IEnumerable<TaskItem>>(property.Value.GetRawText())
-                let data = RetainingStack(taskItems)
-                taskEvent <- Some(TaskEvent.ForEachTask data); None
+                let wrapper = JsonSerializer.Deserialize<TaskSequenceSerializationWrapper>(property.Value.GetRawText())
+                let taskSequence = wrapper.Unwrap()
+                taskEvent <- Some(TaskEvent.ForEachTask taskSequence); None
             | "TaskEvent.ForEachDataItem" ->
-                let taskItems = JsonSerializer.Deserialize<IEnumerable<TaskItem>>(property.Value.GetRawText())
-                let data = RetainingStack(taskItems)
-                taskEvent <- Some(TaskEvent.ForEachTask data); None
+                let wrapper = JsonSerializer.Deserialize<RetainingStackSerializationWrapper>(property.Value.GetRawText())
+                let consumable = wrapper.Unwrap()
+                taskEvent <- Some(TaskEvent.ForEachDataItem consumable); None
             | "TaskEvent.Task" ->
                 let data = JsonSerializer.Deserialize<TaskItem>(property.Value.GetRawText())
                 taskEvent <- Some(TaskEvent.Task data); None

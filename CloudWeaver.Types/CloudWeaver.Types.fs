@@ -1,9 +1,9 @@
 ﻿namespace CloudWeaver.Types
 
 open TustlerServicesLib
-open TustlerModels
+open System.Collections
 open System.Collections.Generic
-open Microsoft.FSharp.Reflection
+open System.Collections.Immutable
 open System.Text.Json
 open System.IO
 open System
@@ -69,6 +69,129 @@ type TaskItem(moduleName: string, taskName: string, description: string) =
     new() = TaskItem(null, null, null)
     override this.ToString() = sprintf "TaskItem: %s %s %s" this.ModuleName this.TaskName this.Description
 
+/// Specifies whether stack items such as tasks are independant or sequentially dependant
+type ItemOrdering =
+    | Independant       // execution of each item is independant of that of its peers
+    | Sequential        // items are executed sequentially with sequential dependancies
+    with
+    override this.ToString() =
+        match this with
+        | Independant -> "Independant"
+        | Sequential -> "Sequential"
+    static member FromString(serializedRepr) =
+        match serializedRepr with
+        | "Independant" -> Independant
+        | "Sequential" -> Sequential
+        | _ -> invalidArg "serializedRepr" "Unknown ItemOrdering type"
+
+type StandardIterationArgument =
+    | Task of TaskItem
+
+type StandardShareIterationArgument(arg: StandardIterationArgument) =
+    interface IShareIterationArgument with
+        member this.ToString () =
+            match arg with
+            | Task task -> sprintf "StandardShareIterationArgument(Task: %s)" (task.TaskName)
+        member this.Serialize writer =
+            match arg with
+            | Task task -> writer.WritePropertyName("Task"); JsonSerializer.Serialize(writer, task)
+
+type IConsumableTaskSequence =
+    inherit IEnumerable<TaskItem>
+    abstract member Total : int with get
+    abstract member Remaining : int with get
+    abstract member Consume : unit -> IShareIterationArgument   // consume the current item and return the value
+    abstract member Reset : unit -> unit
+    abstract member Ordering : ItemOrdering with get
+    abstract member ConsumeTask : unit -> TaskItem   // consume the current item and return the value
+
+type TaskSequence(tasks: IEnumerable<TaskItem>, ordering: ItemOrdering) =
+
+    do
+        if (isNull tasks) then invalidArg "tasks" "Expecting a non-null value for tasks"
+
+    let _array = tasks.ToImmutableArray()
+    let _stack = Stack<TaskItem>(Seq.rev tasks)  // reversed so that calling Pop() removes items in _array order
+
+    new(items) = TaskSequence(items, ItemOrdering.Sequential)
+
+    /// Get the ordering of items for this instance
+    member this.Ordering with get() = ordering
+
+    /// Get a count of the remaining (consumable) items
+    member this.Remaining with get() = _stack.Count
+
+    /// Get the total count
+    member this.Total with get() = _array.Length
+
+    /// Get the current item (head of stack) without consuming it
+    member this.Current with get() = _stack.Peek()
+
+    /// Consume the current item (head of stack) and return it
+    member this.Pop() = _stack.Pop()
+
+    /// Consume the current item (head of stack)
+    member this.Consume() = _stack.Pop() |> ignore
+
+    /// Refill the stack with the same items used at construction time
+    member this.Reset() =
+
+        _stack.Clear()
+
+        _array
+        |> Seq.rev
+        |> Seq.iter (fun item -> _stack.Push(item))
+
+    override this.ToString() = sprintf "TaskSequence of TaskItem: total=%d; remaining=%d" (_array.Length) (_stack.Count)
+
+    interface IConsumableTaskSequence with
+
+        member this.Total: int = this.Total
+
+        member this.Remaining: int = this.Remaining
+
+        member this.Consume(): IShareIterationArgument = StandardShareIterationArgument(StandardIterationArgument.Task (this.Pop())) :> IShareIterationArgument
+
+        member this.Reset(): unit = this.Reset()
+
+        member this.ConsumeTask(): TaskItem = this.Pop()
+
+        member this.Ordering: ItemOrdering = this.Ordering
+
+    interface IEnumerable<TaskItem> with
+
+        member this.GetEnumerator(): System.Collections.IEnumerator = 
+            (_array :> IEnumerable).GetEnumerator()
+
+        member this.GetEnumerator(): IEnumerator<TaskItem> = 
+            (_array :> IEnumerable<TaskItem>).GetEnumerator()
+
+/// A wrapper for serialization/deserialization: retains the essential property values needed for reconstructing a TaskSequence
+type TaskSequenceSerializationWrapper(ordering, total, remaining, tasks: IEnumerable<TaskItem>) =
+    
+    /// Default constructor for deserialization
+    new() = TaskSequenceSerializationWrapper(ItemOrdering.Sequential.ToString(), 0, 0, Seq.empty)
+
+    new(taskSequence: IConsumableTaskSequence) = TaskSequenceSerializationWrapper(taskSequence.Ordering.ToString(), taskSequence.Total, taskSequence.Remaining, taskSequence)
+
+    member val Ordering = ordering with get, set
+        
+    member val Total = total with get, set
+
+    member val Remaining = remaining with get, set
+
+    member val Tasks: IEnumerable<TaskItem> = tasks with get, set
+
+    member this.Unwrap(): TaskSequence =
+        let ordering = ItemOrdering.FromString(this.Ordering)
+        let taskSequence = new TaskSequence(this.Tasks, ordering)
+        let count = this.Total - this.Remaining
+        for x in 1..count do
+            taskSequence.Pop() |> ignore
+
+        taskSequence
+
+
 type SaveEventsFilter =
     | AllEvents
     | ArgumentsOnly
@@ -78,7 +201,7 @@ type SaveEventsFilter =
 type TaskEvent =
     | InvokingFunction
     | SetArgument of TaskResponse
-    | ForEachTask of RetainingStack<TaskItem>
+    | ForEachTask of IConsumableTaskSequence
     | ForEachDataItem of IConsumable
     | Task of TaskItem     // the name and description of the task
     | SelectArgument

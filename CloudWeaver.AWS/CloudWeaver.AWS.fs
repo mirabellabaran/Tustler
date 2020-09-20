@@ -57,6 +57,67 @@ and AWSShowIntraModule(arg: AWSDisplayValue) =
 
     member this.Argument with get() = arg
 
+/// Used for iterable values (see TaskEvent.ForEach...)
+type AWSIterationArgument =
+    | LanguageCode of LanguageCode
+    | Poop of string
+
+type AWSShareIterationArgument(arg: AWSIterationArgument) =
+    interface IShareIterationArgument with
+        member this.ToString () =
+            match arg with
+            | LanguageCode languageCode -> sprintf "AWSShareIterationArgument(LanguageCode: %s)" (languageCode.Name)
+        member this.Serialize writer =
+            match arg with
+            | LanguageCode languageCode -> writer.WritePropertyName("LanguageCodes"); JsonSerializer.Serialize(writer, languageCode)
+    member this.UnWrap with get() = arg
+
+//module public AWSUnWrap =
+
+//    let unWrapLanguageCode arg =
+//        match arg with
+//        | LanguageCode languageCode -> languageCode
+//        | _ -> invalidArg "arg" "Expecting a languageCode"
+
+//    let unWrap (LanguageCode arg) = arg
+//    let unWrap (Poop arg) = arg
+
+//    let (|LanguageCode|) = function
+//        | LanguageCode code -> code
+//        | Poop poo -> poo
+
+type AWSIterationWrapper(consumable: IConsumable) =
+
+    let getWrapperFrom (consumable: IConsumable) = 
+        match consumable with
+        | :? RetainingStack as stack ->
+            match stack.Current with
+            | :? AWSShareIterationArgument as arg -> arg
+            | _ -> invalidArg "consumable" "Unknown item type for RetainingStack; expecting an AWSShareIterationArgument item"
+        | _ -> invalidArg "consumable" "Unknown IConsumable type; expecting RetainingStack"
+
+    let (| APLanguageCode |) (argWrapper: AWSShareIterationArgument) =
+        match argWrapper.UnWrap with
+        | LanguageCode languageCode -> languageCode
+        | _ -> invalidArg "arg" "Expecting a languageCode"
+
+    let (| APPoop |) (argWrapper: AWSShareIterationArgument) =
+        match argWrapper.UnWrap with
+        | Poop str -> Some(str)
+        | _ -> None
+
+    member this.UnWrap with get() = consumable
+
+    member this.LanguageCode with get() = //(APLanguageCode (getWrapperFrom consumable))
+        match (getWrapperFrom consumable) with
+        | APLanguageCode languageCode -> languageCode
+
+    member this.Poop with get() =
+        match (getWrapperFrom consumable) with
+        | APPoop str -> str
+// TODO build a dict from args keyed by TaskResponse.Request* and use active pattern functions to retrieve strongly typed values in task functions
+
+
 /// Arguments used by this module.
 /// These values are set on the events stack (as TaskEvent SetArgument).
 type AWSArgument =
@@ -73,7 +134,7 @@ type AWSArgument =
     | SetTranscriptionLanguageCode of string
     | SetTranscriptionVocabularyName of string
     | SetTranslationLanguageCodeSource of string
-    | SetTranslationTargetLanguages of RetainingStack<LanguageCode>
+    | SetTranslationTargetLanguages of IConsumable                  /// Used for iterable values (see TaskEvent.ForEach...)
     | SetTranslationTerminologyNames of List<string>
     | SetTranslationSegments of SentenceChunker
     | SetSubtitleFilePath of FileInfo
@@ -95,7 +156,7 @@ type AWSArgument =
         | SetTranscriptionLanguageCode languageCode -> (sprintf "SetTranscriptionLanguageCode: %s" languageCode)
         | SetTranscriptionVocabularyName vocabularyName -> (sprintf "SetTranscriptionVocabularyName: %s" vocabularyName)
         | SetTranslationLanguageCodeSource languageCode -> (sprintf "SetTranslationLanguageCodeSource: %s" languageCode)
-        | SetTranslationTargetLanguages languages -> (sprintf "SetTranslationTargetLanguages: %s" (System.String.Join(", ", (Seq.map (fun (lang:LanguageCode) -> lang.Code) languages))))
+        | SetTranslationTargetLanguages languages -> (sprintf "SetTranslationTargetLanguages: %s" (System.String.Join(", ", (Seq.map (fun (lang) -> lang.ToString) languages))))
         | SetTranslationTerminologyNames terminologyNames -> (sprintf "SetTranslationTerminologyNames: %s" (System.String.Join(", ", terminologyNames)))
         | SetTranslationSegments chunker -> (sprintf "SetTranslationSegments: %s" (chunker.ToString()))
         | SetSubtitleFilePath fileInfo -> (sprintf "SetSubtitleFilePath: %s" fileInfo.FullName)
@@ -124,7 +185,7 @@ and AWSShareIntraModule(arg: AWSArgument) =
             | SetTranscriptionLanguageCode transcriptionLanguageCode -> writer.WritePropertyName("SetTranscriptionLanguageCode"); JsonSerializer.Serialize<string>(writer, transcriptionLanguageCode)
             | SetTranscriptionVocabularyName vocabularyName -> writer.WritePropertyName("SetTranscriptionVocabularyName"); JsonSerializer.Serialize<string>(writer, vocabularyName)
             | SetTranslationLanguageCodeSource translationLanguageCode -> writer.WritePropertyName("SetTranslationLanguageCodeSource"); JsonSerializer.Serialize<string>(writer, translationLanguageCode)
-            | SetTranslationTargetLanguages languages -> writer.WritePropertyName("SetTranslationTargetLanguages"); JsonSerializer.Serialize<IEnumerable<LanguageCode>>(writer, languages)
+            | SetTranslationTargetLanguages languages -> writer.WritePropertyName("SetTranslationTargetLanguages"); JsonSerializer.Serialize<RetainingStackSerializationWrapper>(writer, RetainingStackSerializationWrapper(languages))
             | SetTranslationTerminologyNames terminologyNames -> writer.WritePropertyName("SetTranslationTerminologyNames"); JsonSerializer.Serialize<IEnumerable<string>>(writer, terminologyNames)
             | SetTranslationSegments chunker -> writer.WritePropertyName("SetTranslationSegments"); JsonSerializer.Serialize<SentenceChunker>(writer, chunker)
             | SetSubtitleFilePath fileInfo -> writer.WritePropertyName("SetSubtitleFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
@@ -178,8 +239,9 @@ and AWSShareIntraModule(arg: AWSArgument) =
                 let data = JsonSerializer.Deserialize<string>(jsonString)
                 AWSArgument.SetTranslationLanguageCodeSource data
             | "SetTranslationTargetLanguages" ->
-                let data = JsonSerializer.Deserialize<IEnumerable<LanguageCode>>(jsonString)
-                AWSArgument.SetTranslationTargetLanguages (new RetainingStack<LanguageCode>(data))
+                let wrapper = JsonSerializer.Deserialize<RetainingStackSerializationWrapper>(jsonString)
+                let consumable = wrapper.Unwrap()
+                AWSArgument.SetTranslationTargetLanguages consumable
             | "SetTranslationTerminologyNames" ->
                 let data = JsonSerializer.Deserialize<IEnumerable<string>>(jsonString)
                 AWSArgument.SetTranslationTerminologyNames (new List<string>(data))
@@ -347,7 +409,7 @@ type TaskArgumentRecord = {
     TranscriptURI: string option                                        // location of the transcript for a completed transcription job
 
     TranslationLanguageCodeSource: string option                        // the language code for a translation source text
-    TranslationTargetLanguages: RetainingStack<LanguageCode> option     // the translation target languages
+    TranslationTargetLanguages: AWSIterationWrapper option              // the translation target languages
     TranslationTerminologyNames: List<string> option                    // optional list of terminologies
     TranslationSegments: SentenceChunker option                         // chunks of translated text (broken on sentence boundaries)
 
@@ -413,7 +475,7 @@ type TaskArgumentRecord with
                 | SetTranscriptionLanguageCode transcriptionLanguageCode -> { x with TranscriptionLanguageCode = Some(transcriptionLanguageCode) }
                 | SetTranscriptionVocabularyName vocabularyName -> { x with TranscriptionVocabularyName = Some(vocabularyName) }
                 | SetTranslationLanguageCodeSource translationLanguageCode -> { x with TranslationLanguageCodeSource = Some(translationLanguageCode) }
-                | SetTranslationTargetLanguages languages -> { x with TranslationTargetLanguages = Some(languages) }
+                | SetTranslationTargetLanguages languages -> { x with TranslationTargetLanguages = Some(AWSIterationWrapper(languages)) }
                 | SetTranslationTerminologyNames terminologyNames -> { x with TranslationTerminologyNames = Some(terminologyNames) }
                 | SetTranslationSegments chunker -> { x with TranslationSegments = Some(chunker) }
                 | SetSubtitleFilePath fileInfo -> { x with SubtitleFilePath = Some(fileInfo) }

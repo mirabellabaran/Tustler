@@ -112,14 +112,14 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         | Some(TaskEvent.ForEachDataItem items) -> Some(items)
         | _ -> None
 
-    let startNewTask (self:Agent) (stack:RetainingStack<TaskItem>) =
+    let startNewTask (self:Agent) (stack:IConsumableTaskSequence) =
         // check if task is independant
-        let isIndependantTask = stack.Ordering = RetainingStack<TaskItem>.ItemOrdering.Independant
+        let isIndependantTask = stack.Ordering = ItemOrdering.Independant
         if isIndependantTask then
             // independant tasks cannot share arguments; clear all arguments
             events.Add(TaskEvent.ClearArguments)
 
-        let nextTask = stack.Pop();
+        let nextTask = stack.ConsumeTask();
         events.Add(TaskEvent.Task(nextTask))
 
         // update task item variable
@@ -131,14 +131,14 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         events.Add(TaskEvent.FunctionCompleted)
         let taskStack = getCurrentTaskLoopStack ()
         if taskStack.IsSome then
-            if taskStack.Value.Count > 0 then
+            if taskStack.Value.Remaining> 0 then
                 startNewTask self taskStack.Value
             else
                 // check for a data loop (ForEachDataItem)
                 let dataStack = getCurrentDataLoopStack ()
                 // there must be at least one data value remaining for the task function to consume
-                if dataStack.IsSome && dataStack.Value.Count > 1 then
-                    dataStack.Value.Consume()
+                if dataStack.IsSome && dataStack.Value.Remaining > 1 then
+                    dataStack.Value.Consume() |> ignore
                     taskStack.Value.Reset()     // start the sequence of tasks from the beginning
                     startNewTask self taskStack.Value
 
@@ -148,13 +148,13 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
 
     // For each task: add a marker event on the events stack (execute each task in the sequence)
     let addTaskSequenceEvent taskSequence =
-        let subTasks = new RetainingStack<TaskItem>(taskSequence, RetainingStack<TaskItem>.ItemOrdering.Sequential)
+        let subTasks = TaskSequence(taskSequence, ItemOrdering.Sequential)
         events.Add(TaskEvent.ForEachTask(subTasks))
 
     // For each item of data: add a marker event on the events stack (execute tasks in the sequence in the context of the current data item)
     let addDataSequenceEvent (data:IConsumable) taskSequence =
         events.Add(TaskEvent.ForEachDataItem(data))
-        let subTasks = new RetainingStack<TaskItem>(taskSequence, RetainingStack<TaskItem>.ItemOrdering.Sequential)
+        let subTasks = TaskSequence(taskSequence, ItemOrdering.Sequential)
         events.Add(TaskEvent.ForEachTask(subTasks))
 
     let processResponse self (taskInfo: TaskItem) response =

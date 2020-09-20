@@ -633,7 +633,7 @@ module public Tasks =
                         TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "ExtractTranscript", Description = "Extract the transcript from the transcription job output file");
                         TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "SaveTranscript", Description = "Save the extracted transcript to a file");
                     |])
-                    yield TaskResponse.TaskComplete ("", DateTime.Now)
+                    yield TaskResponse.TaskComplete ("Starting task", DateTime.Now)
                 else
                     yield! resolveByRequest resolvable_arguments inputs
             }
@@ -813,7 +813,7 @@ module public Tasks =
             let notifications = argsRecord.Notifications.Value
             let defaultTranscript = argsRecord.DefaultTranscript.Value
             let sourceLanguageCode = argsRecord.TranslationLanguageCodeSource.Value
-            let targetLanguageCode = argsRecord.TranslationTargetLanguages.Value.Current
+            let targetLanguageCode = argsRecord.TranslationTargetLanguages.Value.LanguageCode
             let terminologyNames = argsRecord.TranslationTerminologyNames.Value
             let taskId = argsRecord.TaskIdentifier.Value
             let workingDirectory = argsRecord.WorkingDirectory.Value
@@ -889,7 +889,7 @@ module public Tasks =
         let saveTranslation argsRecord =
             let taskId = argsRecord.TaskIdentifier.Value
             let workingDirectory = argsRecord.WorkingDirectory.Value
-            let targetLanguageCode = argsRecord.TranslationTargetLanguages.Value.Current
+            let targetLanguageCode = argsRecord.TranslationTargetLanguages.Value.LanguageCode
             let chunker = argsRecord.TranslationSegments.Value
 
             seq {
@@ -951,6 +951,7 @@ module public Tasks =
 
     /// Translate text into multiple languages
     //[<HideFromUI>]
+    [<EnableLogging>]
     let MultiLanguageTranslateText (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
         
         let inputs = [|
@@ -987,7 +988,7 @@ module public Tasks =
                         TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "TranslateText", Description = "Translate text into a specified language" );
                         TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "SaveTranslation", Description = "Save some translated text");
                     |])
-                    yield TaskResponse.BeginLoopSequence (targetLanguages, taskSequence)
+                    yield TaskResponse.BeginLoopSequence (targetLanguages.UnWrap, taskSequence)
 
                     // sending task complete initiates the loop
                     yield TaskResponse.TaskComplete ("Translating text into multiple languages...", DateTime.Now)
