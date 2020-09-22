@@ -60,17 +60,41 @@ and AWSShowIntraModule(arg: AWSDisplayValue) =
 /// Used for iterable values (see TaskEvent.ForEach...)
 type AWSIterationArgument =
     | LanguageCode of LanguageCode
-    | Poop of string
+    | Test of string
 
 type AWSShareIterationArgument(arg: AWSIterationArgument) =
     interface IShareIterationArgument with
         member this.ToString () =
             match arg with
             | LanguageCode languageCode -> sprintf "AWSShareIterationArgument(LanguageCode: %s)" (languageCode.Name)
+            | Test str -> sprintf "AWSShareIterationArgument(Test: %s)" str
         member this.Serialize writer =
+            writer.WriteStartObject()
             match arg with
-            | LanguageCode languageCode -> writer.WritePropertyName("LanguageCodes"); JsonSerializer.Serialize(writer, languageCode)
+            | LanguageCode languageCode -> writer.WritePropertyName("LanguageCode"); JsonSerializer.Serialize(writer, languageCode)
+            | Test str -> writer.WritePropertyName("Test"); JsonSerializer.Serialize(writer, str)
+            writer.WriteEndObject()
+
     member this.UnWrap with get() = arg
+
+    static member Deserialize (wrappedObject: JsonElement) =
+        let property = wrappedObject.EnumerateObject() |> Seq.exactlyOne
+
+        let iterationArgument =
+            match property.Name with
+            | "LanguageCode" ->
+                let data = JsonSerializer.Deserialize<LanguageCode>(property.Value.GetRawText())
+                AWSIterationArgument.LanguageCode data
+            | _ -> invalidArg "propertyName" (sprintf "Property %s was not recognized" property.Name)
+
+        AWSShareIterationArgument(iterationArgument) :> IShareIterationArgument
+
+/// An iteration argument stack (IConsumable) for AWSIterationArgument types
+type AWSIterationStack(items: IEnumerable<IShareIterationArgument>) =
+    inherit RetainingStack(items)
+
+    override this.ModuleName with get() = "AWSShareIterationArgument"
+
 
 //module public AWSUnWrap =
 
@@ -103,7 +127,7 @@ type AWSIterationWrapper(consumable: IConsumable) =
 
     let (| APPoop |) (argWrapper: AWSShareIterationArgument) =
         match argWrapper.UnWrap with
-        | Poop str -> Some(str)
+        | Test str -> Some(str)
         | _ -> None
 
     member this.UnWrap with get() = consumable
@@ -170,7 +194,7 @@ and AWSShareIntraModule(arg: AWSArgument) =
         member this.ToString () = sprintf "AWSShareIntraModule(%s)" (arg.ToString())
         member this.AsBytes () =
             JsonSerializer.SerializeToUtf8Bytes(arg)
-        member this.Serialize writer =
+        member this.Serialize writer serializerOptions =
             match arg with
             | SetAWSInterface awsInterface -> writer.WritePropertyName("SetAWSInterface"); JsonSerializer.Serialize<AmazonWebServiceInterface>(writer, awsInterface)
             | SetBucket bucket -> writer.WritePropertyName("SetBucket"); JsonSerializer.Serialize<Bucket>(writer, bucket)
@@ -185,7 +209,7 @@ and AWSShareIntraModule(arg: AWSArgument) =
             | SetTranscriptionLanguageCode transcriptionLanguageCode -> writer.WritePropertyName("SetTranscriptionLanguageCode"); JsonSerializer.Serialize<string>(writer, transcriptionLanguageCode)
             | SetTranscriptionVocabularyName vocabularyName -> writer.WritePropertyName("SetTranscriptionVocabularyName"); JsonSerializer.Serialize<string>(writer, vocabularyName)
             | SetTranslationLanguageCodeSource translationLanguageCode -> writer.WritePropertyName("SetTranslationLanguageCodeSource"); JsonSerializer.Serialize<string>(writer, translationLanguageCode)
-            | SetTranslationTargetLanguages languages -> writer.WritePropertyName("SetTranslationTargetLanguages"); JsonSerializer.Serialize<RetainingStackSerializationWrapper>(writer, RetainingStackSerializationWrapper(languages))
+            | SetTranslationTargetLanguages languages -> writer.WritePropertyName("SetTranslationTargetLanguages"); JsonSerializer.Serialize<RetainingStack>(writer, languages :?> RetainingStack, serializerOptions)
             | SetTranslationTerminologyNames terminologyNames -> writer.WritePropertyName("SetTranslationTerminologyNames"); JsonSerializer.Serialize<IEnumerable<string>>(writer, terminologyNames)
             | SetTranslationSegments chunker -> writer.WritePropertyName("SetTranslationSegments"); JsonSerializer.Serialize<SentenceChunker>(writer, chunker)
             | SetSubtitleFilePath fileInfo -> writer.WritePropertyName("SetSubtitleFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
@@ -195,7 +219,7 @@ and AWSShareIntraModule(arg: AWSArgument) =
     static member fromString idString =
         CommonUtilities.fromString<AWSArgument> idString
 
-    static member Deserialize propertyName (jsonString:string) =
+    static member Deserialize propertyName (jsonString:string) serializerOptions =
         let awsArgument =
             match propertyName with
             | "SetAWSInterface" ->
@@ -239,8 +263,7 @@ and AWSShareIntraModule(arg: AWSArgument) =
                 let data = JsonSerializer.Deserialize<string>(jsonString)
                 AWSArgument.SetTranslationLanguageCodeSource data
             | "SetTranslationTargetLanguages" ->
-                let wrapper = JsonSerializer.Deserialize<RetainingStackSerializationWrapper>(jsonString)
-                let consumable = wrapper.Unwrap()
+                let consumable = JsonSerializer.Deserialize<RetainingStack>(jsonString, serializerOptions)
                 AWSArgument.SetTranslationTargetLanguages consumable
             | "SetTranslationTerminologyNames" ->
                 let data = JsonSerializer.Deserialize<IEnumerable<string>>(jsonString)

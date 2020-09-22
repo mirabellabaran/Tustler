@@ -6,10 +6,13 @@ open CloudWeaver.Types
 open System
 open System.Collections.Generic
 open TustlerServicesLib
+open System.Text.Json.Serialization
+open CloudWeaver.AWS
+open Converters
 
 module public Serialization =
 
-    let private SerializeEvent event (writer:Utf8JsonWriter) =
+    let private SerializeEvent event (writer:Utf8JsonWriter) serializerOptions =
 
         writer.WriteStartObject()
         match event with
@@ -20,11 +23,11 @@ module public Serialization =
                 writer.WriteString("Tag", JsonEncodedText.Encode(responseArg.ModuleTag.AsString()))     // store the module for the argument type
                 writer.WritePropertyName("TaskEvent.SetArgument");
                 writer.WriteStartObject()
-                responseArg.Serialize(writer)
+                responseArg.Serialize writer serializerOptions
                 writer.WriteEndObject()
             | _ -> invalidArg "event" (sprintf "Unexpected event stack set-argument type: %A" arg)
-        | TaskEvent.ForEachTask taskSequence -> writer.WritePropertyName("TaskEvent.ForEachTask"); JsonSerializer.Serialize(writer, TaskSequenceSerializationWrapper(taskSequence))
-        | TaskEvent.ForEachDataItem consumable -> writer.WritePropertyName("TaskEvent.ForEachDataItem"); JsonSerializer.Serialize(writer, RetainingStackSerializationWrapper(consumable))
+        | TaskEvent.ForEachTask consumableTaskSequence -> writer.WritePropertyName("TaskEvent.ForEachTask"); JsonSerializer.Serialize(writer, consumableTaskSequence :?> TaskSequence, serializerOptions)
+        | TaskEvent.ForEachDataItem consumable -> writer.WritePropertyName("TaskEvent.ForEachDataItem"); JsonSerializer.Serialize(writer, consumable :?> RetainingStack, serializerOptions)
         | TaskEvent.Task taskItem -> writer.WritePropertyName("TaskEvent.Task"); JsonSerializer.Serialize(writer, taskItem)
         | TaskEvent.SelectArgument -> writer.WritePropertyName("TaskEvent.SelectArgument"); JsonSerializer.Serialize(writer, "SelectArgument")
         | TaskEvent.ClearArguments -> writer.WritePropertyName("TaskEvent.ClearArguments"); JsonSerializer.Serialize(writer, "ClearArguments")
@@ -33,7 +36,7 @@ module public Serialization =
 
         writer.WriteEndObject()
 
-    let private DeserializeEvent (serializedTaskEvent: JsonElement) =
+    let private DeserializeEvent (serializedTaskEvent: JsonElement) serializerOptions =
         let mutable taskEvent = None
 
         serializedTaskEvent.EnumerateObject()
@@ -55,13 +58,11 @@ module public Serialization =
                 else
                     invalidOp "Error parsing TaskEvent.SetArgument"
             | "TaskEvent.ForEachTask" ->
-                let wrapper = JsonSerializer.Deserialize<TaskSequenceSerializationWrapper>(property.Value.GetRawText())
-                let taskSequence = wrapper.Unwrap()
+                let taskSequence = JsonSerializer.Deserialize<TaskSequence>(property.Value.GetRawText(), serializerOptions)
                 taskEvent <- Some(TaskEvent.ForEachTask taskSequence); None
             | "TaskEvent.ForEachDataItem" ->
-                let wrapper = JsonSerializer.Deserialize<RetainingStackSerializationWrapper>(property.Value.GetRawText())
-                let consumable = wrapper.Unwrap()
-                taskEvent <- Some(TaskEvent.ForEachDataItem consumable); None
+                let stack = JsonSerializer.Deserialize<RetainingStack>(property.Value.GetRawText(), serializerOptions)
+                taskEvent <- Some(TaskEvent.ForEachDataItem stack); None
             | "TaskEvent.Task" ->
                 let data = JsonSerializer.Deserialize<TaskItem>(property.Value.GetRawText())
                 taskEvent <- Some(TaskEvent.Task data); None
@@ -77,17 +78,20 @@ module public Serialization =
     /// Serialize the provided events as a JSON document
     let SerializeEventsAsJSON events =
 
-        let options = JsonWriterOptions(Indented = true)
-            
+        let writerOptions = JsonWriterOptions(Indented = true)
+        let serializerOptions = JsonSerializerOptions()
+        serializerOptions.Converters.Add(RetainingStackConverter())
+        serializerOptions.Converters.Add(TaskSequenceConverter())
+
         use stream = new MemoryStream()
-        using (new Utf8JsonWriter(stream, options)) (fun writer ->
+        using (new Utf8JsonWriter(stream, writerOptions)) (fun writer ->
             writer.WriteStartObject()
             writer.WritePropertyName("Items");
             writer.WriteStartArray();
 
             events
             |> Seq.iter (fun event ->
-                SerializeEvent event writer
+                SerializeEvent event writer serializerOptions
             )
 
             writer.WriteEndArray()
@@ -100,7 +104,10 @@ module public Serialization =
     /// Note that each block of bytes encodes a standalone JSON document
     let SerializeEventsAsBytes events skipCount =
         
-        let options = JsonWriterOptions(Indented = false)
+        let writerOptions = JsonWriterOptions(Indented = false)
+        let serializerOptions = JsonSerializerOptions()
+        serializerOptions.Converters.Add(RetainingStackConverter())
+        serializerOptions.Converters.Add(TaskSequenceConverter())
 
         events
         |> Seq.skip skipCount
@@ -109,8 +116,8 @@ module public Serialization =
             // serialize each event as its own JSON data (not part of the same JSON document)
             // this is so that the log file can be closed without calling WriteEndObject or WriteEndArray
             use stream = new MemoryStream()
-            let result = using (new Utf8JsonWriter(stream, options)) (fun writer ->
-                SerializeEvent event writer
+            let result = using (new Utf8JsonWriter(stream, writerOptions)) (fun writer ->
+                SerializeEvent event writer serializerOptions
                 writer.Flush()
                 stream.ToArray()
             )
@@ -122,13 +129,17 @@ module public Serialization =
     /// Serialize the provided events as a JSON document
     let DeserializeEventsFromJSON (document:JsonDocument) =
 
+        let serializerOptions = JsonSerializerOptions()
+        serializerOptions.Converters.Add(RetainingStackConverter())
+        serializerOptions.Converters.Add(TaskSequenceConverter())
+
         document.RootElement.EnumerateObject()
         |> Seq.map (fun childProperty ->
             match childProperty.Name with
             | "Items" ->
                 childProperty.Value.EnumerateArray()
                 |> Seq.map (fun arrayItem ->
-                    DeserializeEvent arrayItem
+                    DeserializeEvent arrayItem serializerOptions
                 )
                 |> Seq.choose id
             | _ -> invalidOp "Expecting an Items array as first property of the root object"
@@ -140,15 +151,18 @@ module public Serialization =
     /// Note that each block of bytes encodes a standalone JSON document
     let DeserializeEventsFromBytes (blocks: List<byte[]>) =
         
-        let options = new JsonDocumentOptions(AllowTrailingCommas = true)
+        let documentOptions = new JsonDocumentOptions(AllowTrailingCommas = true)
+        let serializerOptions = JsonSerializerOptions()
+        serializerOptions.Converters.Add(RetainingStackConverter())
+        serializerOptions.Converters.Add(TaskSequenceConverter())
 
         blocks
         |> Seq.map (fun block ->
             let sequence = ReadOnlyMemory<byte>(block)
-            use document = JsonDocument.Parse(sequence, options)
+            use document = JsonDocument.Parse(sequence, documentOptions)
 
             // expecting a single child object
-            DeserializeEvent (document.RootElement)
+            DeserializeEvent (document.RootElement) serializerOptions
         )
         |> Seq.choose id
         |> Seq.toArray

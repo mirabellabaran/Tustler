@@ -629,7 +629,7 @@ namespace Tustler.UserControls
                         break;
                     case UITaskArgument.TranslationTargetLanguages translationTargetLanguagesArg:
                         var languages = translationTargetLanguagesArg.Item.Select(languageCode => new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(languageCode)));
-                        var translationTargetLanguages = new RetainingStack(languages);
+                        var translationTargetLanguages = new AWSIterationStack(languages);
                         agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationTargetLanguages(translationTargetLanguages))));
                         break;
                     case UITaskArgument.TranslationTerminologyNames translationTerminologyNamesArg:

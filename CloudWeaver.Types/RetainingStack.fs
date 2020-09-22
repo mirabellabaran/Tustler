@@ -19,6 +19,7 @@ type IConsumable =
 
 /// A stack-like object that supports Stack semantics but retains all data
 /// A retaining stack can be consumed but the original contents are always retrievable
+[<AbstractClass>]
 type RetainingStack(items: IEnumerable<IShareIterationArgument>) =
 
     do
@@ -27,15 +28,8 @@ type RetainingStack(items: IEnumerable<IShareIterationArgument>) =
     let _array = items.ToImmutableArray()
     let _stack = Stack<IShareIterationArgument>(Seq.rev items)  // reversed so that calling Pop() removes items in _array order
 
-    ///// Create a RetainingStack from an IConsumable
-    //static member CreateFrom(consumable: IConsumable) =
-    
-    //    let stack = new RetainingStack(consumable)
-    //    let count = consumable.Total - consumable.Remaining
-    //    for x in 1..count do
-    //        stack.Pop() |> ignore
-
-    //    stack
+    /// the name of the module that contains the iteration argument type
+    abstract ModuleName : string with get
 
     /// Get a count of the remaining (consumable) items
     member this.Remaining with get() = _stack.Count
@@ -81,24 +75,24 @@ type RetainingStack(items: IEnumerable<IShareIterationArgument>) =
         member this.GetEnumerator(): IEnumerator<IShareIterationArgument> = 
             (_array :> IEnumerable<IShareIterationArgument>).GetEnumerator()
 
-/// A wrapper for serialization/deserialization: retains the essential property values needed for reconstructing a RetainingStack
-type RetainingStackSerializationWrapper(total, remaining, items: IEnumerable<IShareIterationArgument>) =
+///// A wrapper for serialization/deserialization: retains the essential property values needed for reconstructing a RetainingStack
+//type RetainingStackSerializationWrapper(total, remaining, items: IEnumerable<IShareIterationArgument>) =
     
-    /// Default constructor for deserialization
-    new() = RetainingStackSerializationWrapper(0, 0, Seq.empty)
+//    /// Default constructor for deserialization
+//    new() = RetainingStackSerializationWrapper(0, 0, Seq.empty)
 
-    new(consumable: IConsumable) = RetainingStackSerializationWrapper(consumable.Total, consumable.Remaining, consumable)
+//    new(consumable: IConsumable) = RetainingStackSerializationWrapper(consumable.Total, consumable.Remaining, consumable)
         
-    member val Total = total with get, set
+//    member val Total = total with get, set
 
-    member val Remaining = remaining with get, set
+//    member val Remaining = remaining with get, set
 
-    member val Items: IEnumerable<IShareIterationArgument> = items with get, set
+//    member val Items: IEnumerable<IShareIterationArgument> = items with get, set
 
-    member this.Unwrap(): RetainingStack =
-        let stack = new RetainingStack(this.Items)
-        let count = this.Total - this.Remaining
-        for x in 1..count do
-            stack.Pop() |> ignore
+//    member this.Unwrap(): RetainingStack =
+//        let stack = new RetainingStack(this.Items)
+//        let count = this.Total - this.Remaining
+//        for x in 1..count do
+//            stack.Pop() |> ignore
 
-        stack
+//        stack

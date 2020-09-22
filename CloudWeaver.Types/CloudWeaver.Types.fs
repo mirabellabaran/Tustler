@@ -37,7 +37,7 @@ type IShareIntraModule =
     abstract member ModuleTag : ModuleTag with get
     abstract member Identifier : WrappedItemIdentifier with get
     abstract member AsBytes : unit -> byte[]
-    abstract member Serialize : Utf8JsonWriter -> unit
+    abstract member Serialize : Utf8JsonWriter -> JsonSerializerOptions -> unit
     abstract member ToString: unit -> string
 
 //type IShareInterModule =
@@ -93,8 +93,30 @@ type StandardShareIterationArgument(arg: StandardIterationArgument) =
             match arg with
             | Task task -> sprintf "StandardShareIterationArgument(Task: %s)" (task.TaskName)
         member this.Serialize writer =
+            writer.WriteStartObject()
             match arg with
-            | Task task -> writer.WritePropertyName("Task"); JsonSerializer.Serialize(writer, task)
+            | Task task -> writer.WritePropertyName("TaskItem"); JsonSerializer.Serialize(writer, task)
+            writer.WriteEndObject()
+
+    member this.UnWrap with get() = arg
+
+    static member Deserialize (wrappedObject: JsonElement) =
+        let property = wrappedObject.EnumerateObject() |> Seq.exactlyOne
+
+        let iterationArgument =
+            match property.Name with
+            | "TaskItem" ->
+                let data = JsonSerializer.Deserialize<TaskItem>(property.Value.GetRawText())
+                StandardIterationArgument.Task data
+            | _ -> invalidArg "propertyName" (sprintf "Property %s was not recognized" property.Name)
+
+        StandardShareIterationArgument(iterationArgument) :> IShareIterationArgument
+
+/// An iteration argument stack (IConsumable) for StandardIterationArgument types
+type StandardIterationStack(items: IEnumerable<IShareIterationArgument>) =
+    inherit RetainingStack(items)
+
+    override this.ModuleName with get() = "StandardShareIterationArgument"
 
 type IConsumableTaskSequence =
     inherit IEnumerable<TaskItem>
@@ -166,30 +188,30 @@ type TaskSequence(tasks: IEnumerable<TaskItem>, ordering: ItemOrdering) =
         member this.GetEnumerator(): IEnumerator<TaskItem> = 
             (_array :> IEnumerable<TaskItem>).GetEnumerator()
 
-/// A wrapper for serialization/deserialization: retains the essential property values needed for reconstructing a TaskSequence
-type TaskSequenceSerializationWrapper(ordering, total, remaining, tasks: IEnumerable<TaskItem>) =
+///// A wrapper for serialization/deserialization: retains the essential property values needed for reconstructing a TaskSequence
+//type TaskSequenceSerializationWrapper(ordering, total, remaining, tasks: IEnumerable<TaskItem>) =
     
-    /// Default constructor for deserialization
-    new() = TaskSequenceSerializationWrapper(ItemOrdering.Sequential.ToString(), 0, 0, Seq.empty)
+//    /// Default constructor for deserialization
+//    new() = TaskSequenceSerializationWrapper(ItemOrdering.Sequential.ToString(), 0, 0, Seq.empty)
 
-    new(taskSequence: IConsumableTaskSequence) = TaskSequenceSerializationWrapper(taskSequence.Ordering.ToString(), taskSequence.Total, taskSequence.Remaining, taskSequence)
+//    new(taskSequence: IConsumableTaskSequence) = TaskSequenceSerializationWrapper(taskSequence.Ordering.ToString(), taskSequence.Total, taskSequence.Remaining, taskSequence)
 
-    member val Ordering = ordering with get, set
+//    member val Ordering = ordering with get, set
         
-    member val Total = total with get, set
+//    member val Total = total with get, set
 
-    member val Remaining = remaining with get, set
+//    member val Remaining = remaining with get, set
 
-    member val Tasks: IEnumerable<TaskItem> = tasks with get, set
+//    member val Tasks: IEnumerable<TaskItem> = tasks with get, set
 
-    member this.Unwrap(): TaskSequence =
-        let ordering = ItemOrdering.FromString(this.Ordering)
-        let taskSequence = new TaskSequence(this.Tasks, ordering)
-        let count = this.Total - this.Remaining
-        for x in 1..count do
-            taskSequence.Pop() |> ignore
+//    member this.Unwrap(): TaskSequence =
+//        let ordering = ItemOrdering.FromString(this.Ordering)
+//        let taskSequence = new TaskSequence(this.Tasks, ordering)
+//        let count = this.Total - this.Remaining
+//        for x in 1..count do
+//            taskSequence.Pop() |> ignore
 
-        taskSequence
+//        taskSequence
 
 
 type SaveEventsFilter =
@@ -357,7 +379,7 @@ and StandardShareIntraModule(arg: StandardArgument) =
         member this.ToString () = sprintf "StandardShareIntraModule(%s)" (arg.ToString())
         member this.AsBytes () =
             JsonSerializer.SerializeToUtf8Bytes(arg)
-        member this.Serialize writer =
+        member this.Serialize writer _serializerOptions =
             match arg with
             | SetNotificationsList _notificationsList -> writer.WritePropertyName("SetNotificationsList"); JsonSerializer.Serialize(writer, "") // don't serialize the value
             | SetTaskIdentifier taskId -> writer.WritePropertyName("SetTaskIdentifier"); JsonSerializer.Serialize(writer, if taskId.IsSome then taskId.Value else "")

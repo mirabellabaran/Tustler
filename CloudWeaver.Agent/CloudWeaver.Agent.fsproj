@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Converters.fs" />
     <Compile Include="ModuleResolver.fs" />
     <Compile Include="Serialization.fs" />
     <Compile Include="CloudWeaver.Agent.fs" />

@@ -4,6 +4,8 @@ open System.Collections.Generic
 open System
 open CloudWeaver.Types
 open CloudWeaver.AWS
+open System.Text.Json
+open Converters
 
 
 /// <summary>
@@ -84,8 +86,12 @@ type ModuleResolver (flagSetLookup: Dictionary<string, Func<string, Dictionary<s
                 Dictionary<string, (Func<string, Dictionary<string, ISaveFlagSet>, Dictionary<string, ISaveFlagSet>>)>(pairs)
             ModuleResolver(flagSetLookup).Deserialize
 
+        let serializerOptions = JsonSerializerOptions()
+        serializerOptions.Converters.Add(RetainingStackConverter())
+        serializerOptions.Converters.Add(TaskSequenceConverter())
+
         /// Get the deserializer for Standard or AWS modules (wraps the flag module resolver for Standard modules)
         match moduleTag with
         | "StandardShareIntraModule" -> GetStandardResolver ()
-        | "AWSShareIntraModule" -> Func<_, _, _>(fun propertyName jsonString -> AWSShareIntraModule.Deserialize propertyName jsonString :> IShareIntraModule)
+        | "AWSShareIntraModule" -> Func<_, _, _>(fun propertyName jsonString -> AWSShareIntraModule.Deserialize propertyName jsonString serializerOptions :> IShareIntraModule)
         | _ -> invalidArg "moduleTag" (sprintf "Unexpected module tag (%s) in ModuleLookup" moduleTag)
