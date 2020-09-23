@@ -4,6 +4,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -78,7 +80,7 @@ namespace TustlerServicesLib
             TranslatedChunks = new Dictionary<int, (bool Complete, string Value)>(SourceChunks.Select(kvp => new KeyValuePair<int, (bool Complete, string Value)>(kvp.Key, (false, null))));
         }
 
-        private SentenceChunker(Dictionary<int, string> sourceChunks, Dictionary<int, (bool Complete, string Value)> translatedChunks)
+        internal SentenceChunker(Dictionary<int, string> sourceChunks, Dictionary<int, (bool Complete, string Value)> translatedChunks)
         {
             SourceChunks = sourceChunks;
             TranslatedChunks = translatedChunks;
@@ -222,6 +224,27 @@ namespace TustlerServicesLib
             }
         }
 
+        internal void Archive(Stream stream)
+        {
+            using ZipArchive archive = new ZipArchive(stream, ZipArchiveMode.Create);
+            foreach (var kvp in SourceChunks)
+            {
+                ZipArchiveEntry entry = archive.CreateEntry($"Source{kvp.Key}.txt");
+                using StreamWriter writer = new StreamWriter(entry.Open());
+                writer.Write(kvp.Value);
+            }
+            foreach (var kvp in TranslatedChunks)
+            {
+                var (completed, value) = kvp.Value;
+                if (completed)
+                {
+                    ZipArchiveEntry entry = archive.CreateEntry($"Translated{kvp.Key}.txt");
+                    using StreamWriter writer = new StreamWriter(entry.Open());
+                    writer.Write(value);
+                }
+            }
+        }
+
         /// <summary>
         /// Recover source and translated chunks from disk
         /// </summary>
@@ -247,6 +270,12 @@ namespace TustlerServicesLib
             return new SentenceChunker(sourceChunks, translatedChunks);
         }
 
+        internal static (Dictionary<int, string> sourceChunks, Dictionary<int, (bool Complete, string Value)> translatedChunks) DeArchive(Stream stream)
+        {
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+            return DeArchive(archive);
+        }
+
         /// <summary>
         /// Break the text inside the specified file into chunks, ensuring breaks occur on sentence boundaries
         /// </summary>
@@ -262,52 +291,39 @@ namespace TustlerServicesLib
         private void Archive(string filePath)
         {
             using FileStream zipFile = new FileStream(filePath, FileMode.Create);
-            using ZipArchive archive = new ZipArchive(zipFile, ZipArchiveMode.Create);
-            foreach (var kvp in SourceChunks)
-            {
-                ZipArchiveEntry entry = archive.CreateEntry($"Source{kvp.Key}.txt");
-                using StreamWriter writer = new StreamWriter(entry.Open());
-                writer.Write(kvp.Value);
-            }
-            foreach (var kvp in TranslatedChunks)
-            {
-                var (completed, value) = kvp.Value;
-                if (completed)
-                {
-                    ZipArchiveEntry entry = archive.CreateEntry($"Translated{kvp.Key}.txt");
-                    using StreamWriter writer = new StreamWriter(entry.Open());
-                    writer.Write(value);
-                }
-            }
+            Archive(zipFile);
         }
 
         private static (Dictionary<int, string> sourceChunks, Dictionary<int, (bool Complete, string Value)> translatedChunks) DeArchive(string filePath)
+        {
+            using ZipArchive archive = ZipFile.OpenRead(filePath);
+            return DeArchive(archive);
+        }
+
+        private static (Dictionary<int, string> sourceChunks, Dictionary<int, (bool Complete, string Value)> translatedChunks) DeArchive(ZipArchive archive)
         {
             var re = new Regex("(Source|Translated)([0-9]+).txt");
             var sourceChunks = new Dictionary<int, string>();
             var translatedChunks = new Dictionary<int, (bool Complete, string Value)>();
 
-            using (ZipArchive archive = ZipFile.OpenRead(filePath))
+            foreach (ZipArchiveEntry entry in archive.Entries)
             {
-                foreach (ZipArchiveEntry entry in archive.Entries)
+                if (entry.FullName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (entry.FullName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                    var m = re.Match(entry.FullName);
+                    if (m.Success && m.Groups.Count > 1)
                     {
-                        var m = re.Match(entry.FullName);
-                        if (m.Success && m.Groups.Count > 1)
+                        if (int.TryParse(m.Groups[2].Value, out int index))
                         {
-                            if (int.TryParse(m.Groups[2].Value, out int index))
+                            using StreamReader reader = new StreamReader(entry.Open());
+                            var text = reader.ReadToEnd();
+                            if (entry.FullName.Contains("Source"))
                             {
-                                using StreamReader reader = new StreamReader(entry.Open());
-                                var text = reader.ReadToEnd();
-                                if (entry.FullName.Contains("Source"))
-                                {
-                                    sourceChunks.Add(index, text);
-                                }
-                                else if (entry.FullName.Contains("Translated"))
-                                {
-                                    translatedChunks.Add(index, (true, text));
-                                }
+                                sourceChunks.Add(index, text);
+                            }
+                            else if (entry.FullName.Contains("Translated"))
+                            {
+                                translatedChunks.Add(index, (true, text));
                             }
                         }
                     }
@@ -360,7 +376,7 @@ namespace TustlerServicesLib
                 });
 
                 // add the last chunk
-                var lastFilteredIndex = (filtered.Count > 0)? filtered.Max() : 0;
+                var lastFilteredIndex = (filtered.Count > 0) ? filtered.Max() : 0;
                 var lastUnfilteredIndex = matches.Max();
                 if (lastFilteredIndex < lastUnfilteredIndex)
                 {
@@ -405,6 +421,45 @@ namespace TustlerServicesLib
                     result.Add(sb.ToString());
                 }
             }
+        }
+    }
+
+    public class SentenceChunkerConverter : JsonConverter<SentenceChunker>
+    {
+        public override SentenceChunker Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.StartObject)
+            {
+                if (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+                {
+                    reader.GetString();
+                    byte[] zippedData = JsonSerializer.Deserialize<byte[]>(ref reader);
+                    var ms = new MemoryStream(zippedData, false);
+                    var (sourceChunks, translatedChunks) = SentenceChunker.DeArchive(ms);
+                    reader.Read();
+
+                    return new SentenceChunker(sourceChunks, translatedChunks);
+                }
+                else
+                {
+                    throw new JsonException("Error parsing SentenceChunker; expecting a property name.");
+                }
+            }
+            else
+            {
+                throw new JsonException("Error parsing SentenceChunker; expecting the start of an object.");
+            }
+        }
+
+        public override void Write(Utf8JsonWriter writer, SentenceChunker chunker, JsonSerializerOptions options)
+        {
+            using var ms = new MemoryStream();
+            chunker.Archive(ms);
+
+            writer.WriteStartObject();
+            writer.WritePropertyName("Zipped");
+            JsonSerializer.Serialize<byte[]>(writer, ms.GetBuffer());
+            writer.WriteEndObject();
         }
     }
 }

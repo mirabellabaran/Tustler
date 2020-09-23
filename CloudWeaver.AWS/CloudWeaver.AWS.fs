@@ -211,7 +211,7 @@ and AWSShareIntraModule(arg: AWSArgument) =
             | SetTranslationLanguageCodeSource translationLanguageCode -> writer.WritePropertyName("SetTranslationLanguageCodeSource"); JsonSerializer.Serialize<string>(writer, translationLanguageCode)
             | SetTranslationTargetLanguages languages -> writer.WritePropertyName("SetTranslationTargetLanguages"); JsonSerializer.Serialize<RetainingStack>(writer, languages :?> RetainingStack, serializerOptions)
             | SetTranslationTerminologyNames terminologyNames -> writer.WritePropertyName("SetTranslationTerminologyNames"); JsonSerializer.Serialize<IEnumerable<string>>(writer, terminologyNames)
-            | SetTranslationSegments chunker -> writer.WritePropertyName("SetTranslationSegments"); JsonSerializer.Serialize<SentenceChunker>(writer, chunker)
+            | SetTranslationSegments chunker -> writer.WritePropertyName("SetTranslationSegments"); JsonSerializer.Serialize<SentenceChunker>(writer, chunker, serializerOptions)
             | SetSubtitleFilePath fileInfo -> writer.WritePropertyName("SetSubtitleFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
 
     member this.Argument with get() = arg
@@ -269,7 +269,7 @@ and AWSShareIntraModule(arg: AWSArgument) =
                 let data = JsonSerializer.Deserialize<IEnumerable<string>>(jsonString)
                 AWSArgument.SetTranslationTerminologyNames (new List<string>(data))
             | "SetTranslationSegments" ->
-                let data = JsonSerializer.Deserialize<SentenceChunker>(jsonString)
+                let data = JsonSerializer.Deserialize<SentenceChunker>(jsonString, serializerOptions)
                 AWSArgument.SetTranslationSegments data
             | "SetSubtitleFilePath" ->
                 let path = JsonSerializer.Deserialize<string>(jsonString)

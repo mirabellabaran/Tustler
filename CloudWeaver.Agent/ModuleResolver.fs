@@ -6,6 +6,7 @@ open CloudWeaver.Types
 open CloudWeaver.AWS
 open System.Text.Json
 open Converters
+open TustlerServicesLib
 
 
 /// <summary>
@@ -89,6 +90,7 @@ type ModuleResolver (flagSetLookup: Dictionary<string, Func<string, Dictionary<s
         let serializerOptions = JsonSerializerOptions()
         serializerOptions.Converters.Add(RetainingStackConverter())
         serializerOptions.Converters.Add(TaskSequenceConverter())
+        serializerOptions.Converters.Add(SentenceChunkerConverter())
 
         /// Get the deserializer for Standard or AWS modules (wraps the flag module resolver for Standard modules)
         match moduleTag with

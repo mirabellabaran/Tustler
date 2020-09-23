@@ -82,6 +82,7 @@ module public Serialization =
         let serializerOptions = JsonSerializerOptions()
         serializerOptions.Converters.Add(RetainingStackConverter())
         serializerOptions.Converters.Add(TaskSequenceConverter())
+        serializerOptions.Converters.Add(SentenceChunkerConverter())
 
         use stream = new MemoryStream()
         using (new Utf8JsonWriter(stream, writerOptions)) (fun writer ->
@@ -108,6 +109,7 @@ module public Serialization =
         let serializerOptions = JsonSerializerOptions()
         serializerOptions.Converters.Add(RetainingStackConverter())
         serializerOptions.Converters.Add(TaskSequenceConverter())
+        serializerOptions.Converters.Add(SentenceChunkerConverter())
 
         events
         |> Seq.skip skipCount
@@ -132,6 +134,7 @@ module public Serialization =
         let serializerOptions = JsonSerializerOptions()
         serializerOptions.Converters.Add(RetainingStackConverter())
         serializerOptions.Converters.Add(TaskSequenceConverter())
+        serializerOptions.Converters.Add(SentenceChunkerConverter())
 
         document.RootElement.EnumerateObject()
         |> Seq.map (fun childProperty ->
@@ -155,6 +158,7 @@ module public Serialization =
         let serializerOptions = JsonSerializerOptions()
         serializerOptions.Converters.Add(RetainingStackConverter())
         serializerOptions.Converters.Add(TaskSequenceConverter())
+        serializerOptions.Converters.Add(SentenceChunkerConverter())
 
         blocks
         |> Seq.map (fun block ->
