@@ -16,66 +16,80 @@ open System.Text.Json
 [<CloudWeaverTaskFunctionModule>]
 module public Tasks =
 
-    /// Find the first unresolved request and send to the UI to resolve the value
-    let private resolveByRequest (args:InfiniteList<MaybeResponse>) (required:TaskResponse[]) =
-        // take all arguments that are set and map them to an AWSRequest or StandardRequest type
-        let resolvedRequests =
-            args
-            |> Seq.takeWhile (fun mr -> mr.IsSet)
-            |> Seq.choose (fun mr ->
-                match mr.Value with
-                | TaskResponse.SetArgument arg ->
-                    match arg with
-                    | :? AWSShareIntraModule as awsShareIntraModule ->
-                        match awsShareIntraModule.Argument with
-                        // arguments corresponding to AWSRequest items
-                        | SetAWSInterface _ -> Some(AWSRequestIntraModule(RequestAWSInterface) :> IRequestIntraModule)
-                        | SetBucket _ -> Some(AWSRequestIntraModule(RequestBucket) :> IRequestIntraModule)
-                        | SetFileMediaReference _ -> Some(AWSRequestIntraModule(RequestFileMediaReference) :> IRequestIntraModule)
-                        | SetS3MediaReference _ -> Some(AWSRequestIntraModule(RequestS3MediaReference) :> IRequestIntraModule)
-                        | SetTranscriptionJobName _ -> Some(AWSRequestIntraModule(RequestTranscriptionJobName) :> IRequestIntraModule)
-                        | SetTranscriptJSON _ -> Some(AWSRequestIntraModule(RequestTranscriptJSON) :> IRequestIntraModule)
-                        | SetTranscriptionDefaultTranscript _ -> Some(AWSRequestIntraModule(RequestTranscriptionDefaultTranscript) :> IRequestIntraModule)
-                        | SetTranscriptURI _ -> Some(AWSRequestIntraModule(RequestTranscriptURI) :> IRequestIntraModule)
-                        | SetTranscriptionLanguageCode _ -> Some(AWSRequestIntraModule(RequestTranscriptionLanguageCode) :> IRequestIntraModule)
-                        | SetTranslationLanguageCodeSource _ -> Some(AWSRequestIntraModule(RequestTranslationLanguageCodeSource) :> IRequestIntraModule)
-                        | SetTranslationTargetLanguages _ -> Some(AWSRequestIntraModule(RequestTranslationTargetLanguages) :> IRequestIntraModule)
-                        | SetTranscriptionVocabularyName _ -> Some(AWSRequestIntraModule(RequestTranscriptionVocabularyName) :> IRequestIntraModule)
-                        | SetTranslationTerminologyNames _ -> Some(AWSRequestIntraModule(RequestTranslationTerminologyNames) :> IRequestIntraModule)
-                        | SetTranslationSegments _ -> Some(AWSRequestIntraModule(RequestTranslationSegments) :> IRequestIntraModule)
-                        | SetSubtitleFilePath _ -> Some(AWSRequestIntraModule(RequestSubtitleFilePath) :> IRequestIntraModule)
+    let private mapResponseToRequest (response: TaskResponse) =
+        match response with
+        | TaskResponse.SetArgument arg ->
+            match arg with
+            | :? AWSShareIntraModule as awsShareIntraModule ->
+                match awsShareIntraModule.Argument with
+                // arguments corresponding to AWSRequest items
+                | SetAWSInterface _ -> Some(AWSRequestIntraModule(RequestAWSInterface) :> IRequestIntraModule)
+                | SetBucket _ -> Some(AWSRequestIntraModule(RequestBucket) :> IRequestIntraModule)
+                | SetBucketsModel _ -> Some(AWSRequestIntraModule(RequestBucketsModel) :> IRequestIntraModule)
+                | SetFileMediaReference _ -> Some(AWSRequestIntraModule(RequestFileMediaReference) :> IRequestIntraModule)
+                | SetS3MediaReference _ -> Some(AWSRequestIntraModule(RequestS3MediaReference) :> IRequestIntraModule)
+                | SetTranscriptionJobsModel _ -> Some(AWSRequestIntraModule(RequestTranscriptionJobsModel) :> IRequestIntraModule)  // see also AWSDisplayValue.DisplayTranscriptionJobsModel
+                | SetTranscriptionJobName _ -> Some(AWSRequestIntraModule(RequestTranscriptionJobName) :> IRequestIntraModule)
+                | SetTranscriptJSON _ -> Some(AWSRequestIntraModule(RequestTranscriptJSON) :> IRequestIntraModule)
+                | SetTranscriptionDefaultTranscript _ -> Some(AWSRequestIntraModule(RequestTranscriptionDefaultTranscript) :> IRequestIntraModule)
+                | SetTranscriptURI _ -> Some(AWSRequestIntraModule(RequestTranscriptURI) :> IRequestIntraModule)
+                | SetTranscriptionLanguageCode _ -> Some(AWSRequestIntraModule(RequestTranscriptionLanguageCode) :> IRequestIntraModule)
+                | SetTranslationLanguageCodeSource _ -> Some(AWSRequestIntraModule(RequestTranslationLanguageCodeSource) :> IRequestIntraModule)
+                | SetTranslationTargetLanguages _ -> Some(AWSRequestIntraModule(RequestTranslationTargetLanguages) :> IRequestIntraModule)
+                | SetTranscriptionVocabularyName _ -> Some(AWSRequestIntraModule(RequestTranscriptionVocabularyName) :> IRequestIntraModule)
+                | SetTranslationTerminologyNames _ -> Some(AWSRequestIntraModule(RequestTranslationTerminologyNames) :> IRequestIntraModule)
+                | SetTranslationSegments _ -> Some(AWSRequestIntraModule(RequestTranslationSegments) :> IRequestIntraModule)
+                | SetSubtitleFilePath _ -> Some(AWSRequestIntraModule(RequestSubtitleFilePath) :> IRequestIntraModule)
+            | :? StandardShareIntraModule as stdShareIntraModule ->
+                match stdShareIntraModule.Argument with
+                | SetNotificationsList _ -> Some(StandardRequestIntraModule(RequestNotifications) :> IRequestIntraModule)
+                | SetTaskIdentifier _ -> Some(StandardRequestIntraModule(RequestTaskIdentifier) :> IRequestIntraModule)
+                | SetTaskItem _ -> Some(StandardRequestIntraModule(RequestTaskItem) :> IRequestIntraModule)
+                | SetWorkingDirectory _ -> Some(StandardRequestIntraModule(RequestWorkingDirectory) :> IRequestIntraModule)
+                | SetSaveFlags _ -> Some(StandardRequestIntraModule(RequestSaveFlags) :> IRequestIntraModule)
+                | SetJsonEvents _ -> Some(StandardRequestIntraModule(RequestJsonEvents) :> IRequestIntraModule)
+                | SetLogFormatEvents _ -> Some(StandardRequestIntraModule(RequestLogFormatEvents) :> IRequestIntraModule)
+                | SetOpenJsonFilePath _ -> Some(StandardRequestIntraModule(RequestOpenJsonFilePath) :> IRequestIntraModule)
+                | SetSaveJsonFilePath _ -> Some(StandardRequestIntraModule(RequestSaveJsonFilePath) :> IRequestIntraModule)
+                | SetOpenLogFormatFilePath _ -> Some(StandardRequestIntraModule(RequestOpenLogFormatFilePath) :> IRequestIntraModule)
+                | SetSaveLogFormatFilePath _ -> Some(StandardRequestIntraModule(RequestSaveLogFormatFilePath) :> IRequestIntraModule)
 
-                        // ignore: these are resolved internally within a task function (therefore no Request is ever generated)
-                        | SetBucketsModel _ -> None
-                        | SetTranscriptionJobsModel _ -> None       // see also AWSDisplayValue.DisplayTranscriptionJobsModel
-                    | :? StandardShareIntraModule as stdShareIntraModule ->
-                        match stdShareIntraModule.Argument with
-                        | SetNotificationsList _ -> Some(StandardRequestIntraModule(RequestNotifications) :> IRequestIntraModule)
-                        | SetTaskIdentifier _ -> Some(StandardRequestIntraModule(RequestTaskIdentifier) :> IRequestIntraModule)
-                        | SetTaskItem _ -> Some(StandardRequestIntraModule(RequestTaskItem) :> IRequestIntraModule)
-                        | SetWorkingDirectory _ -> Some(StandardRequestIntraModule(RequestWorkingDirectory) :> IRequestIntraModule)
-                        | SetSaveFlags _ -> Some(StandardRequestIntraModule(RequestSaveFlags) :> IRequestIntraModule)
-                        | SetJsonEvents _ -> Some(StandardRequestIntraModule(RequestJsonEvents) :> IRequestIntraModule)
-                        | SetLogFormatEvents _ -> Some(StandardRequestIntraModule(RequestLogFormatEvents) :> IRequestIntraModule)
-                        | SetOpenJsonFilePath _ -> Some(StandardRequestIntraModule(RequestOpenJsonFilePath) :> IRequestIntraModule)
-                        | SetSaveJsonFilePath _ -> Some(StandardRequestIntraModule(RequestSaveJsonFilePath) :> IRequestIntraModule)
-                        | SetOpenLogFormatFilePath _ -> Some(StandardRequestIntraModule(RequestOpenLogFormatFilePath) :> IRequestIntraModule)
-                        | SetSaveLogFormatFilePath _ -> Some(StandardRequestIntraModule(RequestSaveLogFormatFilePath) :> IRequestIntraModule)
+            | _ -> None     // ignore request types from other modules
+        | _ -> None
 
-                    | _ -> None     // ignore request types from other modules
-                | _ -> None
-            )
-            |> Set.ofSeq
+    /// Get all requests that are not yet set
+    let private getUnResolvedRequests (argMap: Map<IRequestIntraModule, IShareIntraModule>) (required: TaskResponse []) =
+        required
+        |> Seq.map (fun response ->
+            match response with
+            | TaskResponse.RequestArgument arg -> arg
+            | _ -> invalidArg "response" "Expected RequestArgument in when checking input arguments"
+        )
+        |> Seq.filter (fun request -> not (argMap.ContainsKey request))
+        |> Seq.map (fun request -> TaskResponse.RequestArgument request)
+        |> Seq.toArray
 
-        let unresolvedRequests =
-            required
-            |> Seq.choose(fun response ->
-                match response with
-                | TaskResponse.RequestArgument arg -> Some(arg)
-                | _ -> None
-            )
-            |> Seq.filter (fun request -> not (resolvedRequests.Contains(request)))
-            |> Seq.map (fun request -> TaskResponse.RequestArgument request)
+    // Get the first unresolved request and send to the UI to resolve the value
+    let private resolveByRequest (unresolvedRequests: TaskResponse []) =
+    //let private resolveByRequest (args:InfiniteList<MaybeResponse>) (required:TaskResponse[]) =
+        //// take all arguments that are set and map them to an AWSRequest or StandardRequest type
+        //let resolvedRequests =
+        //    args
+        //    |> Seq.takeWhile (fun mr -> mr.IsSet)
+        //    |> Seq.choose (fun mr ->
+        //        mapResponseToRequest mr.Value
+        //    )
+        //    |> Set.ofSeq
+
+        //let unresolvedRequests =
+        //    required
+        //    |> Seq.choose(fun response ->
+        //        match response with
+        //        | TaskResponse.RequestArgument arg -> Some(arg)
+        //        | _ -> None
+        //    )
+        //    |> Seq.filter (fun request -> not (resolvedRequests.Contains(request)))
+        //    |> Seq.map (fun request -> TaskResponse.RequestArgument request)
 
         let requestStack = Stack(unresolvedRequests)
 
@@ -95,11 +109,33 @@ module public Tasks =
     //        |> Seq.length
     //    resolvers.[resolverIndex] argsRecord awsInterface notifications
 
-    /// Integrate with the default record any request arguments that have been set using the TaskArgumentRecord updater function
-    let private integrateUIRequestArguments (args:InfiniteList<MaybeResponse>) (defaultArgs:TaskArgumentRecord) =
+    ///// Integrate with the default record any request arguments that have been set using the TaskArgumentRecord updater function
+    //let private integrateUIRequestArguments (args:InfiniteList<MaybeResponse>) (defaultArgs:TaskArgumentRecord) =
+    //    args
+    //    |> Seq.takeWhile (fun mr -> mr.IsSet)
+    //    |> Seq.fold (fun (argsRecord:TaskArgumentRecord) mr -> argsRecord.Update mr.Value) defaultArgs
+
+    /// Create a map that contains those request arguments that are currently set
+    let private integrateUIRequestArguments (args:InfiniteList<MaybeResponse>) =
         args
         |> Seq.takeWhile (fun mr -> mr.IsSet)
-        |> Seq.fold (fun (argsRecord:TaskArgumentRecord) mr -> argsRecord.Update mr.Value) defaultArgs
+        |> Seq.fold (fun (map:Map<_,_>) mr ->
+            let request = mapResponseToRequest mr.Value
+            let response =
+                match mr.Value with
+                | TaskResponse.SetArgument arg -> Some(arg)
+                | _ -> None
+            if request.IsSome && response.IsSome then
+                map.Add (request.Value, response.Value)
+            else
+                map
+        ) (Map.empty)
+
+    ///// Integrate with the default record any request arguments that have been set using the TaskArgumentRecord updater function
+    //let private integrateUIRequestArguments (args:InfiniteList<MaybeResponse>) (defaultArgs:TaskArgumentRecord) =
+    //    args
+    //    |> Seq.takeWhile (fun mr -> mr.IsSet)
+    //    |> Seq.fold (fun (argsRecord:TaskArgumentRecord) mr -> argsRecord.Update mr.Value) defaultArgs
 
     /// Validate the supplied arguments by type and position; all or some of the arguments can be unset (MaybeResponse.IsNotSet)
     //let private validateArgs expectedNum argChecker (args: InfiniteList<MaybeResponse>) =
@@ -130,7 +166,15 @@ module public Tasks =
 
     let S3FetchItems (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
-        let showS3Data argsRecord =
+        let showS3Data argMap =
+
+            let argsRecord = {|
+                AWSInterface = PatternMatchers.getAWSInterface argMap;
+                Notifications = PatternMatchers.getNotifications argMap;
+                S3BucketModel = PatternMatchers.getBucketsModel argMap;
+                S3Bucket = PatternMatchers.getBucket argMap;
+            |}
+
             // assert the following as always set
             let awsInterface = argsRecord.AWSInterface.Value
             let notifications = argsRecord.Notifications.Value
@@ -172,13 +216,13 @@ module public Tasks =
             seq {
                 // Eventually expecting three arguments: SetBucketsModel, SetBucket, SetBucketItemsModel
 
-                let defaultArgs = TaskArgumentRecord.Init ()
-                let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+                let argMap = integrateUIRequestArguments resolvable_arguments
+                let unresolvedRequests = getUnResolvedRequests argMap inputs
 
-                if resolvedRecord.AWSInterface.IsSome && resolvedRecord.Notifications.IsSome then
-                    yield! showS3Data resolvedRecord
+                if unresolvedRequests.Length = 0 then
+                    yield! showS3Data argMap
                 else
-                    yield! resolveByRequest resolvable_arguments inputs
+                    yield! resolveByRequest unresolvedRequests
             }
 
     [<HideFromUI>]
@@ -200,7 +244,15 @@ module public Tasks =
                 TaskResponse.TaskInfo (sprintf "Delete job %s...%s" jobName (if success then "succeeded" else "failed"))
             )
 
-        let cleanHistory argsRecord =
+        let cleanHistory argMap =
+
+            let argsRecord = {|
+                AWSInterface = PatternMatchers.getAWSInterface argMap;
+                Notifications = PatternMatchers.getNotifications argMap;
+                TaskItem = PatternMatchers.getTaskItem argMap;
+                TranscriptionJobsModel = PatternMatchers.getTranscriptionJobsModel argMap;
+            |}
+
             // assert the following as always set
             let awsInterface = argsRecord.AWSInterface.Value
             let notifications = argsRecord.Notifications.Value
@@ -210,30 +262,33 @@ module public Tasks =
             let transcriptionJobsModel = argsRecord.TranscriptionJobsModel
 
             seq {
-                if transcriptionJobsModel.IsNone then
-                    yield TaskResponse.TaskInfo (sprintf "Running %s" taskInfo.Description)
+                if taskInfo.IsSome then
+                    if transcriptionJobsModel.IsNone then
+                        yield TaskResponse.TaskInfo (sprintf "Running %s" taskInfo.Value.Description)
 
-                    yield TaskResponse.TaskInfo "Retrieving transcription jobs..."
-
-                    let model = Transcribe.listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
-                    yield! getNotificationResponse notifications
-                    yield (AWSArgument.SetTranscriptionJobsModel model).toSetArgumentTaskResponse()
-                    yield TaskResponse.TaskPrompt "Delete all completed transcription jobs?"
-
-                if transcriptionJobsModel.IsSome then
-                    let model = transcriptionJobsModel.Value
-
-                    if hasDeleteableJobs model then
-                        yield! deleteAll awsInterface notifications model
-                        yield! getNotificationResponse notifications
+                        yield TaskResponse.TaskInfo "Retrieving transcription jobs..."
 
                         let model = Transcribe.listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
                         yield! getNotificationResponse notifications
-                        yield TaskResponse.ShowValue (AWSShowIntraModule(AWSDisplayValue.DisplayTranscriptionJobsModel model))
-                    else
-                        yield TaskResponse.TaskInfo "No transcription jobs to delete"
+                        yield (AWSArgument.SetTranscriptionJobsModel model).toSetArgumentTaskResponse()
+                        yield TaskResponse.TaskPrompt "Delete all completed transcription jobs?"
 
-                    yield TaskResponse.TaskComplete ((sprintf "Completed %s" taskInfo.Description), DateTime.Now)
+                    if transcriptionJobsModel.IsSome then
+                        let model = transcriptionJobsModel.Value
+
+                        if hasDeleteableJobs model then
+                            yield! deleteAll awsInterface notifications model
+                            yield! getNotificationResponse notifications
+
+                            let model = Transcribe.listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
+                            yield! getNotificationResponse notifications
+                            yield TaskResponse.ShowValue (AWSShowIntraModule(AWSDisplayValue.DisplayTranscriptionJobsModel model))
+                        else
+                            yield TaskResponse.TaskInfo "No transcription jobs to delete"
+
+                        yield TaskResponse.TaskComplete ((sprintf "Completed %s" taskInfo.Value.Description), DateTime.Now)
+                else
+                    yield TaskResponse.TaskComplete ("Check value of variable: TaskItem", DateTime.Now)                    
             }
 
         let inputs = [|
@@ -251,13 +306,13 @@ module public Tasks =
                 // eventually expecting four arguments: AWSInterface, Notifications, TaskItem and TranscriptionJobsModel
                 // of which the first three must be resolved in advance
 
-                let defaultArgs = TaskArgumentRecord.Init ()
-                let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+                let argMap = integrateUIRequestArguments resolvable_arguments
+                let unresolvedRequests = getUnResolvedRequests argMap inputs
 
-                if resolvedRecord.AWSInterface.IsSome && resolvedRecord.Notifications.IsSome && resolvedRecord.TaskItem.IsSome then
-                    yield! cleanHistory resolvedRecord
+                if unresolvedRequests.Length = 0 then
+                    yield! cleanHistory argMap
                 else
-                    yield! resolveByRequest resolvable_arguments inputs
+                    yield! resolveByRequest unresolvedRequests
             }
 
     [<HideFromUI>]
@@ -292,7 +347,14 @@ module public Tasks =
     [<HideFromUI>]
     let UploadMediaFile (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
-        let uploadMediaFile argsRecord =
+        let uploadMediaFile argMap =
+            let argsRecord = {|
+                AWSInterface = PatternMatchers.getAWSInterface argMap;
+                Notifications = PatternMatchers.getNotifications argMap;
+                S3Bucket = PatternMatchers.getBucket argMap;
+                FileMediaReference = PatternMatchers.getFileMediaReference argMap;
+            |}
+
             let awsInterface = argsRecord.AWSInterface.Value
             let notifications = argsRecord.Notifications.Value
 
@@ -322,20 +384,27 @@ module public Tasks =
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestS3MediaReference)))
         | Invoke ->
             seq {
-                let defaultArgs = TaskArgumentRecord.Init ()
-                let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+                let argMap = integrateUIRequestArguments resolvable_arguments
+                let unresolvedRequests = getUnResolvedRequests argMap inputs
 
-                if resolvedRecord.AWSInterface.IsSome && resolvedRecord.Notifications.IsSome &&
-                    resolvedRecord.S3Bucket.IsSome && resolvedRecord.FileMediaReference.IsSome then
-                    yield! uploadMediaFile resolvedRecord
+                if unresolvedRequests.Length = 0 then
+                    yield! uploadMediaFile argMap
                 else
-                    yield! resolveByRequest resolvable_arguments inputs
+                    yield! resolveByRequest unresolvedRequests
             }
 
     [<HideFromUI>]
     let StartTranscription (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
-        let startTranscription argsRecord =
+        let startTranscription argMap =
+            let argsRecord = {|
+                AWSInterface = PatternMatchers.getAWSInterface argMap;
+                Notifications = PatternMatchers.getNotifications argMap;
+                S3MediaReference = PatternMatchers.getS3MediaReference argMap;
+                TranscriptionLanguageCode = PatternMatchers.getTranscriptionLanguageCode argMap;
+                TranscriptionVocabularyName = PatternMatchers.getTranscriptionVocabularyName argMap;
+            |}
+
             let awsInterface = argsRecord.AWSInterface.Value
             let notifications = argsRecord.Notifications.Value
 
@@ -369,20 +438,25 @@ module public Tasks =
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionJobName)))
         | Invoke ->
             seq {
-                let defaultArgs = TaskArgumentRecord.Init ()
-                let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+                let argMap = integrateUIRequestArguments resolvable_arguments
+                let unresolvedRequests = getUnResolvedRequests argMap inputs
 
-                if resolvedRecord.AWSInterface.IsSome && resolvedRecord.Notifications.IsSome &&
-                    resolvedRecord.S3MediaReference.IsSome && resolvedRecord.TranscriptionLanguageCode.IsSome && resolvedRecord.TranscriptionVocabularyName.IsSome then
-                    yield! startTranscription resolvedRecord
+                if unresolvedRequests.Length = 0 then
+                    yield! startTranscription argMap
                 else
-                    yield! resolveByRequest resolvable_arguments inputs
+                    yield! resolveByRequest unresolvedRequests
             }
 
     [<HideFromUI>]
     let MonitorTranscription (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
-        let monitorTranscription argsRecord =
+        let monitorTranscription argMap =
+            let argsRecord = {|
+                AWSInterface = PatternMatchers.getAWSInterface argMap;
+                Notifications = PatternMatchers.getNotifications argMap;
+                TranscriptionJobName = PatternMatchers.getTranscriptionJobName argMap;
+            |}
+
             let awsInterface = argsRecord.AWSInterface.Value
             let notifications = argsRecord.Notifications.Value
 
@@ -416,13 +490,13 @@ module public Tasks =
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptURI)))
         | Invoke ->
             seq {
-                let defaultArgs = TaskArgumentRecord.Init ()
-                let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+                let argMap = integrateUIRequestArguments resolvable_arguments
+                let unresolvedRequests = getUnResolvedRequests argMap inputs
 
-                if resolvedRecord.AWSInterface.IsSome && resolvedRecord.Notifications.IsSome && resolvedRecord.TranscriptionJobName.IsSome then
-                    yield! monitorTranscription resolvedRecord
+                if unresolvedRequests.Length = 0 then
+                    yield! monitorTranscription argMap
                 else
-                    yield! resolveByRequest resolvable_arguments inputs
+                    yield! resolveByRequest unresolvedRequests
             }
 
     [<HideFromUI>]
@@ -442,7 +516,16 @@ module public Tasks =
             | _ -> 
                 None
 
-        let downloadTranscriptFile argsRecord =
+        let downloadTranscriptFile argMap =
+            let argsRecord = {|
+                AWSInterface = PatternMatchers.getAWSInterface argMap;
+                Notifications = PatternMatchers.getNotifications argMap;
+                TranscriptURI = PatternMatchers.getTranscriptURI argMap;
+                TaskIdentifier = PatternMatchers.getTaskIdentifier argMap;
+                WorkingDirectory = PatternMatchers.getWorkingDirectory argMap;
+                SaveFlags = PatternMatchers.getSaveFlags argMap;
+            |}
+
             let awsInterface = argsRecord.AWSInterface.Value
             let notifications = argsRecord.Notifications.Value
             let transcriptURI = argsRecord.TranscriptURI.Value      // e.g. https://s3.ap-southeast-2.amazonaws.com/tator/d2a8856b-bd9a-49bf-a54a-5d91df4b73f7.json
@@ -462,27 +545,35 @@ module public Tasks =
                     if parsed.IsSome then
                         let bucketName, key = parsed.Value
 
-                        if saveFlags.IsSet (AWSFlag(AWSFlagItem.TranscribeSaveJSONTranscript)) then
-                            let filePath = Path.Combine(workingDirectory.FullName, (sprintf "Transcript-%s.json" taskId))
-                            let successfulDownload = S3.downloadBucketItemToFile awsInterface notifications bucketName key filePath |> Async.RunSynchronously
-                            if successfulDownload then
-                                let rawData = File.ReadAllBytesAsync(filePath) |> Async.AwaitTask |> Async.RunSynchronously
-                                Some(ReadOnlyMemory(rawData))
+                        if saveFlags.IsSome && workingDirectory.IsSome && taskId.IsSome then
+                            if saveFlags.Value.IsSet (AWSFlag(AWSFlagItem.TranscribeSaveJSONTranscript)) then
+                                let filePath = Path.Combine(workingDirectory.Value.FullName, (sprintf "Transcript-%s.json" taskId.Value))
+                                let successfulDownload = S3.downloadBucketItemToFile awsInterface notifications bucketName key filePath |> Async.RunSynchronously
+                                if successfulDownload then
+                                    let rawData = File.ReadAllBytesAsync(filePath) |> Async.AwaitTask |> Async.RunSynchronously
+                                    Some(ReadOnlyMemory(rawData))
+                                else
+                                    None
                             else
-                                None
+                                let rawData = S3.downloadBucketItemAsBytes awsInterface notifications bucketName key |> Async.RunSynchronously
+                                if isNull rawData then
+                                    None
+                                else
+                                    Some(ReadOnlyMemory(rawData))
                         else
-                            let rawData = S3.downloadBucketItemAsBytes awsInterface notifications bucketName key |> Async.RunSynchronously
-                            if isNull rawData then
-                                None
-                            else
-                                Some(ReadOnlyMemory(rawData))
+                            None                            
                     else
                         None
 
                 yield! getNotificationResponse notifications
                 if transcriptData.IsSome then
                     yield (AWSArgument.SetTranscriptJSON transcriptData.Value).toSetArgumentTaskResponse()
-                yield TaskResponse.TaskComplete ("Downloaded transcript file", DateTime.Now)
+                let message =
+                    if transcriptData.IsSome then
+                        "Downloaded transcript file"
+                    else
+                        "Transcript data not downloaded. Check the settings for variables: TaskIdentifier, WorkingDirectory and SaveFlags" 
+                yield TaskResponse.TaskComplete (message, DateTime.Now)
             }
 
         let inputs = [|
@@ -500,20 +591,24 @@ module public Tasks =
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptJSON)))
         | Invoke ->
             seq {
-                let defaultArgs = TaskArgumentRecord.Init ()
-                let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+                let argMap = integrateUIRequestArguments resolvable_arguments
+                let unresolvedRequests = getUnResolvedRequests argMap inputs
 
-                if resolvedRecord.AWSInterface.IsSome && resolvedRecord.Notifications.IsSome && resolvedRecord.TranscriptURI.IsSome &&
-                    resolvedRecord.TaskIdentifier.IsSome && resolvedRecord.WorkingDirectory.IsSome && resolvedRecord.SaveFlags.IsSome then
-                    yield! downloadTranscriptFile resolvedRecord
+                if unresolvedRequests.Length = 0 then
+                    yield! downloadTranscriptFile argMap
                 else
-                    yield! resolveByRequest resolvable_arguments inputs
+                    yield! resolveByRequest unresolvedRequests
             }
 
     [<HideFromUI>]
     let ExtractTranscript (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
-        let extractTranscript argsRecord =
+        let extractTranscript argMap =
+            let argsRecord = {|
+                Notifications = PatternMatchers.getNotifications argMap;
+                TranscriptJSON = PatternMatchers.getTranscriptJSON argMap;
+            |}
+
             let notifications = argsRecord.Notifications.Value
             let transcriptJSON = argsRecord.TranscriptJSON.Value
 
@@ -538,27 +633,35 @@ module public Tasks =
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionDefaultTranscript)))
         | Invoke ->
             seq {
-                let defaultArgs = TaskArgumentRecord.Init ()
-                let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+                let argMap = integrateUIRequestArguments resolvable_arguments
+                let unresolvedRequests = getUnResolvedRequests argMap inputs
 
-                if resolvedRecord.Notifications.IsSome && resolvedRecord.TranscriptJSON.IsSome then
-                    yield! extractTranscript resolvedRecord
+                if unresolvedRequests.Length = 0 then
+                    yield! extractTranscript argMap
                 else
-                    yield! resolveByRequest resolvable_arguments inputs
+                    yield! resolveByRequest unresolvedRequests
             }
 
     [<HideFromUI>]
     let SaveTranscript (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
-        let saveTranscript argsRecord =
-            
+        let saveTranscript argMap =
+            let argsRecord = {|
+                DefaultTranscript = PatternMatchers.getTranscriptionDefaultTranscript argMap;
+                WorkingDirectory = PatternMatchers.getWorkingDirectory argMap;
+                TaskIdentifier = PatternMatchers.getTaskIdentifier argMap;
+            |}
+
             let defaultTranscript = argsRecord.DefaultTranscript.Value
-            let workingDirectory = argsRecord.WorkingDirectory.Value.FullName
+            let workingDirectory = argsRecord.WorkingDirectory.Value
             let taskId = argsRecord.TaskIdentifier.Value
             seq {
-                let filePath = Path.Combine(workingDirectory, (sprintf "Transcript-%s.txt" taskId))
-                File.WriteAllTextAsync(filePath, defaultTranscript) |> Async.AwaitTask |> Async.RunSynchronously
-                yield TaskResponse.TaskComplete ((sprintf "Saved transcript data to %s" filePath), DateTime.Now)
+                if workingDirectory.IsSome && taskId.IsSome then
+                    let filePath = Path.Combine(workingDirectory.Value.FullName, (sprintf "Transcript-%s.txt" taskId.Value))
+                    File.WriteAllTextAsync(filePath, defaultTranscript) |> Async.AwaitTask |> Async.RunSynchronously
+                    yield TaskResponse.TaskComplete ((sprintf "Saved transcript data to %s" filePath), DateTime.Now)
+                else
+                    yield TaskResponse.TaskComplete ("Check variables: WorkingDirectory && TaskIdentifier", DateTime.Now)
             }
 
         let inputs = [|
@@ -574,26 +677,33 @@ module public Tasks =
         | Outputs -> Seq.empty
         | Invoke ->
             seq {
-                let defaultArgs = TaskArgumentRecord.Init ()
-                let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+                let argMap = integrateUIRequestArguments resolvable_arguments
+                let unresolvedRequests = getUnResolvedRequests argMap [|
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
+                    |]
 
-                if resolvedRecord.SaveFlags.IsSome then
-                    let saveFlags = resolvedRecord.SaveFlags.Value
-                    if saveFlags.IsSet (AWSFlag(AWSFlagItem.TranscribeSaveDefaultTranscript)) then
-                        if resolvedRecord.DefaultTranscript.IsSome && resolvedRecord.WorkingDirectory.IsSome && resolvedRecord.TaskIdentifier.IsSome then
-                            yield! saveTranscript resolvedRecord
-                        else
-                            yield! resolveByRequest resolvable_arguments [|
+                if unresolvedRequests.Length = 0 then
+                    let saveFlags = (PatternMatchers.getSaveFlags argMap).Value
+
+                    if saveFlags.IsSome then
+                        if saveFlags.Value.IsSet (AWSFlag(AWSFlagItem.TranscribeSaveDefaultTranscript)) then
+                            let unresolvedRequests = getUnResolvedRequests argMap [|
+                                TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
                                 TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionDefaultTranscript));
                                 TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory));
                                 TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestTaskIdentifier));
                                 |]
+
+                            if unresolvedRequests.Length = 0 then
+                                yield! saveTranscript argMap
+                            else
+                                yield! resolveByRequest unresolvedRequests
+                        else
+                            yield TaskResponse.TaskComplete ("Save flag not set (TranscribeSaveDefaultTranscript)", DateTime.Now)
                     else
-                        yield TaskResponse.TaskComplete ("Save flag not set (TranscribeSaveDefaultTranscript)", DateTime.Now)
+                        yield TaskResponse.TaskComplete ("Check variable: SaveFlags", DateTime.Now)
                 else
-                    yield! resolveByRequest resolvable_arguments [|
-                        TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
-                        |]
+                    yield! resolveByRequest unresolvedRequests
             }
 
     /// Upload and transcribe some audio
@@ -618,11 +728,10 @@ module public Tasks =
         | Outputs -> Seq.empty
         | Invoke ->
             seq {
-                let defaultArgs = TaskArgumentRecord.Init ()
-                let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+                let argMap = integrateUIRequestArguments resolvable_arguments
+                let unresolvedRequests = getUnResolvedRequests argMap inputs
 
-                if resolvedRecord.S3Bucket.IsSome && resolvedRecord.FileMediaReference.IsSome
-                    && resolvedRecord.TranscriptionLanguageCode.IsSome && resolvedRecord.TranscriptionVocabularyName.IsSome then
+                if unresolvedRequests.Length = 0 then
                     // restored from a previous session OR resolved by request to the UI
                     yield TaskResponse.TaskSaveEvents SaveEventsFilter.ArgumentsOnly     // save the resolved arguments (if not already saved)
                     yield TaskResponse.TaskSequence ([|
@@ -635,7 +744,7 @@ module public Tasks =
                     |])
                     yield TaskResponse.TaskComplete ("Starting task", DateTime.Now)
                 else
-                    yield! resolveByRequest resolvable_arguments inputs
+                    yield! resolveByRequest unresolvedRequests
             }
 
 
@@ -678,7 +787,13 @@ module public Tasks =
             |> List.rev
             |> List.toArray
 
-        let createSubTitles argsRecord =
+        let createSubTitles argMap =
+            let argsRecord = {|
+                Notifications = PatternMatchers.getNotifications argMap;
+                TranscriptJSON = PatternMatchers.getTranscriptJSON argMap;
+                SubtitleFilePath = PatternMatchers.getSubtitleFilePath argMap;
+            |}
+
             let notifications = argsRecord.Notifications.Value
             let transcriptJSON = argsRecord.TranscriptJSON.Value
             let subtitleFilePath = argsRecord.SubtitleFilePath.Value
@@ -708,13 +823,13 @@ module public Tasks =
         | Outputs -> Seq.empty
         | Invoke ->
             seq {
-                let defaultArgs = TaskArgumentRecord.Init ()
-                let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+                let argMap = integrateUIRequestArguments resolvable_arguments
+                let unresolvedRequests = getUnResolvedRequests argMap inputs
 
-                if resolvedRecord.Notifications.IsSome && resolvedRecord.TranscriptJSON.IsSome && resolvedRecord.SubtitleFilePath.IsSome then
-                    yield! createSubTitles resolvedRecord
+                if unresolvedRequests.Length = 0 then
+                    yield! createSubTitles argMap
                 else
-                    yield! resolveByRequest resolvable_arguments inputs
+                    yield! resolveByRequest unresolvedRequests
             }
 
 
@@ -808,50 +923,63 @@ module public Tasks =
 
             mapChunks 0 chunkMapper 0 0L chunks
 
-        let translateText argsRecord = 
+        let translateText argMap =
+            let argsRecord = {|
+                AWSInterface = PatternMatchers.getAWSInterface argMap;
+                Notifications = PatternMatchers.getNotifications argMap;
+                DefaultTranscript = PatternMatchers.getTranscriptionDefaultTranscript argMap;
+                TranslationLanguageCodeSource = PatternMatchers.getTranslationLanguageCodeSource argMap;
+                TranslationTargetLanguages = PatternMatchers.getTranslationTargetLanguages argMap;
+                TranslationTerminologyNames = PatternMatchers.getTranslationTerminologyNames argMap;
+                TaskIdentifier = PatternMatchers.getTaskIdentifier argMap;
+                WorkingDirectory = PatternMatchers.getWorkingDirectory argMap;
+            |}
+
             let awsInterface = argsRecord.AWSInterface.Value
             let notifications = argsRecord.Notifications.Value
             let defaultTranscript = argsRecord.DefaultTranscript.Value
             let sourceLanguageCode = argsRecord.TranslationLanguageCodeSource.Value
-            let targetLanguageCode = argsRecord.TranslationTargetLanguages.Value.LanguageCode
+            let targetLanguageCode = PatternMatchers.Consumable.getLanguageCode (argsRecord.TranslationTargetLanguages.Value)
             let terminologyNames = argsRecord.TranslationTerminologyNames.Value
             let taskId = argsRecord.TaskIdentifier.Value
             let workingDirectory = argsRecord.WorkingDirectory.Value
 
-            let chunker =
-                let archiveFilePath = Translate.getArchivedJobInFolder workingDirectory.FullName taskId   // using taskId as the job name
-                if archiveFilePath.IsSome then
-                    SentenceChunker.DeArchiveChunks(archiveFilePath.Value);
-                else
-                    //// the text file is assumed to contain a sequence of sentences, with one complete sentence per line
-                    //let sentences = File.ReadAllLines(textFilePath)
-                    //new TustlerServicesLib.SentenceChunker(sentences)
-                    //TustlerServicesLib.SentenceChunker.FromFile(textFilePath)
-
-                    if awsInterface.RuntimeOptions.IsMocked then
-                        // set a small chunk size for testing (needs to be longer than the test sentence length for the chunker to work correctly)
-                        let chunkSize = 40
-                        new TustlerServicesLib.SentenceChunker(defaultTranscript, chunkSize)
+            if workingDirectory.IsSome && taskId.IsSome then
+                let chunker =
+                    let archiveFilePath = Translate.getArchivedJobInFolder workingDirectory.Value.FullName taskId.Value   // using taskId as the job name
+                    if archiveFilePath.IsSome then
+                        SentenceChunker.DeArchiveChunks(archiveFilePath.Value);
                     else
-                        new TustlerServicesLib.SentenceChunker(defaultTranscript)
+                        //// the text file is assumed to contain a sequence of sentences, with one complete sentence per line
+                        //let sentences = File.ReadAllLines(textFilePath)
+                        //new TustlerServicesLib.SentenceChunker(sentences)
+                        //TustlerServicesLib.SentenceChunker.FromFile(textFilePath)
 
-            let translator = Translate.getTranslator awsInterface chunker notifications taskId sourceLanguageCode targetLanguageCode.Code terminologyNames
+                        if awsInterface.RuntimeOptions.IsMocked then
+                            // set a small chunk size for testing (needs to be longer than the test sentence length for the chunker to work correctly)
+                            let chunkSize = 40
+                            new TustlerServicesLib.SentenceChunker(defaultTranscript, chunkSize)
+                        else
+                            new TustlerServicesLib.SentenceChunker(defaultTranscript)
 
-            seq {
-                yield TaskResponse.TaskInfo (sprintf "Running %s translation..." targetLanguageCode.Name)
+                let translator = Translate.getTranslator awsInterface chunker notifications taskId.Value sourceLanguageCode targetLanguageCode.Code terminologyNames
+                seq {
+                    yield TaskResponse.TaskInfo (sprintf "Running %s translation..." targetLanguageCode.Name)
 
-                // send TaskResponse messages to show progress
-                yield! processChunks translator chunker
-                if notifications.Notifications.Count > 0 then
-                    yield! getNotificationResponse notifications
+                    // send TaskResponse messages to show progress
+                    yield! processChunks translator chunker
+                    if notifications.Notifications.Count > 0 then
+                        yield! getNotificationResponse notifications
 
-                yield (AWSArgument.SetTranslationSegments chunker).toSetArgumentTaskResponse()
+                    yield (AWSArgument.SetTranslationSegments chunker).toSetArgumentTaskResponse()
 
-                if chunker.IsJobComplete then
-                    yield TaskResponse.TaskComplete ((sprintf "Translation to %s is complete" targetLanguageCode.Name), DateTime.Now)
-                else
-                    yield TaskResponse.TaskComplete ((sprintf "Translation to %s is incomplete; not all segments were translated" targetLanguageCode.Name), DateTime.Now)
-            }
+                    if chunker.IsJobComplete then
+                        yield TaskResponse.TaskComplete ((sprintf "Translation to %s is complete" targetLanguageCode.Name), DateTime.Now)
+                    else
+                        yield TaskResponse.TaskComplete ((sprintf "Translation to %s is incomplete; not all segments were translated" targetLanguageCode.Name), DateTime.Now)
+                }
+            else
+                Seq.singleton (TaskResponse.TaskComplete ("Check variables: WorkingDirectory and TaskIdentifier", DateTime.Now))
 
         let inputs = [|
             TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestAWSInterface));
@@ -872,43 +1000,51 @@ module public Tasks =
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranslationSegments)))
         | Invoke ->
             seq {
-                let defaultArgs = TaskArgumentRecord.Init ()
-                let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+                let argMap = integrateUIRequestArguments resolvable_arguments
+                let unresolvedRequests = getUnResolvedRequests argMap inputs
 
-                if resolvedRecord.AWSInterface.IsSome && resolvedRecord.Notifications.IsSome && resolvedRecord.DefaultTranscript.IsSome &&
-                    resolvedRecord.TranslationLanguageCodeSource.IsSome && resolvedRecord.TranslationTargetLanguages.IsSome &&
-                    resolvedRecord.TranslationTerminologyNames.IsSome && resolvedRecord.TaskIdentifier.IsSome && resolvedRecord.WorkingDirectory.IsSome then
-                    yield! translateText resolvedRecord
+                if unresolvedRequests.Length = 0 then
+                    yield! translateText argMap
                 else
-                    yield! resolveByRequest resolvable_arguments inputs
+                    yield! resolveByRequest unresolvedRequests
             }
 
     [<HideFromUI>]
     let SaveTranslation (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
-        let saveTranslation argsRecord =
+        let saveTranslation argMap =
+            let argsRecord = {|
+                TaskIdentifier = PatternMatchers.getTaskIdentifier argMap;
+                WorkingDirectory = PatternMatchers.getWorkingDirectory argMap;
+                TranslationTargetLanguages = PatternMatchers.getTranslationTargetLanguages argMap;
+                TranslationSegments = PatternMatchers.getTranslationSegments argMap;
+            |}
+
             let taskId = argsRecord.TaskIdentifier.Value
             let workingDirectory = argsRecord.WorkingDirectory.Value
-            let targetLanguageCode = argsRecord.TranslationTargetLanguages.Value.LanguageCode
+            let targetLanguageCode = PatternMatchers.Consumable.getLanguageCode (argsRecord.TranslationTargetLanguages.Value)
             let chunker = argsRecord.TranslationSegments.Value
 
             seq {
-                if chunker.IsJobComplete then
-                    // save the translated text
-                    let fileName = sprintf "Translation-%s-%s.txt" taskId targetLanguageCode.Code
-                    let filePath = Path.Combine(workingDirectory.FullName, fileName)
-                    File.WriteAllText(filePath, chunker.CompletedTranslation)
+                if workingDirectory.IsSome && taskId.IsSome then
+                    if chunker.IsJobComplete then
+                        // save the translated text
+                        let fileName = sprintf "Translation-%s-%s.txt" taskId.Value targetLanguageCode.Code
+                        let filePath = Path.Combine(workingDirectory.Value.FullName, fileName)
+                        File.WriteAllText(filePath, chunker.CompletedTranslation)
 
-                    yield TaskResponse.TaskInfo (sprintf "Working directory is: %s" workingDirectory.FullName)
-                    yield TaskResponse.TaskComplete ((sprintf "Saved translation to %s" fileName), DateTime.Now)
+                        yield TaskResponse.TaskInfo (sprintf "Working directory is: %s" workingDirectory.Value.FullName)
+                        yield TaskResponse.TaskComplete ((sprintf "Saved translation to %s" fileName), DateTime.Now)
+                    else
+                        chunker.ArchiveChunks(taskId.Value, workingDirectory.Value.FullName)
+                        let filePath =
+                            let partial = Path.Combine(workingDirectory.Value.FullName, taskId.Value)
+                            Path.ChangeExtension(partial, "zip")
+                        yield TaskResponse.TaskComplete
+                            ((sprintf "Not all chunks were translated due to processing errors. The results so far for language (%s) have been archived at %s. Rerun the translate function to process the archived results."
+                                targetLanguageCode.Name filePath), DateTime.Now)
                 else
-                    chunker.ArchiveChunks(taskId, workingDirectory.FullName)
-                    let filePath =
-                        let partial = Path.Combine(workingDirectory.FullName, taskId)
-                        Path.ChangeExtension(partial, "zip")
-                    yield TaskResponse.TaskComplete
-                        ((sprintf "Not all chunks were translated due to processing errors. The results so far for language (%s) have been archived at %s. Rerun the translate function to process the archived results."
-                            targetLanguageCode.Name filePath), DateTime.Now)
+                    yield TaskResponse.TaskComplete ("Check variables: WorkingDirectory and TaskIdentifier", DateTime.Now)
             }
 
         let inputs = [|
@@ -925,28 +1061,34 @@ module public Tasks =
         | Outputs -> Seq.empty
         | Invoke ->
             seq {
-                let defaultArgs = TaskArgumentRecord.Init ()
-                let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+                let argMap = integrateUIRequestArguments resolvable_arguments
+                let unresolvedRequests = getUnResolvedRequests argMap [|
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
+                    |]
 
-                if resolvedRecord.SaveFlags.IsSome then
-                    let saveFlags = resolvedRecord.SaveFlags.Value
-                    if saveFlags.IsSet (AWSFlag(AWSFlagItem.TranslateSaveTranslation)) then
-                        if resolvedRecord.TaskIdentifier.IsSome && resolvedRecord.WorkingDirectory.IsSome &&
-                           resolvedRecord.TranslationTargetLanguages.IsSome && resolvedRecord.TranslationSegments.IsSome then
-                            yield! saveTranslation resolvedRecord
-                        else
-                            yield! resolveByRequest resolvable_arguments [|
+                if unresolvedRequests.Length = 0 then
+                    let saveFlags = (PatternMatchers.getSaveFlags argMap).Value
+
+                    if saveFlags.IsSome then
+                        if saveFlags.Value.IsSet (AWSFlag(AWSFlagItem.TranslateSaveTranslation)) then
+                            let unresolvedRequests = getUnResolvedRequests argMap [|
+                                TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
                                 TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranslationSegments));
                                 TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranslationTargetLanguages));
                                 TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory));
                                 TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestTaskIdentifier));
                                 |]
+
+                            if unresolvedRequests.Length = 0 then
+                                yield! saveTranslation argMap
+                            else
+                                yield! resolveByRequest unresolvedRequests
+                        else
+                            yield TaskResponse.TaskComplete ("Save flag not set (TranslateSaveTranslation)", DateTime.Now)
                     else
-                        yield TaskResponse.TaskComplete ("Save flag not set (TranslateSaveTranslation)", DateTime.Now)
+                        yield TaskResponse.TaskComplete ("Check variable: SaveFlags", DateTime.Now)
                 else
-                    yield! resolveByRequest resolvable_arguments [|
-                        TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
-                        |]
+                    yield! resolveByRequest unresolvedRequests
             }
 
     /// Translate text into multiple languages
@@ -974,32 +1116,35 @@ module public Tasks =
         | Outputs -> Seq.empty
         | Invoke ->
             seq {
-                let defaultArgs = TaskArgumentRecord.Init ()
-                let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+                let argMap = integrateUIRequestArguments resolvable_arguments
+                let unresolvedRequests = getUnResolvedRequests argMap inputs
 
-                if resolvedRecord.AWSInterface.IsSome && resolvedRecord.Notifications.IsSome && resolvedRecord.DefaultTranscript.IsSome &&
-                    resolvedRecord.TranslationTerminologyNames.IsSome && resolvedRecord.TranslationLanguageCodeSource.IsSome &&
-                    resolvedRecord.TaskIdentifier.IsSome && resolvedRecord.WorkingDirectory.IsSome && resolvedRecord.SaveFlags.IsSome &&
-                    resolvedRecord.TranslationTargetLanguages.IsSome then
-
+                if unresolvedRequests.Length = 0 then
                     // call the translate and save tasks for each of multiple target languages
-                    let targetLanguages = resolvedRecord.TranslationTargetLanguages.Value
+                    let targetLanguages = (PatternMatchers.getTranslationTargetLanguages argMap).Value
                     let taskSequence = ([|
                         TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "TranslateText", Description = "Translate text into a specified language" );
                         TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "SaveTranslation", Description = "Save some translated text");
                     |])
-                    yield TaskResponse.BeginLoopSequence (targetLanguages.UnWrap, taskSequence)
+                    yield TaskResponse.BeginLoopSequence (targetLanguages, taskSequence)
 
                     // sending task complete initiates the loop
                     yield TaskResponse.TaskComplete ("Translating text into multiple languages...", DateTime.Now)
                 else
-                    yield! resolveByRequest resolvable_arguments inputs
+                    yield! resolveByRequest unresolvedRequests
             }
 
     /// Convert the task events in a JSON document file to binary log format and save the result
     let ConvertJsonLogToLogFormat (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
-        let convertToLogFormat argsRecord =
+        let convertToLogFormat argMap =
+            let argsRecord = {|
+                Notifications = PatternMatchers.getNotifications argMap;
+                JsonFilePath = PatternMatchers.getOpenJsonFilePath argMap;
+                LogFormatFilePath = PatternMatchers.getSaveLogFormatFilePath argMap;
+                LogFormatEvents = PatternMatchers.getLogFormatEvents argMap;
+            |}
+
             let notifications = argsRecord.Notifications.Value
             let jsonFilePath = argsRecord.JsonFilePath.Value
             let binaryFilePath = argsRecord.LogFormatFilePath.Value
@@ -1040,20 +1185,25 @@ module public Tasks =
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestLogFormatEvents)))
         | Invoke ->
                 seq {
-                    let defaultArgs = TaskArgumentRecord.Init ()
-                    let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+                    let argMap = integrateUIRequestArguments resolvable_arguments
+                    let unresolvedRequests = getUnResolvedRequests argMap inputs
 
-                    if resolvedRecord.Notifications.IsSome && resolvedRecord.JsonFilePath.IsSome && resolvedRecord.LogFormatFilePath.IsSome then
-                        yield! convertToLogFormat resolvedRecord
+                    if unresolvedRequests.Length = 0 then
+                        yield! convertToLogFormat argMap
                     else
-                        yield! resolveByRequest resolvable_arguments inputs
+                        yield! resolveByRequest unresolvedRequests
                 }
 
     /// Convert the task events in a binary log format file to a JSON document and save the result
     let ConvertLogFormatToJsonLog (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
-        let convertToJson argsRecord =
-            //let notifications = argsRecord.Notifications.Value
+        let convertToJson argMap =
+            let argsRecord = {|
+                LogFormatFilePath = PatternMatchers.getOpenLogFormatFilePath argMap;
+                JsonFilePath = PatternMatchers.getSaveJsonFilePath argMap;
+                JsonEvents = PatternMatchers.getJsonEvents argMap;
+            |}
+
             let logFormatFilePath = argsRecord.LogFormatFilePath.Value
             let jsonFilePath = argsRecord.JsonFilePath.Value
 
@@ -1072,7 +1222,6 @@ module public Tasks =
                 }
 
         let inputs = [|
-            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestNotifications));
             TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveJsonFilePath));
             TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestOpenLogFormatFilePath));
             |]
@@ -1083,11 +1232,11 @@ module public Tasks =
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestJsonEvents)))
         | Invoke ->
             seq {
-                let defaultArgs = TaskArgumentRecord.Init ()
-                let resolvedRecord = integrateUIRequestArguments resolvable_arguments defaultArgs
+                let argMap = integrateUIRequestArguments resolvable_arguments
+                let unresolvedRequests = getUnResolvedRequests argMap inputs
 
-                if resolvedRecord.Notifications.IsSome && resolvedRecord.JsonFilePath.IsSome && resolvedRecord.LogFormatFilePath.IsSome then
-                    yield! convertToJson resolvedRecord
+                if unresolvedRequests.Length = 0 then
+                    yield! convertToJson argMap
                 else
-                    yield! resolveByRequest resolvable_arguments inputs
+                    yield! resolveByRequest unresolvedRequests
             }

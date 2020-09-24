@@ -8,6 +8,8 @@ open CloudWeaver.Types
 open System.IO
 open System.Text.Json
 
+// MG TODO add an Execution stack type that is a RetainingStack<IConsumable> i.e. a stack of either RetainingStack or TaskSequence (or Task)
+// This is to support deeper levels of tree execution
 type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool) =
 
     let mutable loggedCount = 0

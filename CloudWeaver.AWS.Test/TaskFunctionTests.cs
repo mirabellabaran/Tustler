@@ -37,7 +37,7 @@ namespace CloudWeaver.AWS.Test
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestBucket)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetBucket(new TustlerModels.Bucket() { Name="tator" }))));
+            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetBucket(new TustlerModels.Bucket() { Name = "tator" }))));
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);

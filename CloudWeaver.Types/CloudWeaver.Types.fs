@@ -188,32 +188,6 @@ type TaskSequence(tasks: IEnumerable<TaskItem>, ordering: ItemOrdering) =
         member this.GetEnumerator(): IEnumerator<TaskItem> = 
             (_array :> IEnumerable<TaskItem>).GetEnumerator()
 
-///// A wrapper for serialization/deserialization: retains the essential property values needed for reconstructing a TaskSequence
-//type TaskSequenceSerializationWrapper(ordering, total, remaining, tasks: IEnumerable<TaskItem>) =
-    
-//    /// Default constructor for deserialization
-//    new() = TaskSequenceSerializationWrapper(ItemOrdering.Sequential.ToString(), 0, 0, Seq.empty)
-
-//    new(taskSequence: IConsumableTaskSequence) = TaskSequenceSerializationWrapper(taskSequence.Ordering.ToString(), taskSequence.Total, taskSequence.Remaining, taskSequence)
-
-//    member val Ordering = ordering with get, set
-        
-//    member val Total = total with get, set
-
-//    member val Remaining = remaining with get, set
-
-//    member val Tasks: IEnumerable<TaskItem> = tasks with get, set
-
-//    member this.Unwrap(): TaskSequence =
-//        let ordering = ItemOrdering.FromString(this.Ordering)
-//        let taskSequence = new TaskSequence(this.Tasks, ordering)
-//        let count = this.Total - this.Remaining
-//        for x in 1..count do
-//            taskSequence.Pop() |> ignore
-
-//        taskSequence
-
-
 type SaveEventsFilter =
     | AllEvents
     | ArgumentsOnly
@@ -529,3 +503,110 @@ type StandardVariables() =
             | :? SaveFlags -> saveFlagsArgument <- StandardArgument.SetSaveFlags(Some(value :?> SaveFlags))
             | _ -> invalidArg "value" (sprintf "%A is not an expected value" value)
         | _ -> invalidArg "request" (sprintf "%A is not a runtime modifiable value" request)
+
+module public PatternMatchers =
+
+    let lookupArgument (key: StandardRequestIntraModule) (argMap: Map<IRequestIntraModule, IShareIntraModule>) = 
+        if argMap.ContainsKey key then
+            Some((argMap.[key] :?> StandardShareIntraModule).Argument)
+        else
+            None    // key not set
+
+    let private (| Notifications |) argMap =
+        let key = StandardRequestIntraModule(StandardRequest.RequestNotifications)
+        match (lookupArgument key argMap) with
+        | Some(SetNotificationsList arg) -> Some(arg)
+        | None -> None
+        | _ -> invalidArg "arg" "Expecting a NotificationsList"
+
+    let private (| TaskItem |) argMap =
+        let key = StandardRequestIntraModule(StandardRequest.RequestTaskItem)
+        match (lookupArgument key argMap) with
+        | Some(SetTaskItem arg) -> Some(arg)
+        | None -> None
+        | _ -> invalidArg "arg" "Expecting a TaskItem"
+
+    let private (| TaskIdentifier |) argMap =
+        let key = StandardRequestIntraModule(StandardRequest.RequestTaskIdentifier)
+        match (lookupArgument key argMap) with
+        | Some(SetTaskIdentifier arg) -> Some(arg)
+        | None -> None
+        | _ -> invalidArg "arg" "Expecting a TaskIdentifier"
+
+    let private (| WorkingDirectory |) argMap =
+        let key = StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory)
+        match (lookupArgument key argMap) with
+        | Some(SetWorkingDirectory arg) -> Some(arg)
+        | None -> None
+        | _ -> invalidArg "arg" "Expecting a WorkingDirectory"
+    
+    let private (| SaveFlags |) argMap =
+        let key = StandardRequestIntraModule(StandardRequest.RequestSaveFlags)
+        match (lookupArgument key argMap) with
+        | Some(SetSaveFlags arg) -> Some(arg)
+        | None -> None
+        | _ -> invalidArg "arg" "Expecting SaveFlags"
+
+    let private (| JsonEvents |) argMap =
+        let key = StandardRequestIntraModule(StandardRequest.RequestJsonEvents)
+        match (lookupArgument key argMap) with
+        | Some(SetJsonEvents arg) -> Some(arg)
+        | None -> None
+        | _ -> invalidArg "arg" "Expecting JsonEvents"
+
+    let private (| LogFormatEvents |) argMap =
+        let key = StandardRequestIntraModule(StandardRequest.RequestLogFormatEvents)
+        match (lookupArgument key argMap) with
+        | Some(SetLogFormatEvents arg) -> Some(arg)
+        | None -> None
+        | _ -> invalidArg "arg" "Expecting LogFormatEvents"
+
+    let private (| OpenJsonFilePath |) argMap =
+        let key = StandardRequestIntraModule(StandardRequest.RequestOpenJsonFilePath)
+        match (lookupArgument key argMap) with
+        | Some(SetOpenJsonFilePath arg) -> Some(arg)
+        | None -> None
+        | _ -> invalidArg "arg" "Expecting an OpenJsonFilePath"
+
+    let private (| SaveJsonFilePath |) argMap =
+        let key = StandardRequestIntraModule(StandardRequest.RequestSaveJsonFilePath)
+        match (lookupArgument key argMap) with
+        | Some(SetSaveJsonFilePath arg) -> Some(arg)
+        | None -> None
+        | _ -> invalidArg "arg" "Expecting an SaveJsonFilePath"
+
+    let private (| OpenLogFormatFilePath |) argMap =
+        let key = StandardRequestIntraModule(StandardRequest.RequestOpenLogFormatFilePath)
+        match (lookupArgument key argMap) with
+        | Some(SetOpenLogFormatFilePath arg) -> Some(arg)
+        | None -> None
+        | _ -> invalidArg "arg" "Expecting an OpenLogFormatFilePath"
+
+    let private (| SaveLogFormatFilePath |) argMap =
+        let key = StandardRequestIntraModule(StandardRequest.RequestSaveLogFormatFilePath)
+        match (lookupArgument key argMap) with
+        | Some(SetSaveLogFormatFilePath arg) -> Some(arg)
+        | None -> None
+        | _ -> invalidArg "arg" "Expecting an SaveLogFormatFilePath"
+    
+    let getNotifications argMap = match (argMap) with | Notifications arg -> arg
+
+    let getTaskItem argMap = match (argMap) with | TaskItem arg -> arg
+
+    let getTaskIdentifier argMap = match (argMap) with | TaskIdentifier arg -> arg
+
+    let getWorkingDirectory argMap = match (argMap) with | WorkingDirectory arg -> arg
+    
+    let getSaveFlags argMap = match (argMap) with | SaveFlags arg -> arg
+
+    let getJsonEvents argMap = match (argMap) with | JsonEvents arg -> arg
+
+    let getLogFormatEvents argMap = match (argMap) with | LogFormatEvents arg -> arg
+
+    let getOpenJsonFilePath argMap = match (argMap) with | OpenJsonFilePath arg -> arg
+
+    let getSaveJsonFilePath argMap = match (argMap) with | SaveJsonFilePath arg -> arg
+
+    let getOpenLogFormatFilePath argMap = match (argMap) with | OpenLogFormatFilePath arg -> arg
+
+    let getSaveLogFormatFilePath argMap = match (argMap) with | SaveLogFormatFilePath arg -> arg
