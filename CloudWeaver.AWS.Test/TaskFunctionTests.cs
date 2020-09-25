@@ -628,12 +628,8 @@ namespace CloudWeaver.AWS.Test
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestNotifications)" });
-
-            result = await CallTaskAsync(taskName, taskFunction, agent);
-            Assert.IsTrue(result.Length == 1);
             Assert.IsTrue(CheckAllStartWith(result, new string[] {
-                    "TaskConvertToJson: (5868 bytes)"
+                    "TaskConvertToJson: (5574 bytes)"
                 }));
 
             result = await CallTaskAsync(taskName, taskFunction, agent);
