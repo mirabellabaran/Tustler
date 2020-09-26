@@ -236,7 +236,7 @@ namespace Tustler.UserControls.TaskMemberControls
 
                 CommandParameter = new UITaskArguments()
                 {
-                    Mode = UITaskMode.Select,
+                    Mode = UITaskMode.SetArgument,
                     TaskArguments = new UITaskArgument[] { arg }
                 };
 

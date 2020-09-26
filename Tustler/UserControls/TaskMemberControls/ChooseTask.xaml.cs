@@ -1,5 +1,7 @@
-﻿using System;
+﻿using CloudWeaver.Types;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -10,18 +12,43 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Tustler.Models;
 using TustlerFSharpPlatform;
-using TustlerModels;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
     /// <summary>
-    /// S3BucketSelector expects to be bound to a TaskResponse.BucketsModel
-    /// Interaction logic for S3BucketSelector.xaml
+    /// Interaction logic for ChooseTask.xaml
     /// </summary>
-    public partial class S3BucketSelector : UserControl, ICommandSource
+    public partial class ChooseTask : UserControl, ICommandSource
     {
-        public S3BucketSelector()
+        #region IsButtonEnabled DependencyProperty
+        public static readonly DependencyProperty IsButtonEnabledProperty =
+            DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(ChooseTask), new PropertyMetadata(true, PropertyChangedCallback));
+
+        private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
+        {
+            if (dependencyObject is ChooseTask ctrl)
+            {
+                if (dependencyPropertyChangedEventArgs.NewValue != null)
+                {
+                    var newState = (bool)dependencyPropertyChangedEventArgs.NewValue;
+                    ctrl.btnContinue.IsEnabled = newState;
+                }
+            }
+        }
+
+        /// <summary>
+        ///  Enables or disables the Continue button
+        /// </summary>
+        public bool IsButtonEnabled
+        {
+            get { return (bool)GetValue(IsButtonEnabledProperty); }
+            set { SetValue(IsButtonEnabledProperty, value); }
+        }
+        #endregion
+
+        public ChooseTask()
         {
             InitializeComponent();
         }
@@ -107,19 +134,16 @@ namespace Tustler.UserControls.TaskMemberControls
             DependencyProperty.Register(
                 "Command",
                 typeof(ICommand),
-                typeof(S3BucketSelector),
+                typeof(ChooseTask),
                 new PropertyMetadata((ICommand)null,
                 new PropertyChangedCallback(CommandChanged)));
 
         private static void CommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            S3BucketSelector ctrl = (S3BucketSelector)d;
+            ChooseTask ctrl = (ChooseTask)d;
             ctrl.HookUpCommand((ICommand)e.OldValue, (ICommand)e.NewValue);
         }
 
-        /// <summary>
-        /// Set to the selected bucket
-        /// </summary>
         public object CommandParameter
         {
             get;
@@ -143,22 +167,20 @@ namespace Tustler.UserControls.TaskMemberControls
             }
         }
 
-        private void Select_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        private void Continue_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = true;
+            e.CanExecute = (lbTaskFunctions.SelectedItem is object);
         }
 
-        private void Select_Executed(object sender, ExecutedRoutedEventArgs e)
+        private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var context = (e.OriginalSource as Button).DataContext as Bucket;
-
-            var parameterData = new UITaskArgument?[] {
-                UITaskArgument.NewBucket(context)
-            };
+            var selectedTask = lbTaskFunctions.SelectedItem as TaskFunctionSpecifier;
+            var taskItem = new TaskItem(selectedTask.ModuleName, selectedTask.TaskName, string.Empty);
+            var parameterData = new UITaskArgument[] { UITaskArgument.NewSelectedTask(taskItem) };
 
             CommandParameter = new UITaskArguments()
             {
-                Mode = UITaskMode.SetArgument,
+                Mode = UITaskMode.SelectTask,
                 TaskArguments = parameterData
             };
 
@@ -166,13 +188,13 @@ namespace Tustler.UserControls.TaskMemberControls
         }
     }
 
-    public static class S3BucketSelectorCommands
+    public static class ChooseTaskCommands
     {
-        public static readonly RoutedUICommand Select = new RoutedUICommand
+        public static readonly RoutedUICommand Continue = new RoutedUICommand
             (
-                "Select",
-                "Select",
-                typeof(S3BucketSelectorCommands),
+                "Continue",
+                "Continue",
+                typeof(ChooseTaskCommands),
                 null
             );
     }

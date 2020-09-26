@@ -303,10 +303,9 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void OpenFilePicker_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            OpenFileDialog dlg = new OpenFileDialog
+            SaveFileDialog dlg = new SaveFileDialog
             {
                 Title = "Choose a file to open",
-                Multiselect = false,
                 InitialDirectory = AppSettings.FileCachePath
             };
 

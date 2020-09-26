@@ -1240,3 +1240,17 @@ module public Tasks =
                 else
                     yield! resolveByRequest unresolvedRequests
             }
+
+    /// Choose a task function to run
+    let SelectTask (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+
+        let inputs = [| |]
+
+        match queryMode with
+        | Description -> Seq.singleton (TaskResponse.TaskDescription "Select a task to run")
+        | Inputs -> Seq.ofArray inputs
+        | Outputs -> Seq.singleton (TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestJsonEvents)))
+        | Invoke ->
+            seq {
+                    yield TaskResponse.ChooseTask
+            }

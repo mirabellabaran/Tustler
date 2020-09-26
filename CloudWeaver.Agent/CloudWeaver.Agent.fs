@@ -22,6 +22,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
     let saveEventsEvent = new Event<EventHandler<_>, _>()       // save some or all events as a JSON document
     let convertToJsonEvent = new Event<EventHandler<_>, _>()    // convert events in binary log format to JSON document format
     let convertToBinaryEvent = new Event<EventHandler<_>, _>()  // convert events in JSON document format to binary log format
+    //let chooseTaskEvent = new Event<EventHandler<_>, _>()       // choose which task function to run
 
     let errorEvent = new Event<EventHandler<_>, _>()
 
@@ -170,7 +171,9 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         | TaskResponse.RequestArgument arg when knownArguments.IsKnownArgument(arg) ->
             events.Add(knownArguments.GetKnownArgument(arg))
             callTaskEvent.Trigger(self, taskInfo)
-        | TaskResponse.TaskSequence taskSequence -> addTaskSequenceEvent taskSequence
+        | TaskResponse.TaskSequence taskSequence ->
+            addTaskSequenceEvent taskSequence
+            newUIResponseEvent.Trigger(self, response)
         | TaskResponse.TaskContinue delayMilliseconds ->
             Async.AwaitTask (Task.Delay(delayMilliseconds)) |> Async.RunSynchronously
             callTaskEvent.Trigger(self, taskInfo)
@@ -200,6 +203,8 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         | TaskResponse.TaskConvertToBinary document ->
             convertToBinaryEvent.Trigger(self, document)
             callTaskEvent.Trigger(self, taskInfo)
+        //| TaskResponse.ChooseTask ->
+        //    chooseTaskEvent.Trigger(self, EventArgs())
 
         | _ ->
             let pendingUIResponse =
@@ -298,9 +303,6 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
     [<CLIEvent>]
     member this.CallTask:IEvent<EventHandler<TaskItem>, TaskItem> = callTaskEvent.Publish
 
-    //[<CLIEvent>]
-    //member this.RecallTask:IEvent<EventHandler<EventArgs>, EventArgs> = recallTaskEvent.Publish
-
     [<CLIEvent>]
     member this.NewUIResponse:IEvent<EventHandler<TaskResponse>, TaskResponse> = newUIResponseEvent.Publish
 
@@ -312,6 +314,9 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
 
     [<CLIEvent>]
     member this.ConvertToBinary:IEvent<EventHandler<JsonDocument>, JsonDocument> = convertToBinaryEvent.Publish
+
+    //[<CLIEvent>]
+    //member this.ChooseTask:IEvent<EventHandler<EventArgs>, EventArgs> = chooseTaskEvent.Publish
 
     [<CLIEvent>]
     member this.Error:IEvent<EventHandler<ApplicationErrorInfo>, ApplicationErrorInfo> = errorEvent.Publish

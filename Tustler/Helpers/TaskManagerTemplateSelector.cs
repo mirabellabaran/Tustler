@@ -12,7 +12,7 @@ namespace Tustler.Helpers
     {
         public override DataTemplate? SelectTemplate(object item, DependencyObject container)
         {
-            if (container is FrameworkElement element && item is TaskResponse response)
+            if (container is FrameworkElement element && item is ResponseWrapper wrapper)
             {
                 DataTemplate? GetErrorTemplate(TaskResponse.Notification note)
                 {
@@ -74,25 +74,6 @@ namespace Tustler.Helpers
                     };
                 }
 
-                //DataTemplate? GetSetBoundaryArgumentTemplate(IShareInterModule arg)
-                //{
-                //    return arg.Identifier switch
-                //    {
-                //        WrappedItemIdentifier id => id.Item switch
-                //        {
-                //            //"SetBucket" => element.FindResource("BucketTemplate") as DataTemplate,
-                //            //"SetBucketsModel" => element.FindResource("BucketsModelTemplate") as DataTemplate,
-                //            //"SetBucketItemsModel" => element.FindResource("BucketItemsModelTemplate") as DataTemplate,
-                //            //"SetTranscriptionJobsModel" => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
-                //            //"SetTranscriptionJobName" => element.FindResource("TranscriptionJobNameTemplate") as DataTemplate,
-                //            //"SetFileUpload" => element.FindResource("FileUploadTemplate") as DataTemplate,
-
-                //            _ => throw new ArgumentException("Unknown boundary argument")
-                //        },
-                //        _ => null
-                //    };
-                //}
-
                 DataTemplate? GetShowValueTemplate(IShowValue arg)
                 {
                     return arg.Identifier switch
@@ -110,7 +91,7 @@ namespace Tustler.Helpers
 
                 // Note that ShowTranscriptionJobsSummary and SetTranscriptionJobsModel share a template as both display the same data type
                 // (the latter also sets an argument on the events stack)
-                var template = response switch
+                var template = wrapper.TaskResponse switch
                 {
                     TaskResponse.Notification note => GetErrorTemplate(note),
                     TaskResponse.TaskInfo _ => element.FindResource("TaskInfoTemplate") as DataTemplate,
@@ -122,11 +103,14 @@ namespace Tustler.Helpers
 
                     TaskResponse.ShowValue arg => GetShowValueTemplate(arg.Item),
                     TaskResponse.SetArgument arg => GetSetArgumentTemplate(arg.Item),
-                    //TaskResponse.SetBoundaryArgument arg => GetSetBoundaryArgumentTemplate(arg.Item),
 
                     TaskResponse.RequestArgument arg => GetRequestTemplate(arg.Item),
 
-                    _ => null
+                    _ => wrapper.TaskResponse.Tag switch
+                    {
+                        TaskResponse.Tags.ChooseTask => element.FindResource("ChooseTaskTemplate") as DataTemplate,
+                        _ => null,
+                    }
                 };
 
                 return template;

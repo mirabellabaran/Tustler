@@ -14,12 +14,14 @@ type FilePickerMode =
 [<RequireQualifiedAccess>]
 type UITaskMode =
     | Unknown
-    | Select
+    | SetArgument        // set an argument on the agent
     | Continue
+    | SelectTask
     | ForEachIndependantTask
 
 [<RequireQualifiedAccess>]
 type UITaskArgument =
+    | SelectedTask of TaskItem
     | Bucket of Bucket
     | ForEach of IEnumerable<TaskItem>
     | S3MediaReference of S3MediaReference

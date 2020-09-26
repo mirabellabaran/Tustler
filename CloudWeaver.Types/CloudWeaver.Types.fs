@@ -219,6 +219,8 @@ and
     | TaskSaveEvents of SaveEventsFilter                // save all events (or all argument events) on the event stack as a JSON document for subsequent sessions
     | TaskConvertToBinary of JsonDocument               // convert a JSON document to binary log format and set an argument (SetLogFormatEvents)
     | TaskConvertToJson of byte[]                       // convert the log format data to JSON document format and set an argument (SetJsonEvents)
+    
+    | ChooseTask                            // ask the UI to present a list of task functions
 
     | Notification of Notification
     | BeginLoopSequence of IConsumable * IEnumerable<TaskItem>  // execute the task sequence for each consumable data item (the specified tasks are inside the loop)
@@ -250,6 +252,7 @@ and
         | TaskSaveEvents filter -> (sprintf "TaskSaveEvents: %A" filter)
         | TaskConvertToBinary _jsonDocument -> "TaskConvertToBinary {document}"
         | TaskConvertToJson data -> (sprintf "TaskConvertToJson: (%d bytes)" data.Length)
+        | ChooseTask -> "ChooseTask"
         | Notification notification -> (sprintf "Notification: %s" (notification.ToString()))
         | BeginLoopSequence (consumable, taskItems) -> (sprintf "BeginLoopSequence (%d items): %s" consumable.Total (System.String.Join(", ", (Seq.map (fun (item: TaskItem) -> item.TaskName) taskItems))))
         | ShowValue showValue -> (sprintf "ShowValue: %s" (showValue.ToString()))

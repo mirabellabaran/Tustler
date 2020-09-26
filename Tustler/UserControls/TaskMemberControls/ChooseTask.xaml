@@ -1,0 +1,28 @@
+﻿<UserControl x:Class="Tustler.UserControls.TaskMemberControls.ChooseTask"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:uc="clr-namespace:Tustler.UserControls.TaskMemberControls"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.CommandBindings>
+        <CommandBinding Command="{x:Static uc:ChooseTaskCommands.Continue}" CanExecute="Continue_CanExecute" Executed="Continue_Executed" />
+    </UserControl.CommandBindings>
+
+    <StackPanel Orientation="Vertical">
+        <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
+            <StackPanel Orientation="Vertical">
+                <Label Foreground="#637074" Background="#BDD4AA" FontWeight="Bold" Margin="1" Content="Choose a task:" />
+                <ListBox x:Name="lbTaskFunctions" SelectionMode="Single" MaxHeight="200" HorizontalContentAlignment="Stretch" ItemsSource="{Binding Path=Owner.TaskFunctions}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Label Background="#637074" Foreground="#BDD4E7" FontWeight="Bold" Margin="1" Content="{Binding Path=TaskName}" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+        </Border>
+        <Button x:Name="btnContinue" Content="Continue" Height="30" Width="80" Command="{x:Static uc:ChooseTaskCommands.Continue}" Style="{StaticResource ButtonDarkFlat}" />
+    </StackPanel>
+</UserControl>
