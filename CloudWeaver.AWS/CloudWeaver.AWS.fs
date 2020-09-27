@@ -90,8 +90,8 @@ type AWSShareIterationArgument(arg: AWSIterationArgument) =
         AWSShareIterationArgument(iterationArgument) :> IShareIterationArgument
 
 /// An iteration argument stack (IConsumable) for AWSIterationArgument types
-type AWSIterationStack(items: IEnumerable<IShareIterationArgument>) =
-    inherit RetainingStack(items)
+type AWSIterationStack(uid: Guid, items: IEnumerable<IShareIterationArgument>) =
+    inherit RetainingStack(uid, items)
 
     override this.ModuleName with get() = "AWSShareIterationArgument"
 

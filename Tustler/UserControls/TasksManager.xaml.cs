@@ -651,7 +651,7 @@ namespace Tustler.UserControls
                         break;
                     case UITaskArgument.TranslationTargetLanguages translationTargetLanguagesArg:
                         var languages = translationTargetLanguagesArg.Item.Select(languageCode => new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(languageCode)));
-                        var translationTargetLanguages = new AWSIterationStack(languages);
+                        var translationTargetLanguages = new AWSIterationStack(Guid.NewGuid(), languages);
                         agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationTargetLanguages(translationTargetLanguages))));
                         break;
                     case UITaskArgument.TranslationTerminologyNames translationTerminologyNamesArg:
@@ -705,17 +705,17 @@ namespace Tustler.UserControls
                 // expecting a single argument (an IEnumerable<TaskItem>)
                 var subtasks = parameterInfo.TaskArguments.First() switch
                 {
-                    UITaskArgument.ForEach args => new TaskSequence(args.Item, ItemOrdering.Independant),
+                    UITaskArgument.ForEach args => args.Item.ToArray(),
                     _ => throw new ArgumentException($"Unknown argument type")
                 };
 
-                // now that the user has made their selections, add those selections to the event source for later reference
-                agent.AddEvent(TaskEvent.NewForEachTask(subtasks));
+                // now that the user has made their selections, push the new tasks on the execution stack
+                agent.PushTasks(subtasks, ItemOrdering.Independant);
 
                 // start the first sub-task
-                if (subtasks.Remaining > 0)
+                if (subtasks.Length > 0)
                 {
-                    agent.StartNewTask(subtasks);       // pop the first task item and set as argument; then invoke the callback that adds the next task to the queue
+                    agent.StartNextTask();       // pop the first task item and invoke the callback that adds the next task to the queue
                     await Dispatcher.InvokeAsync(async () =>
                     {
                         var nextTaskSpecifier = taskQueue.Dequeue();

@@ -10,20 +10,26 @@ open System.Collections.Generic
 module public Converters =
 
     type JsonValue =
+    | Identifier of Guid
     | Int of int
     | String of string
     | Array of IShareIterationArgument[]
     | Tasks of TaskItem[]
     with
-        static member getString value =
+        static member getGuid value =
             match value with
-            | JsonValue.String str -> str
-            | _ -> raise (JsonException("Expecting the name of a string value"))
+            | JsonValue.Identifier guid -> guid
+            | _ -> raise (JsonException("Expecting the name of a Guid value"))
 
         static member getInteger value =
             match value with
             | JsonValue.Int i -> i
             | _ -> raise (JsonException("Expecting the name of an integer value"))
+
+        static member getString value =
+            match value with
+            | JsonValue.String str -> str
+            | _ -> raise (JsonException("Expecting the name of a string value"))
 
         static member getArray value =
             match value with
@@ -50,7 +56,11 @@ module public Converters =
                             let data =
                                 match reader.TokenType with
                                 | JsonTokenType.Number -> JsonValue.Int (reader.GetInt32())
-                                | JsonTokenType.String -> JsonValue.String (reader.GetString())
+                                | JsonTokenType.String -> // could be Guid or string
+                                    let str = reader.GetString()
+                                    match Guid.TryParse str with
+                                    | (true, identifier) -> JsonValue.Identifier identifier
+                                    | (_, _) -> JsonValue.String str
                                 | JsonTokenType.StartArray ->
                                     if dict.ContainsKey "ModuleName" then
                                         let data =
@@ -71,11 +81,12 @@ module public Converters =
                             dict.Add(propertyName, data)
                     | _ -> ()
 
-            if (dict.ContainsKey "ModuleName") && (dict.ContainsKey "Items") then
+            if (dict.ContainsKey "Identifier") && (dict.ContainsKey "ModuleName") && (dict.ContainsKey "Items") then
+                let identifier = JsonValue.getGuid (dict.["Identifier"])
                 let items = JsonValue.getArray (dict.["Items"])
                 match (JsonValue.getString (dict.["ModuleName"])) with
-                | "StandardShareIterationArgument" -> StandardIterationStack(items) :> RetainingStack
-                | "AWSShareIterationArgument" -> AWSIterationStack(items) :> RetainingStack
+                | "StandardShareIterationArgument" -> StandardIterationStack(identifier, items) :> RetainingStack
+                | "AWSShareIterationArgument" -> AWSIterationStack(identifier, items) :> RetainingStack
                 | _ -> raise (JsonException("Expecting a ModuleName property"))
             else                
                 raise (JsonException("Error parsing RetainingStack type"))
@@ -83,6 +94,7 @@ module public Converters =
         /// Serialize a RetainingStack (which is an IEnumerable<IShareIterationArgument> with additional attributes)
         override this.Write(writer, instance, _options) =
             writer.WriteStartObject()
+            writer.WriteString("Identifier", instance.Identifier.ToString())
             writer.WriteString("ModuleName", instance.ModuleName)
             writer.WriteNumber("Total", instance.Total)
             writer.WriteNumber("Remaining", instance.Remaining)
@@ -107,7 +119,11 @@ module public Converters =
                             let data =
                                 match reader.TokenType with
                                 | JsonTokenType.Number -> JsonValue.Int (reader.GetInt32())
-                                | JsonTokenType.String -> JsonValue.String (reader.GetString())
+                                | JsonTokenType.String ->   // could be Guid or string
+                                    let str = reader.GetString()
+                                    match Guid.TryParse str with
+                                    | (true, identifier) -> JsonValue.Identifier identifier
+                                    | (_, _) -> JsonValue.String str
                                 | JsonTokenType.StartArray ->
                                     let data =
                                         JsonSerializer.Deserialize<IEnumerable<TaskItem>>(&reader)
@@ -117,12 +133,13 @@ module public Converters =
                             dict.Add(propertyName, data)
                     | _ -> ()
 
-            if (dict.ContainsKey "Ordering") && (dict.ContainsKey "Tasks") then
+            if (dict.ContainsKey "Identifier") && (dict.ContainsKey "Ordering") && (dict.ContainsKey "Tasks") then
+                let identifier = JsonValue.getGuid (dict.["Identifier"])
                 let ordering =
                     let str = JsonValue.getString (dict.["Ordering"])
                     ItemOrdering.FromString str
                 let tasks = JsonValue.getTasks (dict.["Tasks"])
-                TaskSequence(tasks, ordering)
+                TaskSequence(identifier, tasks, ordering)
             else                
                 raise (JsonException("Error parsing TaskSequence"))
 
@@ -130,6 +147,7 @@ module public Converters =
         override this.Write(writer, instance, _options) =
             writer.WriteStartObject()
             writer.WriteString("Ordering", instance.Ordering.ToString())
+            writer.WriteString("Identifier", instance.Identifier.ToString())
             writer.WriteNumber("Total", instance.Total)
             writer.WriteNumber("Remaining", instance.Remaining)
             writer.WritePropertyName("Tasks")

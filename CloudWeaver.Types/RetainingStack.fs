@@ -4,6 +4,7 @@ open System.Collections
 open System.Collections.Generic
 open System.Collections.Immutable
 open System.Text.Json
+open System
 
 type IShareIterationArgument =
     abstract member Serialize : Utf8JsonWriter -> unit
@@ -12,6 +13,7 @@ type IShareIterationArgument =
 /// Defines a type whose internal items can be consumed until none are left
 type IConsumable =
     inherit IEnumerable<IShareIterationArgument>
+    abstract member Identifier: Guid with get
     abstract member Total : int with get
     abstract member Remaining : int with get
     abstract member Consume : unit -> IShareIterationArgument   // consume the current item and return the value
@@ -20,7 +22,7 @@ type IConsumable =
 /// A stack-like object that supports Stack semantics but retains all data
 /// A retaining stack can be consumed but the original contents are always retrievable
 [<AbstractClass>]
-type RetainingStack(items: IEnumerable<IShareIterationArgument>) =
+type RetainingStack(uid: Guid, items: IEnumerable<IShareIterationArgument>) =
 
     do
         if (isNull items) then invalidArg "items" "Expecting a non-null value for items"
@@ -31,11 +33,14 @@ type RetainingStack(items: IEnumerable<IShareIterationArgument>) =
     /// the name of the module that contains the iteration argument type
     abstract ModuleName : string with get
 
-    /// Get a count of the remaining (consumable) items
-    member this.Remaining with get() = _stack.Count
+    /// Get the unique identifier for this instance
+    member this.Identifier with get() = uid
 
     /// Get the total count
     member this.Total with get() = _array.Length
+
+    /// Get a count of the remaining (consumable) items
+    member this.Remaining with get() = _stack.Count
 
     /// Get the current item (head of stack) without consuming it
     member this.Current with get() = _stack.Peek()
@@ -58,6 +63,8 @@ type RetainingStack(items: IEnumerable<IShareIterationArgument>) =
     override this.ToString() = sprintf "RetainingStack of IShareIterationArgument: total=%d; remaining=%d" (_array.Length) (_stack.Count)
 
     interface IConsumable with
+
+        member this.Identifier with get() = this.Identifier
 
         member this.Total: int = this.Total
 

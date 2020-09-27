@@ -113,13 +113,14 @@ type StandardShareIterationArgument(arg: StandardIterationArgument) =
         StandardShareIterationArgument(iterationArgument) :> IShareIterationArgument
 
 /// An iteration argument stack (IConsumable) for StandardIterationArgument types
-type StandardIterationStack(items: IEnumerable<IShareIterationArgument>) =
-    inherit RetainingStack(items)
+type StandardIterationStack(uid: Guid, items: IEnumerable<IShareIterationArgument>) =
+    inherit RetainingStack(uid, items)
 
     override this.ModuleName with get() = "StandardShareIterationArgument"
 
 type IConsumableTaskSequence =
     inherit IEnumerable<TaskItem>
+    abstract member Identifier: Guid with get
     abstract member Total : int with get
     abstract member Remaining : int with get
     abstract member Consume : unit -> IShareIterationArgument   // consume the current item and return the value
@@ -127,7 +128,7 @@ type IConsumableTaskSequence =
     abstract member Ordering : ItemOrdering with get
     abstract member ConsumeTask : unit -> TaskItem   // consume the current item and return the value
 
-type TaskSequence(tasks: IEnumerable<TaskItem>, ordering: ItemOrdering) =
+type TaskSequence(uid: Guid, tasks: IEnumerable<TaskItem>, ordering: ItemOrdering) =
 
     do
         if (isNull tasks) then invalidArg "tasks" "Expecting a non-null value for tasks"
@@ -135,16 +136,19 @@ type TaskSequence(tasks: IEnumerable<TaskItem>, ordering: ItemOrdering) =
     let _array = tasks.ToImmutableArray()
     let _stack = Stack<TaskItem>(Seq.rev tasks)  // reversed so that calling Pop() removes items in _array order
 
-    new(items) = TaskSequence(items, ItemOrdering.Sequential)
+    new(uid, items) = TaskSequence(uid, items, ItemOrdering.Sequential)
 
     /// Get the ordering of items for this instance
     member this.Ordering with get() = ordering
 
-    /// Get a count of the remaining (consumable) items
-    member this.Remaining with get() = _stack.Count
+    /// Get the unique identifier for this instance
+    member this.Identifier with get() = uid
 
     /// Get the total count
     member this.Total with get() = _array.Length
+
+    /// Get a count of the remaining (consumable) items
+    member this.Remaining with get() = _stack.Count
 
     /// Get the current item (head of stack) without consuming it
     member this.Current with get() = _stack.Peek()
@@ -167,6 +171,8 @@ type TaskSequence(tasks: IEnumerable<TaskItem>, ordering: ItemOrdering) =
     override this.ToString() = sprintf "TaskSequence of TaskItem: total=%d; remaining=%d" (_array.Length) (_stack.Count)
 
     interface IConsumableTaskSequence with
+
+        member this.Identifier with get() = this.Identifier
 
         member this.Total: int = this.Total
 
@@ -197,9 +203,10 @@ type SaveEventsFilter =
 type TaskEvent =
     | InvokingFunction
     | SetArgument of TaskResponse
-    | ForEachTask of IConsumableTaskSequence
-    | ForEachDataItem of IConsumable
-    | Task of TaskItem     // the name and description of the task
+    | ForEachTask of IConsumableTaskSequence            // add a stack frame of tasks (with a guid identifier)
+    | ForEachDataItem of IConsumable                    // add a stack frame of data items (with a guid identifier)
+    | Pop of Guid                                       // pop the stack identified by the specified guid
+    | Task of TaskItem                                  // the name and description of the task
     | SelectArgument
     | ClearArguments
     | FunctionCompleted

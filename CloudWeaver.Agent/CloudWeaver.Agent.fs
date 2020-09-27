@@ -8,6 +8,10 @@ open CloudWeaver.Types
 open System.IO
 open System.Text.Json
 
+type ExecutionStackFrameType =
+    | Data of IConsumable
+    | Tasks of IConsumableTaskSequence
+
 // MG TODO add an Execution stack type that is a RetainingStack<IConsumable> i.e. a stack of either RetainingStack or TaskSequence (or Task)
 // This is to support deeper levels of tree execution
 type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool) =
@@ -22,15 +26,16 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
     let saveEventsEvent = new Event<EventHandler<_>, _>()       // save some or all events as a JSON document
     let convertToJsonEvent = new Event<EventHandler<_>, _>()    // convert events in binary log format to JSON document format
     let convertToBinaryEvent = new Event<EventHandler<_>, _>()  // convert events in JSON document format to binary log format
-    //let chooseTaskEvent = new Event<EventHandler<_>, _>()       // choose which task function to run
 
     let errorEvent = new Event<EventHandler<_>, _>()
 
     do
         knownArguments.AddModule(standardVariables)
 
-    // the event stack: ground truth for the events generated in a given session (start task to TaskResponse.TaskComplete)
+    // the event stack: ground truth for the events generated in a given session (from start of task to TaskResponse.TaskComplete)
     let events = new List<TaskEvent>()
+
+    let executionStack = new Stack<ExecutionStackFrameType>()
 
     // the responses generated from the last task function call (useful for testing purposes)
     let taskResponses = if retainResponses then Some(new List<TaskResponse>()) else None
@@ -81,39 +86,39 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
             let response = TaskResponse.TaskInfo (sprintf "Log Replay: Unexpected event at top of stack: %A" lastEvent)
             newUIResponseEvent.Trigger(self, response)
 
-    /// Get the last ForEachTask RetainingStack on the event stack (if there is one)
-    let getCurrentTaskLoopStack () =
+    ///// Get the last ForEachTask RetainingStack on the event stack (if there is one)
+    //let getCurrentTaskLoopStack () =
 
-        // ... first get the last ForEachTask event
-        let lastForEach =
-            events
-            |> Seq.tryFindBack (fun evt ->
-                match evt with
-                | TaskEvent.ForEachTask _ -> true
-                | _ -> false
-            )
+    //    // ... first get the last ForEachTask event
+    //    let lastForEach =
+    //        events
+    //        |> Seq.tryFindBack (fun evt ->
+    //            match evt with
+    //            | TaskEvent.ForEachTask _ -> true
+    //            | _ -> false
+    //        )
 
-        // ... and retrieve the internal RetainingStack
-        match lastForEach with
-        | Some(TaskEvent.ForEachTask items) -> Some(items)
-        | _ -> None
+    //    // ... and retrieve the internal RetainingStack
+    //    match lastForEach with
+    //    | Some(TaskEvent.ForEachTask items) -> Some(items)
+    //    | _ -> None
 
-    /// Get the last ForEachTask RetainingStack on the event stack (if there is one)
-    let getCurrentDataLoopStack () =
+    ///// Get the last ForEachTask RetainingStack on the event stack (if there is one)
+    //let getCurrentDataLoopStack () =
 
-        // ... first get the last ForEachTask event
-        let lastForEach =
-            events
-            |> Seq.tryFindBack (fun evt ->
-                match evt with
-                | TaskEvent.ForEachDataItem _ -> true
-                | _ -> false
-            )
+    //    // ... first get the last ForEachTask event
+    //    let lastForEach =
+    //        events
+    //        |> Seq.tryFindBack (fun evt ->
+    //            match evt with
+    //            | TaskEvent.ForEachDataItem _ -> true
+    //            | _ -> false
+    //        )
 
-        // ... and retrieve the internal RetainingStack
-        match lastForEach with
-        | Some(TaskEvent.ForEachDataItem items) -> Some(items)
-        | _ -> None
+    //    // ... and retrieve the internal RetainingStack
+    //    match lastForEach with
+    //    | Some(TaskEvent.ForEachDataItem items) -> Some(items)
+    //    | _ -> None
 
     let startNewTask (self:Agent) (stack:IConsumableTaskSequence) =
         // check if task is independant
@@ -130,35 +135,61 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         
         callTaskEvent.Trigger(self, nextTask)
 
-    let nextTask (self:Agent) =
-        events.Add(TaskEvent.FunctionCompleted)
-        let taskStack = getCurrentTaskLoopStack ()
-        if taskStack.IsSome then
-            if taskStack.Value.Remaining> 0 then
-                startNewTask self taskStack.Value
+    let rec nextTask (self:Agent) =
+        // expecting a tasks frame at the top of the execution stack
+        match executionStack.TryPeek() with
+        | true, Tasks taskSequence ->
+            if taskSequence.Remaining > 0 then
+                startNewTask self taskSequence
             else
-                // check for a data loop (ForEachDataItem)
-                let dataStack = getCurrentDataLoopStack ()
-                // there must be at least one data value remaining for the task function to consume
-                if dataStack.IsSome && dataStack.Value.Remaining > 1 then
-                    dataStack.Value.Consume() |> ignore
-                    taskStack.Value.Reset()     // start the sequence of tasks from the beginning
-                    startNewTask self taskStack.Value
+                // out of tasks; is there a Data frame on top?
+                let topFrame = executionStack.Pop()
+                match executionStack.Peek() with
+                | Data consumable ->
+                    // there must be at least one data value remaining for the task function to consume
+                    if consumable.Remaining > 1 then
+                        consumable.Consume() |> ignore
+                        taskSequence.Reset()     // start the sequence of tasks from the beginning
+                        executionStack.Push(topFrame)
+                        startNewTask self taskSequence
+                    else
+                        executionStack.Pop() |> ignore          // pop the top frame (Data) and try again
+                        nextTask self
+                | _ -> nextTask self                            // leave the top frame (Tasks) popped and try again
+        | true, Data _ -> invalidOp "Found data frame at top of execution stack"
+        | _ -> ()                                               // nothing left to execute
+
+
+        //let taskStack = getCurrentTaskLoopStack ()
+        //if taskStack.IsSome then
+        //    if taskStack.Value.Remaining> 0 then
+        //        startNewTask self taskStack.Value
+        //    else
+        //        // check for a data loop (ForEachDataItem)
+        //        let dataStack = getCurrentDataLoopStack ()
+        //        // there must be at least one data value remaining for the task function to consume
+        //        if dataStack.IsSome && dataStack.Value.Remaining > 1 then
+        //            dataStack.Value.Consume() |> ignore
+        //            taskStack.Value.Reset()     // start the sequence of tasks from the beginning
+        //            startNewTask self taskStack.Value
 
     let addArgumentEvent (self:Agent) response =
         events.Add(TaskEvent.SetArgument(response))
         newUIResponseEvent.Trigger(self, response)
 
     // For each task: add a marker event on the events stack (execute each task in the sequence)
-    let addTaskSequenceEvent taskSequence =
-        let subTasks = TaskSequence(taskSequence, ItemOrdering.Sequential)
+    let addTaskSequenceEvent taskSequence ordering =
+        let subTasks = TaskSequence(Guid.NewGuid(), taskSequence, ordering)
         events.Add(TaskEvent.ForEachTask(subTasks))
+        executionStack.Push(Tasks subTasks)
 
     // For each item of data: add a marker event on the events stack (execute tasks in the sequence in the context of the current data item)
     let addDataSequenceEvent (data:IConsumable) taskSequence =
         events.Add(TaskEvent.ForEachDataItem(data))
-        let subTasks = TaskSequence(taskSequence, ItemOrdering.Sequential)
+        let subTasks = TaskSequence(Guid.NewGuid(), taskSequence, ItemOrdering.Sequential)
         events.Add(TaskEvent.ForEachTask(subTasks))
+        executionStack.Push(Data data)
+        executionStack.Push(Tasks subTasks)
 
     let processResponse self (taskInfo: TaskItem) response =
         if retainResponses then
@@ -172,12 +203,13 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
             events.Add(knownArguments.GetKnownArgument(arg))
             callTaskEvent.Trigger(self, taskInfo)
         | TaskResponse.TaskSequence taskSequence ->
-            addTaskSequenceEvent taskSequence
+            addTaskSequenceEvent taskSequence ItemOrdering.Sequential
             newUIResponseEvent.Trigger(self, response)
         | TaskResponse.TaskContinue delayMilliseconds ->
             Async.AwaitTask (Task.Delay(delayMilliseconds)) |> Async.RunSynchronously
             callTaskEvent.Trigger(self, taskInfo)
         | TaskResponse.TaskComplete _ ->
+            events.Add(TaskEvent.FunctionCompleted)
             newUIResponseEvent.Trigger(self, response)
             nextTask self
         | TaskResponse.BeginLoopSequence (consumable, taskSequence) -> addDataSequenceEvent consumable taskSequence
@@ -203,8 +235,6 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         | TaskResponse.TaskConvertToBinary document ->
             convertToBinaryEvent.Trigger(self, document)
             callTaskEvent.Trigger(self, taskInfo)
-        //| TaskResponse.ChooseTask ->
-        //    chooseTaskEvent.Trigger(self, EventArgs())
 
         | _ ->
             let pendingUIResponse =
@@ -254,8 +284,12 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         runTask this taskInfo responses
 
     /// Start the task at the top of the stack
-    member this.StartNewTask stack =
-        startNewTask this stack
+    member this.StartNextTask () =
+        nextTask this
+
+    /// Add a sequence of (independant or dependant) tasks to the execution stack
+    member this.PushTasks taskSequence ordering =
+        addTaskSequenceEvent taskSequence ordering
 
     /// A new UI selection has been made
     member this.NewSelection response =
@@ -268,9 +302,6 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
 
     member this.AddArgument response =
         events.Add(TaskEvent.SetArgument(response))
-
-    member this.AddEvent evt =
-        events.Add(evt)
 
     member this.AddEvents evts =
         events.AddRange(evts)
@@ -314,9 +345,6 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
 
     [<CLIEvent>]
     member this.ConvertToBinary:IEvent<EventHandler<JsonDocument>, JsonDocument> = convertToBinaryEvent.Publish
-
-    //[<CLIEvent>]
-    //member this.ChooseTask:IEvent<EventHandler<EventArgs>, EventArgs> = chooseTaskEvent.Publish
 
     [<CLIEvent>]
     member this.Error:IEvent<EventHandler<ApplicationErrorInfo>, ApplicationErrorInfo> = errorEvent.Publish
