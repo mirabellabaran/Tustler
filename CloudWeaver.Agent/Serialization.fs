@@ -28,11 +28,13 @@ module public Serialization =
             | _ -> invalidArg "event" (sprintf "Unexpected event stack set-argument type: %A" arg)
         | TaskEvent.ForEachTask consumableTaskSequence -> writer.WritePropertyName("TaskEvent.ForEachTask"); JsonSerializer.Serialize(writer, consumableTaskSequence :?> TaskSequence, serializerOptions)
         | TaskEvent.ForEachDataItem consumable -> writer.WritePropertyName("TaskEvent.ForEachDataItem"); JsonSerializer.Serialize(writer, consumable :?> RetainingStack, serializerOptions)
+        | TaskEvent.ConsumedData identifier -> writer.WritePropertyName("TaskEvent.ConsumedData"); JsonSerializer.Serialize(writer, identifier)
+        | TaskEvent.ConsumedTask identifier -> writer.WritePropertyName("TaskEvent.ConsumedTask"); JsonSerializer.Serialize(writer, identifier)
         | TaskEvent.Task taskItem -> writer.WritePropertyName("TaskEvent.Task"); JsonSerializer.Serialize(writer, taskItem)
+        | TaskEvent.TaskError taskItem -> writer.WritePropertyName("TaskEvent.TaskError"); JsonSerializer.Serialize(writer, taskItem)
         | TaskEvent.SelectArgument -> writer.WritePropertyName("TaskEvent.SelectArgument"); JsonSerializer.Serialize(writer, "SelectArgument")
         | TaskEvent.ClearArguments -> writer.WritePropertyName("TaskEvent.ClearArguments"); JsonSerializer.Serialize(writer, "ClearArguments")
         | TaskEvent.FunctionCompleted -> writer.WritePropertyName("TaskEvent.FunctionCompleted"); JsonSerializer.Serialize(writer, "FunctionCompleted")
-        | _ -> invalidArg "event" (sprintf "Unexpected event stack type: %A" event)
 
         writer.WriteEndObject()
 
@@ -63,9 +65,18 @@ module public Serialization =
             | "TaskEvent.ForEachDataItem" ->
                 let stack = JsonSerializer.Deserialize<RetainingStack>(property.Value.GetRawText(), serializerOptions)
                 taskEvent <- Some(TaskEvent.ForEachDataItem stack); None
+            | "TaskEvent.ConsumedData" ->
+                let identifier = JsonSerializer.Deserialize<Guid>(property.Value.GetRawText(), serializerOptions)
+                taskEvent <- Some(TaskEvent.ConsumedData identifier); None
+            | "TaskEvent.ConsumedTask" ->
+                let identifier = JsonSerializer.Deserialize<Guid>(property.Value.GetRawText(), serializerOptions)
+                taskEvent <- Some(TaskEvent.ConsumedTask identifier); None
             | "TaskEvent.Task" ->
                 let data = JsonSerializer.Deserialize<TaskItem>(property.Value.GetRawText())
                 taskEvent <- Some(TaskEvent.Task data); None
+            | "TaskEvent.TaskError" ->
+                let data = JsonSerializer.Deserialize<TaskItem>(property.Value.GetRawText())
+                taskEvent <- Some(TaskEvent.TaskError data); None
             | "TaskEvent.SelectArgument" -> taskEvent <- Some(TaskEvent.SelectArgument); None
             | "TaskEvent.ClearArguments" -> taskEvent <- Some(TaskEvent.ClearArguments); None
             | "TaskEvent.FunctionCompleted" -> taskEvent <- Some(TaskEvent.FunctionCompleted); None

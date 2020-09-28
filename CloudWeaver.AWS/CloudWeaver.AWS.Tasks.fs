@@ -748,6 +748,7 @@ module public Tasks =
             }
 
 
+    [<HideFromUI>]
     let CreateSubTitles (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         // Subtitle lines need to:
@@ -1135,6 +1136,7 @@ module public Tasks =
             }
 
     /// Convert the task events in a JSON document file to binary log format and save the result
+    [<HideFromUI>]
     let ConvertJsonLogToLogFormat (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         let convertToLogFormat argMap =
@@ -1195,6 +1197,7 @@ module public Tasks =
                 }
 
     /// Convert the task events in a binary log format file to a JSON document and save the result
+    [<HideFromUI>]
     let ConvertLogFormatToJsonLog (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         let convertToJson argMap =

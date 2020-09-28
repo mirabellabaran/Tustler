@@ -18,6 +18,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
 
     let mutable loggedCount = 0
     let mutable uiResponsePending = false
+    let mutable errorState = false
 
     let standardVariables = StandardVariables()
 
@@ -40,86 +41,6 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
     // the responses generated from the last task function call (useful for testing purposes)
     let taskResponses = if retainResponses then Some(new List<TaskResponse>()) else None
 
-    /// Replace the events stack with the specified logged events and continue execution
-    let continueWith self loggedEvents =
-
-        // find the last task and call it
-        let callLastTask () =
-            let lastTask =
-                events
-                |> Seq.tryFindBack (fun evt ->
-                    match evt with
-                    | TaskEvent.Task _ -> true
-                    | _ -> false
-                )
-
-            let nextTask =
-                match lastTask with
-                | Some(TaskEvent.Task taskInfo) -> Some(taskInfo)
-                | _ -> None
-
-            if nextTask.IsSome then
-                standardVariables.SetValue(StandardRequest.RequestTaskItem, nextTask.Value)   // update task item variable
-                callTaskEvent.Trigger(self, nextTask.Value)
-            else
-                let response = TaskResponse.TaskInfo "Log Replay: No Task event set prior to current SetArgument or InvokingFunction event"
-                newUIResponseEvent.Trigger(self, response)
-            
-        events.Clear()
-        events.AddRange(loggedEvents)
-
-        // match the last event
-        // events are saved in blocks so the last event is limited to only the following:
-        let lastEvent = events.[events.Count - 1]
-        match lastEvent with
-        | TaskEvent.SetArgument _ ->
-            callLastTask ()
-        | TaskEvent.InvokingFunction ->
-            // top of stack for functions with delays such as MonitorTranscription
-            callLastTask ()
-        | TaskEvent.Task taskInfo ->
-            callTaskEvent.Trigger(self, taskInfo)
-        | TaskEvent.FunctionCompleted ->
-            let response = TaskResponse.TaskInfo "Log Replay: Nothing to show as the previous logged run completed successfully"
-            newUIResponseEvent.Trigger(self, response)
-        | _ ->
-            let response = TaskResponse.TaskInfo (sprintf "Log Replay: Unexpected event at top of stack: %A" lastEvent)
-            newUIResponseEvent.Trigger(self, response)
-
-    ///// Get the last ForEachTask RetainingStack on the event stack (if there is one)
-    //let getCurrentTaskLoopStack () =
-
-    //    // ... first get the last ForEachTask event
-    //    let lastForEach =
-    //        events
-    //        |> Seq.tryFindBack (fun evt ->
-    //            match evt with
-    //            | TaskEvent.ForEachTask _ -> true
-    //            | _ -> false
-    //        )
-
-    //    // ... and retrieve the internal RetainingStack
-    //    match lastForEach with
-    //    | Some(TaskEvent.ForEachTask items) -> Some(items)
-    //    | _ -> None
-
-    ///// Get the last ForEachTask RetainingStack on the event stack (if there is one)
-    //let getCurrentDataLoopStack () =
-
-    //    // ... first get the last ForEachTask event
-    //    let lastForEach =
-    //        events
-    //        |> Seq.tryFindBack (fun evt ->
-    //            match evt with
-    //            | TaskEvent.ForEachDataItem _ -> true
-    //            | _ -> false
-    //        )
-
-    //    // ... and retrieve the internal RetainingStack
-    //    match lastForEach with
-    //    | Some(TaskEvent.ForEachDataItem items) -> Some(items)
-    //    | _ -> None
-
     let startNewTask (self:Agent) (stack:IConsumableTaskSequence) =
         // check if task is independant
         let isIndependantTask = stack.Ordering = ItemOrdering.Independant
@@ -128,6 +49,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
             events.Add(TaskEvent.ClearArguments)
 
         let nextTask = stack.ConsumeTask();
+        events.Add(TaskEvent.ConsumedTask stack.Identifier)
         events.Add(TaskEvent.Task(nextTask))
 
         // update task item variable
@@ -136,42 +58,121 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         callTaskEvent.Trigger(self, nextTask)
 
     let rec nextTask (self:Agent) =
-        // expecting a tasks frame at the top of the execution stack
-        match executionStack.TryPeek() with
-        | true, Tasks taskSequence ->
-            if taskSequence.Remaining > 0 then
-                startNewTask self taskSequence
+        if not errorState then
+            // expecting a tasks frame at the top of the execution stack
+            match executionStack.TryPeek() with
+            | true, Tasks taskSequence ->
+                if taskSequence.Remaining > 0 then
+                    startNewTask self taskSequence
+                else
+                    // out of tasks; is there a Data frame on top?
+                    let topFrame = executionStack.Pop()
+                    match executionStack.TryPeek() with
+                    | true, Data consumable ->
+                        // there must be at least one data value remaining for the task function to consume
+                        if consumable.Remaining > 1 then
+                            consumable.Consume() |> ignore
+                            events.Add(TaskEvent.ConsumedData consumable.Identifier)
+                            taskSequence.Reset()     // start the sequence of tasks from the beginning
+                            executionStack.Push(topFrame)
+                            startNewTask self taskSequence
+                        else
+                            executionStack.Pop() |> ignore          // pop the top frame (Data) and try again
+                            nextTask self
+                    | _ -> nextTask self                            // leave the top frame (Tasks) popped and try again
+            | true, Data _ -> invalidOp "Found data frame at top of execution stack"
+            | _ -> ()                                               // nothing left to execute
+
+    /// Replace the events stack with the specified logged events and continue execution
+    let continueWith self loggedEvents =
+            
+        let regenerateExecutionStack () =
+
+            let findDataFrame identifier =
+                executionStack
+                |> Seq.pick (fun frameType ->
+                    match frameType with
+                    | Data fr when fr.Identifier = identifier -> Some(fr)
+                    | Data _ -> None
+                    | Tasks _ -> None
+                )
+
+            let findTaskFrame identifier =
+                executionStack
+                |> Seq.pick (fun frameType ->
+                    match frameType with
+                    | Tasks fr when fr.Identifier = identifier -> Some(fr)
+                    | Tasks _ -> None
+                    | Data _ -> None
+                )
+
+            // replay the events
+            events
+            |> Seq.iter (fun event ->
+                match event with
+                | TaskEvent.ForEachDataItem consumable -> executionStack.Push(Data consumable)
+                | TaskEvent.ForEachTask tasks -> executionStack.Push(Tasks tasks)
+                | TaskEvent.ConsumedData identifier ->
+                    let frame = findDataFrame identifier
+                    frame.Consume() |> ignore
+                | TaskEvent.ConsumedTask identifier ->
+                    let frame = findTaskFrame identifier
+                    frame.Consume() |> ignore
+                | _ -> ()
+            )
+
+            if executionStack.Count > 0 then
+                nextTask self
+                if executionStack.Count = 0 then    // popped last item
+                    let response = TaskResponse.TaskInfo "Log Replay: Nothing to show as the previous logged run completed successfully"
+                    newUIResponseEvent.Trigger(self, response)
             else
-                // out of tasks; is there a Data frame on top?
-                let topFrame = executionStack.Pop()
-                match executionStack.Peek() with
-                | Data consumable ->
-                    // there must be at least one data value remaining for the task function to consume
-                    if consumable.Remaining > 1 then
-                        consumable.Consume() |> ignore
-                        taskSequence.Reset()     // start the sequence of tasks from the beginning
-                        executionStack.Push(topFrame)
-                        startNewTask self taskSequence
-                    else
-                        executionStack.Pop() |> ignore          // pop the top frame (Data) and try again
-                        nextTask self
-                | _ -> nextTask self                            // leave the top frame (Tasks) popped and try again
-        | true, Data _ -> invalidOp "Found data frame at top of execution stack"
-        | _ -> ()                                               // nothing left to execute
+                let response = TaskResponse.TaskInfo "Log Replay: No frames on the execution stack"
+                newUIResponseEvent.Trigger(self, response)
 
+        // find the last task and call it
+        let callLastTask () =
+            let lastTaskItem =
+                events
+                |> Seq.tryPick (fun evt ->
+                    match evt with
+                    | TaskEvent.Task taskInfo -> Some(taskInfo)
+                    | _ -> None
+                )
 
-        //let taskStack = getCurrentTaskLoopStack ()
-        //if taskStack.IsSome then
-        //    if taskStack.Value.Remaining> 0 then
-        //        startNewTask self taskStack.Value
-        //    else
-        //        // check for a data loop (ForEachDataItem)
-        //        let dataStack = getCurrentDataLoopStack ()
-        //        // there must be at least one data value remaining for the task function to consume
-        //        if dataStack.IsSome && dataStack.Value.Remaining > 1 then
-        //            dataStack.Value.Consume() |> ignore
-        //            taskStack.Value.Reset()     // start the sequence of tasks from the beginning
-        //            startNewTask self taskStack.Value
+            if lastTaskItem.IsSome then
+                standardVariables.SetValue(StandardRequest.RequestTaskItem, lastTaskItem.Value)   // update task item variable
+                callTaskEvent.Trigger(self, lastTaskItem.Value)
+            else
+                let response = TaskResponse.TaskInfo "Log Replay: No Task event set prior to current SetArgument or InvokingFunction event"
+                newUIResponseEvent.Trigger(self, response)
+            
+        events.Clear()
+        executionStack.Clear()
+        events.AddRange(loggedEvents)
+        //loggedCount <- events.Count   // new log file; start from the beginning
+
+        if events.Count > 0 then
+            // match the last event
+            // events are saved in blocks so the last event is limited to only the following:
+            let lastEvent = events.[events.Count - 1]
+            match lastEvent with
+            | TaskEvent.SetArgument _ ->
+                callLastTask ()
+            | TaskEvent.InvokingFunction ->
+                // top of stack for functions with delays such as MonitorTranscription
+                callLastTask ()
+            | TaskEvent.Task taskInfo ->
+                callTaskEvent.Trigger(self, taskInfo)
+            | TaskEvent.FunctionCompleted ->
+                regenerateExecutionStack()
+            | _ ->
+                let response = TaskResponse.TaskInfo (sprintf "Log Replay: Unexpected event at top of stack: %A" lastEvent)
+                newUIResponseEvent.Trigger(self, response)
+        else
+            let response = TaskResponse.TaskInfo "Log Replay: No events to replay"
+            newUIResponseEvent.Trigger(self, response)
+
 
     let addArgumentEvent (self:Agent) response =
         events.Add(TaskEvent.SetArgument(response))
@@ -196,7 +197,6 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
             taskResponses.Value.Add(response)
         match response with
         | TaskResponse.SetArgument _ -> addArgumentEvent self response
-        //| TaskResponse.SetBoundaryArgument _ -> addArgumentEvent self response
         
         // resolve requests for common arguments immediately (other requests get passed to the UI)
         | TaskResponse.RequestArgument arg when knownArguments.IsKnownArgument(arg) ->
@@ -235,7 +235,13 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
         | TaskResponse.TaskConvertToBinary document ->
             convertToBinaryEvent.Trigger(self, document)
             callTaskEvent.Trigger(self, taskInfo)
-
+        | TaskResponse.Notification notification ->
+            match notification with
+            | :? ApplicationErrorInfo as error ->
+                events.Add(TaskEvent.TaskError taskInfo)
+                errorState <- true   // stop further processing
+            | _ -> ()
+            newUIResponseEvent.Trigger(self, response)
         | _ ->
             let pendingUIResponse =
                 match response with
@@ -274,14 +280,20 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
 
     /// Process the responses from the current task function
     member this.RunTask taskInfo (responses: seq<TaskResponse>) =
-        events.Add(TaskEvent.InvokingFunction)
-        uiResponsePending <- false
+        if errorState then
+            let reportState = async {
+                newUIResponseEvent.Trigger(this, TaskResponse.TaskInfo "The agent encountered an error. Start a new task to continue.")
+            }
+            Async.StartImmediateAsTask reportState
+        else
+            events.Add(TaskEvent.InvokingFunction)
+            uiResponsePending <- false
 
-        // collect responses from just the current call to the task function
-        if retainResponses then taskResponses.Value.Clear()
+            // collect responses from just the current call to the task function
+            if retainResponses then taskResponses.Value.Clear()
 
-        // The TaskItem parameter is to allow the current task to be queued for recall when specified by the task function
-        runTask this taskInfo responses
+            // The TaskItem parameter is to allow the current task to be queued for recall when specified by the task function
+            runTask this taskInfo responses
 
     /// Start the task at the top of the stack
     member this.StartNextTask () =

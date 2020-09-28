@@ -273,11 +273,11 @@ namespace Tustler.UserControls
                     await RunTask().ConfigureAwait(false);
                 }
 
-                if (this.taskLogger.IsLoggingEnabled && false)  // MG TODO
+                if (this.taskLogger.IsLoggingEnabled)  // MG TODO
                 {
                     //var logFilePath = Path.Combine(taskFolderPath, "637354693450070938-log.bin");
                     //var logFilePath = Path.Combine(taskFolderPath, "637354676138930293-log.bin");
-                    var logFilePath = Path.Combine(taskFolderPath, "637354733302481717-log.bin");
+                    var logFilePath = Path.Combine(taskFolderPath, "partial.bin");
                     if (File.Exists(logFilePath))
                     {
                         UnLogEvents(logFilePath);
@@ -353,8 +353,9 @@ namespace Tustler.UserControls
         {
             await Dispatcher.InvokeAsync(() =>
             {
-                taskResponses.Add(new ResponseWrapper(this, response));
-                lbTaskResponses.ScrollIntoView(response);
+                var wrapper = new ResponseWrapper(this, response);
+                taskResponses.Add(wrapper);
+                lbTaskResponses.ScrollIntoView(wrapper);
             });
         }
 

@@ -205,8 +205,10 @@ type TaskEvent =
     | SetArgument of TaskResponse
     | ForEachTask of IConsumableTaskSequence            // add a stack frame of tasks (with a guid identifier)
     | ForEachDataItem of IConsumable                    // add a stack frame of data items (with a guid identifier)
-    | Pop of Guid                                       // pop the stack identified by the specified guid
-    | Task of TaskItem                                  // the name and description of the task
+    | ConsumedData of Guid                              // data was consumed from the specified stack
+    | ConsumedTask of Guid                              // a task was consumed from the specified stack
+    | Task of TaskItem                                  // record the name and description of the current task
+    | TaskError of TaskItem                             // record an error on the current task
     | SelectArgument
     | ClearArguments
     | FunctionCompleted
