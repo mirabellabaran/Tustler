@@ -16,7 +16,8 @@ type IConsumable =
     abstract member Identifier: Guid with get
     abstract member Total : int with get
     abstract member Remaining : int with get
-    abstract member Consume : unit -> IShareIterationArgument   // consume the current item and return the value
+    abstract member Current : IShareIterationArgument option with get
+    abstract member Consume : unit -> unit   // consume the current item
     abstract member Reset : unit -> unit
 
 /// A stack-like object that supports Stack semantics but retains all data
@@ -43,7 +44,10 @@ type RetainingStack(uid: Guid, items: IEnumerable<IShareIterationArgument>) =
     member this.Remaining with get() = _stack.Count
 
     /// Get the current item (head of stack) without consuming it
-    member this.Current with get() = _stack.Peek()
+    member this.Current with get() =
+        match _stack.TryPeek() with
+        | true, item -> Some(item)
+        | _ -> None
 
     /// Consume the current item (head of stack) and return it
     member this.Pop() = _stack.Pop()
@@ -70,7 +74,9 @@ type RetainingStack(uid: Guid, items: IEnumerable<IShareIterationArgument>) =
 
         member this.Remaining: int = this.Remaining
 
-        member this.Consume(): IShareIterationArgument = this.Pop()
+        member this.Current: IShareIterationArgument option = this.Current
+
+        member this.Consume(): unit = this.Pop() |> ignore
 
         member this.Reset(): unit = this.Reset()
 

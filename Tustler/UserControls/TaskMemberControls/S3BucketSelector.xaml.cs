@@ -158,7 +158,7 @@ namespace Tustler.UserControls.TaskMemberControls
 
             CommandParameter = new UITaskArguments()
             {
-                Mode = UITaskMode.SetArgument,
+                Mode = UITaskMode.RestartTask,
                 TaskArguments = parameterData
             };
 

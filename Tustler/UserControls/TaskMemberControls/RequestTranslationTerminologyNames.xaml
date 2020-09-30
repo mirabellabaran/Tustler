@@ -48,7 +48,7 @@
                 <ListBox x:Name="lbTerminologyNames" Grid.Row="1" Grid.Column="0" Grid.RowSpan="3" SelectionMode="Multiple" Style="{StaticResource listBoxStyles}" ItemsSource="{Binding Source={StaticResource terminologiesInstance}, Path=TranslationTerminologies}" ItemTemplate="{StaticResource ListItemTempate}" SelectedValuePath="Name" SelectionChanged="TerminologyNames_SelectionChanged"/>
 
                 <StackPanel Orientation="Vertical" Grid.Row="1" Grid.Column="1" Grid.RowSpan="3" Margin="10">
-                    <TextBlock Text="Target Languages:" Margin="0,0,0,2" Width="300" Style="{StaticResource textBlockStyles}" />
+                    <TextBlock Text="Terminology Names:" Margin="0,0,0,2" Width="300" Style="{StaticResource textBlockStyles}" />
                     <ListBox Height="100" Background="{StaticResource ContrastingBackground}" BorderThickness="0" ItemsSource="{Binding Source={StaticResource selectedTerminologies}, Path=Items}" ScrollViewer.VerticalScrollBarVisibility="Auto" />
                 </StackPanel>
 

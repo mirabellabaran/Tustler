@@ -59,6 +59,8 @@ namespace Tustler.UserControls
                     var taskSpecifier = dependencyPropertyChangedEventArgs.NewValue as TaskFunctionSpecifier;
                     ctrl.TaskFunction = taskSpecifier?.TaskName switch
                     {
+                        "MinimalFunction" => AWSTasks.MinimalFunction,
+
                         "S3FetchItems" => AWSTasks.S3FetchItems,
 
                         "Cleanup" => AWSTasks.Cleanup,
@@ -213,14 +215,19 @@ namespace Tustler.UserControls
 
         private void StartTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = true;// !(TaskArguments is null) && TaskArguments.IsComplete();
+            e.CanExecute = true;
         }
 
         private async void StartTask_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             try
             {
+                // TODO three state enum: Init, Running, Stopped
+                // In Stop mode, create a new Agent instance, reinitalize the list of log files and default to last run; allow restart of prev. run
+
                 Mouse.OverrideCursor = Cursors.Wait;
+                btnStartTask.Content = "Stop";
+                btnStartTask.IsEnabled = false;
 
                 // attempt to restore event stack arguments from a previous session
                 var taskFolderPath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.TaskSpecifier.TaskName);
@@ -270,10 +277,14 @@ namespace Tustler.UserControls
                     });
                     agent.SetSaveFlags(saveFlags);
 
-                    await RunTask().ConfigureAwait(false);
+                    // set the current task (this is normally set by the agent)
+                    var task = new TaskItem(this.TaskSpecifier.ModuleName, this.TaskSpecifier.TaskName, string.Empty);
+                    agent.PushTask(task);
+
+                    await CheckQueue().ConfigureAwait(false);
                 }
 
-                if (this.taskLogger.IsLoggingEnabled)  // MG TODO
+                if (this.taskLogger.IsLoggingEnabled && false)  // MG TODO
                 {
                     //var logFilePath = Path.Combine(taskFolderPath, "637354693450070938-log.bin");
                     //var logFilePath = Path.Combine(taskFolderPath, "637354676138930293-log.bin");
@@ -314,8 +325,7 @@ namespace Tustler.UserControls
             notificationsList.Clear();      // cleared for each function invocation
             var responseStream = TaskFunction(TaskFunctionQueryMode.Invoke, args);
 
-            var currentTask = new TaskItem(this.TaskSpecifier.ModuleName, this.TaskSpecifier.TaskName, string.Empty);
-            await agent.RunTask(currentTask, responseStream).ConfigureAwait(false);
+            await agent.RunTask(responseStream).ConfigureAwait(false);
 
             if (this.taskLogger.IsLoggingEnabled)
             {
@@ -546,8 +556,7 @@ namespace Tustler.UserControls
                 {
                     case UITaskArgument.SelectedTask taskArg:
                         var task = taskArg.Item;
-                        var taskPath = TaskFunctionSpecifier.FullPathFromTaskItem(task);
-                        taskQueue.Enqueue(this.taskFunctionLookup[taskPath]);      // will throw if task path is unknown
+                        agent.PushTask(task);
                         break;
                 }
 
@@ -555,6 +564,71 @@ namespace Tustler.UserControls
                 {
                     await CheckQueue().ConfigureAwait(false);
                 });
+            }
+
+            /// A UI component has been selected that restarts an already completed task e.g. S3FetchItems
+            async Task RunUIResponseRestartTaskAsync(UITaskArguments parameterInfo)
+            {
+                // the user has selected an item that sets an argument
+                // first check if the task is complete
+                var hasCompleted = agent.HasFunctionCompleted();
+
+                if (hasCompleted)
+                {
+                    // how many responses ago was the last TaskSelect?:
+                    //  pare back a copy of the responses collection to the last TaskSelect
+                    var tempStack = new Stack<TaskResponse>(taskResponses.Select(wrapper => wrapper.TaskResponse));
+                    TaskResponse? lastResponse = null;
+                    while (!tempStack.Peek().IsTaskSelect)
+                    {
+                        lastResponse = tempStack.Pop();
+                    }
+
+                    if (lastResponse is object)
+                    {
+                        // re-add the last response (immediately after the TaskSelect)
+                        tempStack.Push(lastResponse);
+
+                        // clear and reinitialize the arguments on the events stack (common arguments) before adding SetArgument below
+                        //var commonArgs = moduleLookup[TaskSpecifier.ModuleName];
+                        agent.NewSelection(lastResponse);
+                    }
+
+                    // clearing the ObservableCollection will disconnect the data bindings (the DataContext on the ItemsControl item containers)
+                    // instead, just remove the last numItems items
+                    var numItems = taskResponses.Count - tempStack.Count;
+                    for (int i = 0; i < numItems; i++)
+                    {
+                        taskResponses.RemoveAt(taskResponses.Count - 1);
+                    }
+
+                    // reset the current task (pushes the current task on the queue)
+                    var task = new TaskItem(this.TaskSpecifier.ModuleName, this.TaskSpecifier.TaskName, string.Empty);
+                    agent.PushTask(task);
+                }
+
+                // Add a SetArgument event to the events list and reinvoke the function
+                switch (parameterInfo.TaskArguments.First())
+                {
+                    case UITaskArgument.Bucket bucketArg:
+                        var bucket = bucketArg.Item;
+                        agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetBucket(bucket))));
+                        break;
+                }
+
+                if (hasCompleted)
+                {
+                    // current task has been reset (pushes the current task on the queue)
+                    await CheckQueue().ConfigureAwait(false);
+                }
+                else
+                {
+                    // current task not yet complete
+                    await Dispatcher.InvokeAsync(async () =>
+                    {
+                        await RunTask().ConfigureAwait(false);
+                    });
+                }
             }
 
             async Task RunUIResponseSetArgumentAsync(UITaskArguments parameterInfo)
@@ -589,38 +663,6 @@ namespace Tustler.UserControls
                     case RequestFilePath ctrl:
                         ctrl.IsButtonEnabled = false;
                         break;
-                }
-
-                // the user has selected an item that sets an argument
-                // first check if the task is complete
-                if (agent.HasFunctionCompleted())
-                {
-                    // how many responses ago was the last TaskSelect?:
-                    //  pare back a copy of the responses collection to the last TaskSelect
-                    var tempStack = new Stack<TaskResponse>(taskResponses.Select(wrapper => wrapper.TaskResponse));
-                    TaskResponse? lastResponse = null;
-                    while (!tempStack.Peek().IsTaskSelect)
-                    {
-                        lastResponse = tempStack.Pop();
-                    }
-
-                    if (lastResponse is object)
-                    {
-                        // re-add the last response (immediately after the TaskSelect)
-                        tempStack.Push(lastResponse);
-
-                        // clear and reinitialize the arguments on the events stack (common arguments) before adding SetArgument below
-                        //var commonArgs = moduleLookup[TaskSpecifier.ModuleName];
-                        agent.NewSelection(lastResponse);
-                    }
-
-                    // clearing the ObservableCollection will disconnect the data bindings (the DataContext on the ItemsControl item containers)
-                    // instead, just remove the last numItems items
-                    var numItems = taskResponses.Count - tempStack.Count;
-                    for (int i = 0; i < numItems; i++)
-                    {
-                        taskResponses.RemoveAt(taskResponses.Count - 1);
-                    }
                 }
 
                 // Add a SetArgument event to the events list and reinvoke the function
@@ -711,20 +753,16 @@ namespace Tustler.UserControls
                 };
 
                 // now that the user has made their selections, push the new tasks on the execution stack
+                // this attempts to pop the first task item (if any) and invoke the callback that adds the next task to the queue
                 agent.PushTasks(subtasks, ItemOrdering.Independant);
 
-                // start the first sub-task
-                if (subtasks.Length > 0)
+                await Dispatcher.InvokeAsync(async () =>
                 {
-                    agent.StartNextTask();       // pop the first task item and invoke the callback that adds the next task to the queue
-                    await Dispatcher.InvokeAsync(async () =>
-                    {
-                        var nextTaskSpecifier = taskQueue.Dequeue();
-                        this.TaskSpecifier = nextTaskSpecifier;
+                    var nextTaskSpecifier = taskQueue.Dequeue();
+                    this.TaskSpecifier = nextTaskSpecifier;
 
-                        await RunTask().ConfigureAwait(false);
-                    });
-                }
+                    await RunTask().ConfigureAwait(false);
+                });
             }
 
             var parameterInfo = e.Parameter as UITaskArguments;
@@ -733,6 +771,9 @@ namespace Tustler.UserControls
             {
                 case UITaskMode.Tags.SelectTask:
                     await RunUIResponseSelectTaskAsync(parameterInfo).ConfigureAwait(false);
+                    break;
+                case UITaskMode.Tags.RestartTask:
+                    await RunUIResponseRestartTaskAsync(parameterInfo).ConfigureAwait(false);
                     break;
                 case UITaskMode.Tags.SetArgument:
                     await RunUIResponseSetArgumentAsync(parameterInfo).ConfigureAwait(false);

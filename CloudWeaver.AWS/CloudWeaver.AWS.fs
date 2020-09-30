@@ -527,12 +527,12 @@ module public PatternMatchers =
     module Consumable =
 
         let private getWrapperFrom (consumable: IConsumable) = 
-            match consumable with
-            | :? RetainingStack as stack ->
-                match stack.Current with
+            match consumable.Current with
+            | Some(argInterface) ->
+                match argInterface with
                 | :? AWSShareIterationArgument as arg -> arg
                 | _ -> invalidArg "consumable" "Unknown item type for RetainingStack; expecting an AWSShareIterationArgument item"
-            | _ -> invalidArg "consumable" "Unknown IConsumable type; expecting RetainingStack"
+            | _ -> invalidArg "consumable" "Current property returns None"
 
         let private (| LanguageCode |) (argWrapper: AWSShareIterationArgument) =
             match argWrapper.UnWrap with

@@ -123,11 +123,12 @@ type IConsumableTaskSequence =
     abstract member Identifier: Guid with get
     abstract member Total : int with get
     abstract member Remaining : int with get
-    abstract member Consume : unit -> IShareIterationArgument   // consume the current item and return the value
+    abstract member Current : TaskItem option with get
     abstract member Reset : unit -> unit
     abstract member Ordering : ItemOrdering with get
-    abstract member ConsumeTask : unit -> TaskItem   // consume the current item and return the value
+    abstract member ConsumeTask : unit -> unit          // consume the current item
 
+/// Represents a sequence of tasks, including the current task. The sequence must be consumed in order to set the current task.
 type TaskSequence(uid: Guid, tasks: IEnumerable<TaskItem>, ordering: ItemOrdering) =
 
     do
@@ -150,14 +151,14 @@ type TaskSequence(uid: Guid, tasks: IEnumerable<TaskItem>, ordering: ItemOrderin
     /// Get a count of the remaining (consumable) items
     member this.Remaining with get() = _stack.Count
 
-    /// Get the current item (head of stack) without consuming it
-    member this.Current with get() = _stack.Peek()
-
-    /// Consume the current item (head of stack) and return it
-    member this.Pop() = _stack.Pop()
-
-    /// Consume the current item (head of stack)
-    member this.Consume() = _stack.Pop() |> ignore
+    /// Get the current item (the last popped item)
+    member this.Current with get() =
+        let popped = this.Total - this.Remaining - 1
+        if popped < 0 then
+            None
+        else
+            let current = _array |> Seq.skip popped |> Seq.take 1 |> Seq.exactlyOne
+            Some(current)
 
     /// Refill the stack with the same items used at construction time
     member this.Reset() =
@@ -178,11 +179,11 @@ type TaskSequence(uid: Guid, tasks: IEnumerable<TaskItem>, ordering: ItemOrderin
 
         member this.Remaining: int = this.Remaining
 
-        member this.Consume(): IShareIterationArgument = StandardShareIterationArgument(StandardIterationArgument.Task (this.Pop())) :> IShareIterationArgument
+        member this.Current: TaskItem option = this.Current
 
         member this.Reset(): unit = this.Reset()
 
-        member this.ConsumeTask(): TaskItem = this.Pop()
+        member this.ConsumeTask(): unit = _stack.Pop() |> ignore
 
         member this.Ordering: ItemOrdering = this.Ordering
 
@@ -205,8 +206,8 @@ type TaskEvent =
     | SetArgument of TaskResponse
     | ForEachTask of IConsumableTaskSequence            // add a stack frame of tasks (with a guid identifier)
     | ForEachDataItem of IConsumable                    // add a stack frame of data items (with a guid identifier)
-    | ConsumedData of Guid                              // data was consumed from the specified stack
-    | ConsumedTask of Guid                              // a task was consumed from the specified stack
+    | ConsumedData of Guid                              // data was consumed from the specified IConsumable; the top of stack is the new current value
+    | ConsumedTask of Guid                              // a task was consumed from the specified IConsumableTaskSequence; the stack.Current property holds the new current value
     | Task of TaskItem                                  // record the name and description of the current task
     | TaskError of TaskItem                             // record an error on the current task
     | SelectArgument
