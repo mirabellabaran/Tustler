@@ -651,7 +651,7 @@ namespace CloudWeaver.AWS.Test
                 }));
         }
 
-        private static Agent InitializeTest(string taskId, string workingDirectory, SaveFlags saveFlags)
+        private static Agent InitializeTest(string taskName, string workingDirectory, SaveFlags saveFlags)
         {
             var notificationsList = new NotificationsList();
             var awsInterface = new AmazonWebServiceInterface(new RuntimeOptions() { IsMocked = true });
@@ -660,8 +660,11 @@ namespace CloudWeaver.AWS.Test
             knownArguments.AddModule(new StandardKnownArguments(notificationsList));
             knownArguments.AddModule(new AWSKnownArguments(awsInterface));
 
-            var agent = new Agent(knownArguments, retainResponses: true);
-            agent.SetTaskIdentifier(taskId);
+            var specifier = new TaskFunctionSpecifier(null, null, taskName, false);
+            var taskLogger = new TaskLogger();
+
+            var agent = new Agent(knownArguments, specifier, taskLogger, retainResponses: true);
+            agent.SetTaskIdentifier(taskName);
             agent.SetWorkingDirectory(new System.IO.DirectoryInfo(workingDirectory));
             if (saveFlags is object)
                 agent.SetSaveFlags(saveFlags);

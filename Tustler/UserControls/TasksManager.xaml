@@ -15,6 +15,7 @@
         <CommandBinding Command="{x:Static uc:TaskCommands.StartTask}" CanExecute="StartTask_CanExecute" Executed="StartTask_Executed" />
         <CommandBinding Command="{x:Static uc:TaskCommands.StartMiniTask}" CanExecute="StartMiniTask_CanExecute" Executed="StartMiniTask_Executed" />
         <CommandBinding Command="{x:Static uc:TaskCommands.UIResponse}" CanExecute="UIResponse_CanExecute" Executed="UIResponse_Executed" />
+        <CommandBinding Command="{x:Static uc:TaskCommands.SelectRunMode}" CanExecute="SelectRunMode_CanExecute" Executed="SelectRunMode_Executed" />
     </UserControl.CommandBindings>
 
     <UserControl.Resources>
@@ -490,20 +491,45 @@
     </UserControl.Resources>
     
     <DockPanel Margin="20,5,20,20" LastChildFill="True">
-        <!--<StackPanel x:Name="gridContainer" DockPanel.Dock="Top">
-            <Grid x:Name="grdMembers" ShowGridLines="False" Margin="10">
-                <Grid.RowDefinitions>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                </Grid.ColumnDefinitions>
-            </Grid>
-        </StackPanel>-->
-        <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="10" Height="100">
-            <Button x:Name="btnStartTask" Content="Start Task" Height="30" Width="100" Margin="0,5,0,5" Command="{x:Static uc:TaskCommands.StartTask}" Style="{StaticResource ButtonDark}" />
-            <ListBox x:Name="lbLogFiles" Width="300"/>
-        </UniformGrid>
+        <Grid DockPanel.Dock="Top" Margin="10" >
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="600" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Border BorderBrush="DarkGray" Grid.Row="0" Grid.Column="0" BorderThickness="2" Padding="10" Margin="10, 0, 10, 0">
+                <Grid HorizontalAlignment="Stretch" >
+                    <Grid.RowDefinitions>
+                        <RowDefinition/>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="200" />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <RadioButton x:Name="rbNewTaskRun" Grid.Row="0" Grid.Column="0" Content="Start a new task run" HorizontalAlignment="Left" GroupName="rbRunTask" IsChecked="True" Command="{x:Static uc:TaskCommands.SelectRunMode}" />
+                    <RadioButton x:Name="rbRunLog" Grid.Row="0" Grid.Column="1" Content="Run a log" HorizontalAlignment="Left" GroupName="rbRunTask" IsChecked="False" Command="{x:Static uc:TaskCommands.SelectRunMode}" />
+                    <ComboBox x:Name="lbLogFiles" Grid.Row="1" Grid.Column="1" IsEnabled="False" Margin="10,10,10,0" Height="40" HorizontalContentAlignment="Stretch" Style="{StaticResource ComboBoxStyleCustom}" DropDownOpened="LogFiles_DropDownOpened">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <UniformGrid Rows="1">
+                                    <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path=TaskName}"/>
+                                    </Border>
+                                    <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path=Description}"/>
+                                    </Border>
+                                </UniformGrid>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </Grid>
+            </Border>
+            <Button x:Name="btnStartTask" Grid.Row="0" Grid.Column="1" Content="Run Task" Height="30" Width="100" Margin="0,5,0,5" Command="{x:Static uc:TaskCommands.StartTask}" Style="{StaticResource ButtonDark}" />
+        </Grid>
         <Border BorderThickness="2" BorderBrush="DarkGray">
-            <!--<ListBox x:Name="lbTaskResponses" Margin="20, 10, 20, 10" Background="{StaticResource NormalBackground}" ItemTemplateSelector="{StaticResource taskManagerDataTemplateSelector}" />-->
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                 <ItemsControl x:Name="lbTaskResponses" Margin="20, 10, 20, 10" Background="{StaticResource NormalBackground}" ItemTemplateSelector="{StaticResource taskManagerDataTemplateSelector}" ScrollViewer.VerticalScrollBarVisibility="Auto">
                     <ItemsControl.ItemsPanel>

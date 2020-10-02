@@ -1,14 +1,13 @@
-﻿using CloudWeaver.Types;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Tustler.Models
+namespace TustlerServicesLib
 {
     /// <summary>
     /// Specifies the name and path (assembly and module) to a task function
     /// </summary>
-    public class TaskFunctionSpecifier : IElementTag
+    public class TaskFunctionSpecifier
     {
         public TaskFunctionSpecifier(string assemblyName, string moduleName, string taskName, bool enableLogging)
         {
@@ -34,14 +33,6 @@ namespace Tustler.Models
             {
                 return $"{ModuleName}.{TaskName}";
             }
-        }
-
-        public static string FullPathFromTaskItem(TaskItem task)
-        {
-            if (task is object)
-                return $"{task.ModuleName}.{task.TaskName}";
-            else
-                throw new ArgumentException("Expecting a task item");
         }
     }
 }

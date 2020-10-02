@@ -36,11 +36,20 @@ namespace Tustler.UserControls
     /// </summary>
     public partial class TasksManager : UserControl, IOwnerType
     {
+        private enum RunMode
+        {
+            Init,
+            Running,
+            Stopped
+        }
+
         private const string EventStackArgumentRestoreName = "defaultargs.json";
+
+        private RunMode runMode;
 
         private readonly NotificationsList notificationsList;
         private readonly AmazonWebServiceInterface awsInterface;
-        private readonly TaskLogger taskLogger;
+        //private readonly TaskLogger taskLogger;
 
         private readonly Dictionary<string, TaskFunctionSpecifier> taskFunctionLookup;
         private readonly Queue<TaskFunctionSpecifier> taskQueue;
@@ -124,20 +133,20 @@ namespace Tustler.UserControls
             if (logger is null) throw new ArgumentNullException(nameof(logger));
 
             this.awsInterface = awsInterface;
-            this.taskLogger = logger;
+            //this.taskLogger = logger;
             this.notificationsList = new NotificationsList();
 
             this.TaskFunction = AWSTasks.MinimalFunction;
             this.TaskSpecifier = rootSpecifier;
-            this.taskLogger.StartLogging(this.TaskSpecifier);
+            //this.taskLogger.StartLogging(this.TaskSpecifier);
+
+            this.taskResponses = new ObservableCollection<ResponseWrapper>();
 
             KnownArgumentsCollection knownArguments = new KnownArgumentsCollection();
             knownArguments.AddModule(new StandardKnownArguments(notificationsList));
             knownArguments.AddModule(new AWSKnownArguments(awsInterface));
 
-            this.taskResponses = new ObservableCollection<ResponseWrapper>();
-
-            agent = new Agent(knownArguments, false);
+            agent = new Agent(knownArguments, rootSpecifier, logger, false);
 
             agent.NewUIResponse += Agent_NewUIResponse;
             agent.SaveEvents += Agent_SaveEvents;
@@ -150,6 +159,46 @@ namespace Tustler.UserControls
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
             ShowGlobalMessage("Parameter set", $"Task name set to {TaskSpecifier.TaskName}");
+
+            //var taskFolderPath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.TaskSpecifier.TaskName);
+            //rbRunLog.IsEnabled = Directory.Exists(taskFolderPath) && Directory.EnumerateFiles(taskFolderPath, "*-log.bin", SearchOption.TopDirectoryOnly).Any();
+
+            rbRunLog.IsEnabled = this.TaskSpecifier.IsLoggingEnabled;
+        }
+
+        private void LogFiles_DropDownOpened(object sender, EventArgs e)
+        {
+            if (lbLogFiles.Items.Count == 0)
+            {
+                // check for log files
+                var loggedTaskName = agent.RootTask.TaskName;
+                var taskFolderPath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, loggedTaskName);
+                if (Directory.Exists(taskFolderPath))
+                {
+                    static string CreateDescription(string filePath)
+                    {
+                        var fileName = Path.GetFileNameWithoutExtension(new ReadOnlySpan<char>(filePath.ToCharArray()));
+                        var endIndex = fileName.LastIndexOf('-');
+                        if ((endIndex > 0) && (long.TryParse(fileName.Slice(0, endIndex), out long ticks)))
+                        {
+                            var dt = new DateTime(ticks);
+                            return dt.ToString("dddd, MMM dd hh:mm", System.Globalization.CultureInfo.InvariantCulture);
+                        }
+                        else
+                        {
+                            return fileName.ToString();
+                        }
+                    }
+
+                    var filePaths = Directory.EnumerateFiles(taskFolderPath, "*-log.bin", SearchOption.TopDirectoryOnly);
+                    var listData = filePaths.Select(filePath => new LogFile { FilePath = filePath, TaskName = loggedTaskName, Description = CreateDescription(filePath) });
+                    lbLogFiles.ItemsSource = listData;
+                }
+                else
+                {
+                    lbLogFiles.Items.Clear();
+                }
+            }
         }
 
         private void ShowGlobalMessage(string message, string detail)
@@ -194,16 +243,30 @@ namespace Tustler.UserControls
             }
         }
 
-        private async Task LogEventsAsync()
-        {
-            await Dispatcher.InvokeAsync(() =>
-            {
-                var unloggedEvents = agent.SerializeUnloggedEventsAsBytes();
+        //private void LogEvents()
+        //{
+        //    var unloggedEvents = agent.SerializeUnloggedEventsAsBytes();
 
-                var data = EventLoggingUtilities.BlockArrayToByteArray(unloggedEvents);
-                this.taskLogger.AddToLog(data);
-            });
-        }
+        //    var data = EventLoggingUtilities.BlockArrayToByteArray(unloggedEvents);
+        //    this.taskLogger.AddToLog(data);
+        //}
+
+        //private async Task LogEventsAsync()
+        //{
+        //    await Dispatcher.InvokeAsync(() =>
+        //    {
+        //        LogEvents();
+        //    });
+        //}
+
+        //private async Task LogEventsAndCloseAsync()
+        //{
+        //    await Dispatcher.InvokeAsync(() =>
+        //    {
+        //        LogEvents();
+        //        this.taskLogger.StopLogging();
+        //    });
+        //}
 
         private void UnLogEvents(string logFilePath)
         {
@@ -215,19 +278,16 @@ namespace Tustler.UserControls
 
         private void StartTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = true;
+            var isNewRunMode = rbNewTaskRun.IsChecked.HasValue && rbNewTaskRun.IsChecked.Value;
+            var isRunLogMode = (rbRunLog.IsChecked.HasValue && rbRunLog.IsChecked.Value) && (lbLogFiles.SelectedItem is object);
+            e.CanExecute = (isNewRunMode || isRunLogMode);
         }
 
-        private async void StartTask_Executed(object sender, ExecutedRoutedEventArgs e)
+        private async Task FirstRun()
         {
             try
             {
-                // TODO three state enum: Init, Running, Stopped
-                // In Stop mode, create a new Agent instance, reinitalize the list of log files and default to last run; allow restart of prev. run
-
                 Mouse.OverrideCursor = Cursors.Wait;
-                btnStartTask.Content = "Stop";
-                btnStartTask.IsEnabled = false;
 
                 // attempt to restore event stack arguments from a previous session
                 var taskFolderPath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.TaskSpecifier.TaskName);
@@ -284,14 +344,12 @@ namespace Tustler.UserControls
                     await CheckQueue().ConfigureAwait(false);
                 }
 
-                if (this.taskLogger.IsLoggingEnabled && false)  // MG TODO
+                var logMode = (rbRunLog.IsChecked.HasValue && rbRunLog.IsChecked.Value) && (lbLogFiles.SelectedItem is object);
+                if (logMode)
                 {
-                    //var logFilePath = Path.Combine(taskFolderPath, "637354693450070938-log.bin");
-                    //var logFilePath = Path.Combine(taskFolderPath, "637354676138930293-log.bin");
-                    var logFilePath = Path.Combine(taskFolderPath, "partial.bin");
-                    if (File.Exists(logFilePath))
+                    if (lbLogFiles.SelectedItem is LogFile selectedLogFile && File.Exists(selectedLogFile.FilePath))
                     {
-                        UnLogEvents(logFilePath);
+                        UnLogEvents(selectedLogFile.FilePath);
 
                         // check the queue for new task function specifiers
                         await CheckQueue().ConfigureAwait(false);
@@ -315,26 +373,67 @@ namespace Tustler.UserControls
             }
         }
 
+        private async void StartTask_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            // In Stopped mode, a new Agent instance is created and that last log file is run (assuming logging is enabled)
+
+            switch (runMode)
+            {
+                case RunMode.Init:
+                    btnStartTask.Content = "Stop";
+                    runMode = RunMode.Running;
+                    await FirstRun().ConfigureAwait(false);
+                    break;
+                case RunMode.Running:
+                    runMode = RunMode.Stopped;
+                    btnStartTask.Content = "Run Task";
+                    if (agent.IsLoggingEnabled)
+                    {
+                        // log any unlogged events and close the log file in preparation for reopening
+                        agent.CloseLog();
+                    }
+                    else
+                    {
+                        btnStartTask.IsEnabled = false;         // no log file to restart
+                    }
+                    break;
+                case RunMode.Stopped:
+                    if (agent.IsLoggingEnabled)
+                    {
+                        btnStartTask.Content = "Stop";
+                        runMode = RunMode.Running;
+
+                        // MG TODO consider just restarting where it left off rather than reading a log file
+                        UnLogEvents(agent.LogFilePath.FullName);
+                        await CheckQueue().ConfigureAwait(false);
+                    }
+                    break;
+            }
+        }
+
         private async Task RunTask()
         {
-            // generate an arguments stack (by default an infinite enumerable of Nothing arguments)
-            var args = new InfiniteList<MaybeResponse>(MaybeResponse.Nothing);
-
-            agent.PrepareFunctionArguments(args);
-
-            notificationsList.Clear();      // cleared for each function invocation
-            var responseStream = TaskFunction(TaskFunctionQueryMode.Invoke, args);
-
-            await agent.RunTask(responseStream).ConfigureAwait(false);
-
-            if (this.taskLogger.IsLoggingEnabled)
+            if (runMode == RunMode.Running)
             {
-                // update the log file
-                await LogEventsAsync().ConfigureAwait(false);
-            }
+                // generate an arguments stack (by default an infinite enumerable of Nothing arguments)
+                var args = new InfiniteList<MaybeResponse>(MaybeResponse.Nothing);
 
-            // Once the previous call to RunTask() has run to completion start the next task (if any)
-            await CheckQueue().ConfigureAwait(false);
+                agent.PrepareFunctionArguments(args);
+
+                notificationsList.Clear();      // cleared for each function invocation
+                var responseStream = TaskFunction(TaskFunctionQueryMode.Invoke, args);
+
+                await agent.RunTask(responseStream).ConfigureAwait(false);
+
+                //if (this.taskLogger.IsLoggingEnabled)
+                //{
+                //    // update the log file
+                //    await LogEventsAsync().ConfigureAwait(false);
+                //}
+
+                // Once the previous call to RunTask() has run to completion start the next task (if any)
+                await CheckQueue().ConfigureAwait(false);
+            }
         }
 
         private async Task CheckQueue()
@@ -354,7 +453,12 @@ namespace Tustler.UserControls
                 // if complete then stop logging
                 if (!agent.IsAwaitingResponse)
                 {
-                    this.taskLogger.StopLogging();
+                    //this.taskLogger.StopLogging();
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        btnStartTask.Content = "Run Task";
+                        btnStartTask.IsEnabled = false;
+                    });
                 }
             }
         }
@@ -385,8 +489,7 @@ namespace Tustler.UserControls
             // Note that the current call must run to completion for the system to work correctly (ie the agent must run just one task function at a time)
             // Although calling Dispatcher InvokeAsync will wait until the call has finished, it will also allow multiple subtasks to run simultaneously
             // Instead, just enqueue the next task specifier and run the task later (see RunTask)
-            var taskPath = TaskFunctionSpecifier.FullPathFromTaskItem(task);
-            taskQueue.Enqueue(this.taskFunctionLookup[taskPath]);      // will throw if task path is unknown
+            taskQueue.Enqueue(this.taskFunctionLookup[task.FullPath]);      // will throw if task path is unknown
         }
 
         private async void Agent_ConvertToBinary(object? sender, JsonDocument document)
@@ -788,6 +891,18 @@ namespace Tustler.UserControls
                     throw new ArgumentException($"UIResponse_Executed: unknown mode for parameterInfo");
             }
         }
+
+        private void SelectRunMode_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = true;
+        }
+
+        private void SelectRunMode_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            var radioButton = e.OriginalSource as RadioButton;
+
+            lbLogFiles.IsEnabled = (radioButton!.Name == "rbRunLog");
+        }
     }
 
     public static class TaskCommands
@@ -812,6 +927,14 @@ namespace Tustler.UserControls
             (
                 "UIResponse",
                 "UIResponse",
+                typeof(TaskCommands),
+                null
+            );
+
+        public static readonly RoutedUICommand SelectRunMode = new RoutedUICommand
+            (
+                "SelectRunMode",
+                "SelectRunMode",
                 typeof(TaskCommands),
                 null
             );

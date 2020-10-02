@@ -1,7 +1,6 @@
 ﻿using CloudWeaver.Types;
 using System.Collections.Generic;
-using System.Windows.Controls;
-using Tustler.Models;
+using TustlerServicesLib;
 
 namespace Tustler.Helpers
 {

@@ -65,6 +65,7 @@ type TaskItem(moduleName: string, taskName: string, description: string) =
     member this.ModuleName with get() = _moduleName and set(value) = _moduleName <- value
     member this.TaskName with get() = _taskName and set(value) = _taskName <- value
     member this.Description with get() = _description and set(value) = _description <- value
+    member this.FullPath with get() = sprintf "%s.%s" this.ModuleName this.TaskName
 
     new() = TaskItem(null, null, null)
     override this.ToString() = sprintf "TaskItem: %s %s %s" this.ModuleName this.TaskName this.Description

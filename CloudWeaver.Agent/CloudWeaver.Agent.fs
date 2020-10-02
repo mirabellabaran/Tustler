@@ -12,7 +12,7 @@ type ExecutionStackFrameType =
     | Data of IConsumable
     | Tasks of IConsumableTaskSequence
 
-type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool) =
+type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctionSpecifier, taskLogger: TaskLogger, retainResponses: bool) =
 
     let mutable loggedCount = 0
     let mutable uiResponsePending = false
@@ -22,7 +22,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
 
     let callTaskEvent = new Event<EventHandler<_>, _>()
     let newUIResponseEvent = new Event<EventHandler<_>, _>()
-    let saveEventsEvent = new Event<EventHandler<_>, _>()       // save some or all events as a JSON document
+    let saveEventsEvent = new Event<EventHandler<_>, _>()               // save some or all events as a JSON document
     let convertToJsonEvent = new Event<EventHandler<_>, _>()    // convert events in binary log format to JSON document format
     let convertToBinaryEvent = new Event<EventHandler<_>, _>()  // convert events in JSON document format to binary log format
 
@@ -30,6 +30,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
 
     do
         knownArguments.AddModule(standardVariables)
+        taskLogger.StartLogging (rootTask) |> ignore
 
     // the event stack: ground truth for the events generated in a given session (from start of task to TaskResponse.TaskComplete)
     let events = new List<TaskEvent>()
@@ -260,11 +261,26 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
             uiResponsePending <- pendingUIResponse
             newUIResponseEvent.Trigger(self, response)    // receiver would typically call Dispatcher.InvokeAsync to invoke a function to add the response to the user interface
 
+    /// log any unlogged events
+    let logEvents () =
+        if taskLogger.IsLoggingEnabled then
+            let unloggedSerializedData = CloudWeaver.Serialization.SerializeEventsAsBytes events loggedCount
+            loggedCount <- events.Count
+            let data = EventLoggingUtilities.BlockArrayToByteArray(unloggedSerializedData)
+            taskLogger.AddToLog(data);
+
+    let checkComplete () =
+        if executionStack.Count = 0 then    // && not uiResponsePending
+            taskLogger.StopLogging ()
+
     let processor self responses =
         async {
             try
                 responses
                 |> Seq.iter (fun response -> processResponse self response)
+
+                logEvents ()
+                checkComplete ()
             with
                 | :? AggregateException as ex ->
                     let errorInfo = NotificationsList.CreateErrorNotification ("TaskQueue: queueWriter", ex.InnerException.Message, ex.InnerException)
@@ -301,6 +317,20 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
 
             // The TaskItem parameter is to allow the current task to be queued for recall when specified by the task function
             runTask this responses
+
+    /// Write any unlogged events and close the log file (typically called when stopping the task)
+    member this.CloseLog () =
+        logEvents ()
+        taskLogger.StopLogging ()
+
+    /// Returns the full path of the log file (this will only exist if IsLoggingEnabled is true and StartLogging() has been called)
+    member this.LogFilePath with get() = taskLogger.LogFilePath
+
+    /// Returns true if the root task has the EnableLogging attribute set
+    member this.IsLoggingEnabled with get() = taskLogger.IsLoggingEnabled
+
+    /// Returns the task specifier provided in the Agent constructor
+    member this.RootTask with get() = rootTask
 
     /// Get the current task from the exection stack
     member this.CurrentTask () = getCurrentTask ()
@@ -349,10 +379,10 @@ type public Agent(knownArguments:KnownArgumentsCollection, retainResponses: bool
     member this.ContinueWith loggedEvents =
         continueWith this loggedEvents
 
-    member this.SerializeUnloggedEventsAsBytes () =
-        let unloggedSerializedData = CloudWeaver.Serialization.SerializeEventsAsBytes events loggedCount
-        loggedCount <- events.Count
-        unloggedSerializedData
+    //member this.SerializeUnloggedEventsAsBytes () =
+    //    let unloggedSerializedData = CloudWeaver.Serialization.SerializeEventsAsBytes events loggedCount
+    //    loggedCount <- events.Count
+    //    unloggedSerializedData
 
     member this.LastCallResponseList () = if retainResponses then taskResponses.Value else new List<TaskResponse>()
 

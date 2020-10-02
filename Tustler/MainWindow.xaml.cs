@@ -360,7 +360,7 @@ namespace Tustler
                 {
                     taskFunctions = await FindAllTaskFunctionModules().ConfigureAwait(true);
                 }
-                var topLevelFunctions = taskFunctions.Where(data => data.hideFromUI == false).Select(data => data.specifier).ToArray();
+                var topLevelFunctions = taskFunctions.Where(data => data.hideFromUI == false).Select(data => new TaskFunctionElement(data.specifier)).ToArray();
                 var tasksDataModel = new TasksTreeViewDataModel(topLevelFunctions);
                 AddItems<MenuItem>(CreateMenuItem, item, tasksDataModel.TreeViewItemDataCollection);
             }
@@ -454,7 +454,7 @@ namespace Tustler
                 {
                     taskFunctions = await FindAllTaskFunctionModules().ConfigureAwait(true);
                 }
-                var topLevelFunctions = taskFunctions.Where(data => data.hideFromUI == false).Select(data => data.specifier).ToArray();
+                var topLevelFunctions = taskFunctions.Where(data => data.hideFromUI == false).Select(data => new TaskFunctionElement(data.specifier)).ToArray();
                 var tasksDataModel = new TasksTreeViewDataModel(topLevelFunctions);
                 return tasksDataModel.TreeViewItemDataCollection;
             }
@@ -555,8 +555,8 @@ namespace Tustler
                         break;
                     case "task":
                         var allTaskFunctions = taskFunctions.Select(data => data.specifier).ToArray();
-                        var specifier = (initial as TaskFunctionSpecifier);
-                        var uc = new TasksManager(allTaskFunctions, awsInterface, taskLogger, specifier);
+                        var taskFunctionElement = (initial as TaskFunctionElement);
+                        var uc = new TasksManager(allTaskFunctions, awsInterface, taskLogger, taskFunctionElement.TaskFunctionSpecifier);
                         panControlsContainer.Children.Add(uc);
                         break;
                 }

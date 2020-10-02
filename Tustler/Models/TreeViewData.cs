@@ -102,7 +102,7 @@ namespace Tustler.Models
             private set;
         }
 
-        public TasksTreeViewDataModel(TaskFunctionSpecifier[] taskFunctions)
+        public TasksTreeViewDataModel(TaskFunctionElement[] taskFunctions)
         {
             var divisionItems = from taskFunction in taskFunctions select new TreeViewItemData { Name = taskFunction.TaskName, Tag = taskFunction, HasChildren = false };
             TreeViewItemDataCollection = new ObservableCollection<TreeViewItemData>(divisionItems);
