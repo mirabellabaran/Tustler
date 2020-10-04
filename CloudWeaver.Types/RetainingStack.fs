@@ -19,6 +19,7 @@ type IConsumable =
     abstract member Current : IShareIterationArgument option with get
     abstract member Consume : unit -> unit   // consume the current item
     abstract member Reset : unit -> unit
+    abstract member ToString: unit -> string
 
 /// A stack-like object that supports Stack semantics but retains all data
 /// A retaining stack can be consumed but the original contents are always retrievable
@@ -79,6 +80,8 @@ type RetainingStack(uid: Guid, items: IEnumerable<IShareIterationArgument>) =
         member this.Consume(): unit = this.Pop() |> ignore
 
         member this.Reset(): unit = this.Reset()
+
+        member this.ToString(): string = sprintf "IConsumable: Total %d, Remaining %d, Id %s" this.Total this.Remaining (this.Identifier.ToString())
 
     interface IEnumerable<IShareIterationArgument> with
 

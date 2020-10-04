@@ -131,6 +131,16 @@ module public Tasks =
                 map
         ) (Map.empty)
 
+    let private getLastSetArgument (args:InfiniteList<MaybeResponse>) =
+        args
+        |> Seq.takeWhile (fun mr -> mr.IsSet)
+        |> Seq.choose (fun mr ->
+            match mr.Value with
+            | TaskResponse.SetArgument arg -> Some(arg)
+            | _ -> None
+        )
+        |> Seq.tryLast
+
     ///// Integrate with the default record any request arguments that have been set using the TaskArgumentRecord updater function
     //let private integrateUIRequestArguments (args:InfiniteList<MaybeResponse>) (defaultArgs:TaskArgumentRecord) =
     //    args
@@ -163,6 +173,83 @@ module public Tasks =
         | Outputs -> Seq.empty
         | Invoke ->
             seq { yield TaskResponse.TaskInfo "Minimal task function" }
+
+    let SaveLastArgument(queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+
+        let saveLastArgument argMap (lastArg: IShareIntraModule) =
+
+            let argsRecord = {|
+                TaskIdentifier = PatternMatchers.getTaskIdentifier argMap;
+                WorkingDirectory = PatternMatchers.getWorkingDirectory argMap;
+                TranslationTargetLanguages = PatternMatchers.getTranslationTargetLanguages argMap;
+                TranslationSegments = PatternMatchers.getTranslationSegments argMap;
+            |}
+
+            let taskId = argsRecord.TaskIdentifier.Value
+            let workingDirectory = argsRecord.WorkingDirectory.Value
+            //let targetLanguageCode = PatternMatchers.Consumable.getLanguageCode (argsRecord.TranslationTargetLanguages.Value)
+            //let chunker = argsRecord.TranslationSegments.Value
+
+            //let writerOptions = JsonWriterOptions(Indented = false)
+            //let serializerOptions = JsonSerializerOptions()
+            //serializerOptions.Converters.Add(RetainingStackConverter())
+            //serializerOptions.Converters.Add(TaskSequenceConverter())
+            //serializerOptions.Converters.Add(SentenceChunkerConverter())
+
+            //use stream = new MemoryStream()
+            //let result = using (new Utf8JsonWriter(stream, writerOptions)) (fun writer ->
+            //    lastArg.Serialize writer serializerOptions
+            //    writer.Flush()
+            //    stream.ToArray()
+            //)
+            let result: byte[] = Array.empty
+
+            seq {
+                // MG add Label to IShareIntraModule
+                let fileName = "poo"   //sprintf "Translation-%s-%s.txt" taskId.Value targetLanguageCode.Code
+                let filePath = Path.Combine(workingDirectory.Value.FullName, fileName)
+                File.WriteAllBytes(filePath, result)
+
+                yield TaskResponse.TaskInfo (sprintf "Working directory is: %s" workingDirectory.Value.FullName)
+                yield TaskResponse.TaskComplete ((sprintf "Saved translation to %s" fileName), DateTime.Now)
+            }
+
+        let inputs = [|
+             TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
+             TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranslationSegments));
+             TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranslationTargetLanguages));
+             TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory));
+             TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestTaskIdentifier));
+         |]
+
+        match queryMode with
+        | Description -> Seq.singleton (TaskResponse.TaskDescription "Save the last argument added to the event stack")
+        | Inputs -> Seq.ofArray inputs
+        | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestBucketsModel)))
+        | Invoke ->
+            seq {
+                let lastArg = getLastSetArgument resolvable_arguments
+
+                if lastArg.IsSome then
+                    let argMap = integrateUIRequestArguments resolvable_arguments
+                    let unresolvedRequests = getUnResolvedRequests argMap inputs
+
+                    if unresolvedRequests.Length = 0 then
+                        yield! saveLastArgument argMap lastArg.Value
+                    else
+                        yield! resolveByRequest unresolvedRequests
+                else
+                    yield TaskResponse.TaskComplete ("Nothing to save (no argument set)", DateTime.Now)
+            }
+
+
+    /// Read the default arguments file in the working directory (if it exists) and request the UI to select which arguments to set
+    let ReadDefaultArguments (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+        ()
+
+
+
+
 
     let S3FetchItems (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
@@ -940,7 +1027,7 @@ module public Tasks =
             let notifications = argsRecord.Notifications.Value
             let defaultTranscript = argsRecord.DefaultTranscript.Value
             let sourceLanguageCode = argsRecord.TranslationLanguageCodeSource.Value
-            let targetLanguageCode = PatternMatchers.Consumable.getLanguageCode (argsRecord.TranslationTargetLanguages.Value)
+            let targetLanguageCode = ConsumablePatternMatcher.getLanguageCode (argsRecord.TranslationTargetLanguages.Value)
             let terminologyNames = argsRecord.TranslationTerminologyNames.Value
             let taskId = argsRecord.TaskIdentifier.Value
             let workingDirectory = argsRecord.WorkingDirectory.Value
@@ -1023,7 +1110,7 @@ module public Tasks =
 
             let taskId = argsRecord.TaskIdentifier.Value
             let workingDirectory = argsRecord.WorkingDirectory.Value
-            let targetLanguageCode = PatternMatchers.Consumable.getLanguageCode (argsRecord.TranslationTargetLanguages.Value)
+            let targetLanguageCode = ConsumablePatternMatcher.getLanguageCode (argsRecord.TranslationTargetLanguages.Value)
             let chunker = argsRecord.TranslationSegments.Value
 
             seq {

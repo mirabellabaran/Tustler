@@ -7,6 +7,7 @@ open System.Collections.Immutable
 open System.Text.Json
 open System.IO
 open System
+open System.Text
 
 // an attribute to mark CloudWeaver modules that contain Task Functions
 type CloudWeaverTaskFunctionModule() = inherit System.Attribute()
@@ -36,6 +37,7 @@ type WrappedItemIdentifier =
 type IShareIntraModule =
     abstract member ModuleTag : ModuleTag with get
     abstract member Identifier : WrappedItemIdentifier with get
+    abstract member Description : unit -> string
     abstract member AsBytes : unit -> byte[]
     abstract member Serialize : Utf8JsonWriter -> JsonSerializerOptions -> unit
     abstract member ToString: unit -> string
@@ -361,12 +363,37 @@ type StandardArgument =
 
 /// Wraps standard argument types
 and StandardShareIntraModule(arg: StandardArgument) =
+    let getAsBytes (sim: IShareIntraModule) = UTF8Encoding.UTF8.GetString(sim.AsBytes())
     interface IShareIntraModule with
         member this.ModuleTag with get() = Tag "StandardShareIntraModule"
         member this.Identifier with get() = Identifier (CommonUtilities.toString arg)
         member this.ToString () = sprintf "StandardShareIntraModule(%s)" (arg.ToString())
-        member this.AsBytes () =
-            JsonSerializer.SerializeToUtf8Bytes(arg)
+        member this.Description () =
+            match arg with
+            | SetNotificationsList notificationsList -> sprintf "NotificationsList: %d notifications" notificationsList.Notifications.Count
+            | SetTaskIdentifier taskId -> sprintf "TaskIdentifier: %s" (if taskId.IsSome then taskId.Value else "[None]")
+            | SetTaskItem taskItem -> if taskItem.IsSome then taskItem.Value.ToString() else "[None]"
+            | SetWorkingDirectory dir -> sprintf "WorkingDirectory: %s" (if dir.IsSome then dir.Value.FullName else "[None]")
+            | SetSaveFlags flags -> sprintf "SaveFlags: %s" (if flags.IsSome then flags.Value.ToString() else "[None]")
+            | SetJsonEvents data -> sprintf "JsonEvents: %d bytes" (data.Length)
+            | SetLogFormatEvents data -> sprintf "LogFormatEvents: %d bytes" (data.Length)
+            | SetOpenJsonFilePath fileInfo -> sprintf "OpenJsonFilePath: %s" (fileInfo.FullName)
+            | SetSaveJsonFilePath fileInfo -> sprintf "SaveJsonFilePath: %s" (fileInfo.FullName)
+            | SetOpenLogFormatFilePath fileInfo -> sprintf "OpenLogFormatFilePath: %s" (fileInfo.FullName)
+            | SetSaveLogFormatFilePath fileInfo -> sprintf "SaveLogFormatFilePath: %s" (fileInfo.FullName)
+        member this.AsBytes () =    // UTF-8 bytes only
+            match arg with
+            | SetNotificationsList notificationsList -> JsonSerializer.SerializeToUtf8Bytes(notificationsList)
+            | SetTaskIdentifier taskId -> if taskId.IsSome then UTF8Encoding.UTF8.GetBytes(taskId.Value) else Array.Empty<byte>()
+            | SetTaskItem taskItem -> if taskItem.IsSome then JsonSerializer.SerializeToUtf8Bytes(taskItem.Value) else Array.Empty<byte>()
+            | SetWorkingDirectory dir -> if dir.IsSome then UTF8Encoding.UTF8.GetBytes(dir.Value.FullName) else Array.Empty<byte>()
+            | SetSaveFlags flags -> if flags.IsSome then UTF8Encoding.UTF8.GetBytes(flags.Value.ToString()) else Array.Empty<byte>()
+            | SetJsonEvents data -> data
+            | SetLogFormatEvents data -> JsonSerializer.SerializeToUtf8Bytes(data)
+            | SetOpenJsonFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)
+            | SetSaveJsonFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)
+            | SetOpenLogFormatFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)
+            | SetSaveLogFormatFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)
         member this.Serialize writer _serializerOptions =
             match arg with
             | SetNotificationsList _notificationsList -> writer.WritePropertyName("SetNotificationsList"); JsonSerializer.Serialize(writer, "") // don't serialize the value

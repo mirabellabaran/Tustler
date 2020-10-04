@@ -10,6 +10,7 @@ open TustlerAWSLib
 open System.Text.Json
 open System.IO
 open Microsoft.FSharp.Reflection
+open System.Text
 
 /// A reference to a media file item stored in an S3 Bucket
 type S3MediaReference(bucketName: string, key: string, mimeType: string, extension: string) =
@@ -95,6 +96,37 @@ type AWSIterationStack(uid: Guid, items: IEnumerable<IShareIterationArgument>) =
 
     override this.ModuleName with get() = "AWSShareIterationArgument"
 
+module public ConsumablePatternMatcher =
+
+    let private getWrapperFrom (consumable: IConsumable) = 
+        match consumable.Current with
+        | Some(argInterface) ->
+            match argInterface with
+            | :? AWSShareIterationArgument as arg -> arg
+            | _ -> invalidArg "consumable" "Unknown item type for RetainingStack; expecting an AWSShareIterationArgument item"
+        | _ -> invalidArg "consumable" "Current property returns None"
+
+    let private getArguments (consumable: IConsumable) = 
+        consumable
+        |> Seq.map (fun argInterface ->
+            match argInterface with
+            | :? AWSShareIterationArgument as arg -> arg
+            | _ -> invalidArg "consumable" "Unknown item type for RetainingStack; expecting an AWSShareIterationArgument item"
+        )
+
+    let private (| LanguageCode |) (argWrapper: AWSShareIterationArgument) =
+        match argWrapper.UnWrap with
+        | LanguageCode languageCode -> languageCode
+        | _ -> invalidArg "arg" "Expecting a languageCode"
+
+    let getLanguageCode consumable = match (getWrapperFrom consumable) with | LanguageCode arg -> arg
+
+    let getAllLanguageCodes consumable =
+        getArguments consumable
+        |> Seq.map (fun arg ->
+            match arg with | LanguageCode arg -> arg
+        )
+        |> Seq.toArray
 
 /// Arguments used by this module.
 /// These values are set on the events stack (as TaskEvent SetArgument).
@@ -142,12 +174,49 @@ type AWSArgument =
 
 /// Wrapper for the arguments used by this module
 and AWSShareIntraModule(arg: AWSArgument) =
+    let getAsBytes (sim: IShareIntraModule) = UTF8Encoding.UTF8.GetString(sim.AsBytes())
     interface IShareIntraModule with
         member this.ModuleTag with get() = Tag "AWSShareIntraModule"
         member this.Identifier with get() = Identifier (CommonUtilities.toString arg)
         member this.ToString () = sprintf "AWSShareIntraModule(%s)" (arg.ToString())
+        member this.Description () =
+            match arg with
+            | SetAWSInterface awsInterface -> sprintf "AWSInterface: mocking mode %s" (if awsInterface.RuntimeOptions.IsMocked then "enabled" else "disabled")
+            | SetBucket bucket -> sprintf "Bucket: %s" (bucket.Name)
+            | SetBucketsModel bucketViewModel -> sprintf "BucketsModel: %s" (if bucketViewModel.Buckets.Count = 0 then "0 buckets" else System.String.Join(", ", bucketViewModel.Buckets |> Seq.map (fun bucket -> bucket.Name)))
+            | SetS3MediaReference s3MediaReference -> sprintf "S3MediaReference: key %s from %s (%s)" (s3MediaReference.Key) (s3MediaReference.BucketName) (s3MediaReference.MimeType)
+            | SetTranscriptionJobName jobName -> sprintf "TranscriptionJobName: %s" jobName
+            | SetTranscriptJSON transcriptData -> sprintf "TranscriptJSON: %d bytes" (transcriptData.Length)
+            | SetTranscriptionDefaultTranscript defaultTranscript -> sprintf "TranscriptionDefaultTranscript: %s%s" (defaultTranscript.Substring(0, min 30 (defaultTranscript.Length))) (if defaultTranscript.Length < 30 then "" else "...")
+            | SetTranscriptURI transcriptURI -> sprintf "TranscriptURI: %s" transcriptURI
+            | SetTranscriptionJobsModel transcriptionJobsViewModel -> sprintf "TranscriptionJobsModel: %s" (if transcriptionJobsViewModel.TranscriptionJobs.Count = 0 then "0 jobs" else System.String.Join(", ", transcriptionJobsViewModel.TranscriptionJobs |> Seq.map (fun job -> job.TranscriptionJobName) |> Seq.sort))
+            | SetFileMediaReference fileMediaReference -> sprintf "FileMediaReference: %s of type %s" (Path.GetFileName(fileMediaReference.FilePath)) (fileMediaReference.MimeType)
+            | SetTranscriptionLanguageCode transcriptionLanguageCode -> sprintf "TranscriptionLanguageCode: %s" transcriptionLanguageCode
+            | SetTranscriptionVocabularyName vocabularyName -> sprintf "TranscriptionVocabularyName: %s" vocabularyName
+            | SetTranslationLanguageCodeSource translationLanguageCode -> sprintf "TranslationLanguageCodeSource: %s" translationLanguageCode
+            | SetTranslationTargetLanguages languages -> sprintf "TranslationTargetLanguages: %s" (System.String.Join(", ", ConsumablePatternMatcher.getAllLanguageCodes languages |> Seq.map (fun language -> language.Name)))
+            | SetTranslationTerminologyNames terminologyNames -> sprintf "TranslationTerminologyNames: %s" (System.String.Join(", ", terminologyNames))
+            | SetTranslationSegments chunker -> sprintf "TranslationSegments: %s (%d segments)" (if chunker.IsJobComplete then "completed" else "incomplete") (chunker.NumChunks)
+            | SetSubtitleFilePath fileInfo -> sprintf "SubtitleFilePath: %s" (fileInfo.FullName)
         member this.AsBytes () =
-            JsonSerializer.SerializeToUtf8Bytes(arg)
+            match arg with
+            | SetAWSInterface awsInterface -> UTF8Encoding.UTF8.GetBytes(sprintf "AmazonWebServiceInterface (IsMocked = %b)" awsInterface.RuntimeOptions.IsMocked)
+            | SetBucket bucket -> JsonSerializer.SerializeToUtf8Bytes(bucket)
+            | SetBucketsModel bucketViewModel -> JsonSerializer.SerializeToUtf8Bytes(bucketViewModel)
+            | SetS3MediaReference s3MediaReference -> JsonSerializer.SerializeToUtf8Bytes(s3MediaReference)
+            | SetTranscriptionJobName jobName -> UTF8Encoding.UTF8.GetBytes(jobName)
+            | SetTranscriptJSON transcriptData -> JsonSerializer.SerializeToUtf8Bytes(transcriptData.ToArray())
+            | SetTranscriptionDefaultTranscript defaultTranscript -> UTF8Encoding.UTF8.GetBytes(defaultTranscript)
+            | SetTranscriptURI transcriptURI -> UTF8Encoding.UTF8.GetBytes(transcriptURI)
+            | SetTranscriptionJobsModel transcriptionJobsViewModel -> JsonSerializer.SerializeToUtf8Bytes(transcriptionJobsViewModel)
+            | SetFileMediaReference fileMediaReference -> JsonSerializer.SerializeToUtf8Bytes(fileMediaReference)
+            | SetTranscriptionLanguageCode transcriptionLanguageCode -> UTF8Encoding.UTF8.GetBytes(transcriptionLanguageCode)
+            | SetTranscriptionVocabularyName vocabularyName -> UTF8Encoding.UTF8.GetBytes(vocabularyName)
+            | SetTranslationLanguageCodeSource translationLanguageCode -> UTF8Encoding.UTF8.GetBytes(translationLanguageCode)
+            | SetTranslationTargetLanguages languages -> JsonSerializer.SerializeToUtf8Bytes(ConsumablePatternMatcher.getAllLanguageCodes languages)
+            | SetTranslationTerminologyNames terminologyNames -> JsonSerializer.SerializeToUtf8Bytes(terminologyNames)
+            | SetTranslationSegments chunker -> if chunker.IsJobComplete then UTF8Encoding.UTF8.GetBytes(chunker.CompletedTranslation) else UTF8Encoding.UTF8.GetBytes("Incomplete translation")
+            | SetSubtitleFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)
         member this.Serialize writer serializerOptions =
             match arg with
             | SetAWSInterface awsInterface -> writer.WritePropertyName("SetAWSInterface"); JsonSerializer.Serialize<AmazonWebServiceInterface>(writer, awsInterface)
@@ -303,7 +372,6 @@ type AWSKnownArguments(awsInterface) =
             | RequestAWSInterface -> AWSArgument.SetAWSInterface(awsInterface).toTaskEvent()
             | _ -> invalidArg "request" "The request is not a known argument"
 
-
 type AWSFlagItem =
     | TranscribeSaveJSONTranscript          // save the JSON transcript generated by the Transcribe service
     | TranscribeSaveDefaultTranscript       // save the default transcript extracted from the JSON transcript file
@@ -359,6 +427,7 @@ type AWSFlagSet(flags: AWSFlagItem[]) =
         member this.SetFlag flag = this.SetFlag flag
         member this.IsSet flag = this.IsSet flag
         override this.ToString(): string = System.String.Join(", ", (_set |> Seq.map(fun flag -> sprintf "%s.%s" this.Identifier flag.Identifier)))
+
 
 /// a library of active recognizers (active pattern functions) that retrieve strongly typed values from a map of arguments
 // e.g. let (PatternMatchers.AWSInterface awsInterface) = argMap
@@ -523,20 +592,3 @@ module public PatternMatchers =
     let getTranslationSegments argMap = match (argMap) with | TranslationSegments arg -> arg
 
     let getSubtitleFilePath argMap = match (argMap) with | SubtitleFilePath arg -> arg
-    
-    module Consumable =
-
-        let private getWrapperFrom (consumable: IConsumable) = 
-            match consumable.Current with
-            | Some(argInterface) ->
-                match argInterface with
-                | :? AWSShareIterationArgument as arg -> arg
-                | _ -> invalidArg "consumable" "Unknown item type for RetainingStack; expecting an AWSShareIterationArgument item"
-            | _ -> invalidArg "consumable" "Current property returns None"
-
-        let private (| LanguageCode |) (argWrapper: AWSShareIterationArgument) =
-            match argWrapper.UnWrap with
-            | LanguageCode languageCode -> languageCode
-            | _ -> invalidArg "arg" "Expecting a languageCode"
-
-        let getLanguageCode consumable = match (getWrapperFrom consumable) with | LanguageCode arg -> arg

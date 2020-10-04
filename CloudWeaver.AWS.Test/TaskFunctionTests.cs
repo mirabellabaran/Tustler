@@ -1,6 +1,3 @@
-using Amazon.Polly;
-using CloudWeaver;
-using CloudWeaver.AWS;
 using CloudWeaver.Types;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;

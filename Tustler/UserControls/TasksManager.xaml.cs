@@ -324,16 +324,16 @@ namespace Tustler.UserControls
                     // set the save flags
                     var saveFlags = new SaveFlags(new ISaveFlagSet[]
                     {
-                    new StandardFlagSet(new StandardFlagItem[]
-                    {
-                        StandardFlagItem.SaveTaskName
-                    }),
-                    new AWSFlagSet(new AWSFlagItem[]
-                    {
-                        AWSFlagItem.TranscribeSaveJSONTranscript,
-                        AWSFlagItem.TranscribeSaveDefaultTranscript,
-                        AWSFlagItem.TranslateSaveTranslation
-                    })
+                        new StandardFlagSet(new StandardFlagItem[]
+                        {
+                            StandardFlagItem.SaveTaskName
+                        }),
+                        new AWSFlagSet(new AWSFlagItem[]
+                        {
+                            AWSFlagItem.TranscribeSaveJSONTranscript,
+                            AWSFlagItem.TranscribeSaveDefaultTranscript,
+                            AWSFlagItem.TranslateSaveTranslation
+                        })
                     });
                     agent.SetSaveFlags(saveFlags);
 
