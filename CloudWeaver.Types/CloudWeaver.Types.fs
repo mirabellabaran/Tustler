@@ -72,6 +72,41 @@ type TaskItem(moduleName: string, taskName: string, description: string) =
     new() = TaskItem(null, null, null)
     override this.ToString() = sprintf "TaskItem: %s %s %s" this.ModuleName this.TaskName this.Description
 
+/// A reference to a media file stored locally (normally a file to be uploaded to S3)
+type FileMediaReference(filePath: string, mimeType: string, extension: string) =
+    let mutable _filePath = filePath
+    let mutable _mimeType = mimeType
+    let mutable _extension = extension
+
+    member this.FilePath with get() = _filePath and set(value) = _filePath <- value
+    member this.MimeType with get() = _mimeType and set(value) = _mimeType <- value
+    member this.Extension with get() = _extension and set(value) = _extension <- value
+
+    new() = FileMediaReference(null, null, null)
+
+[<RequireQualifiedAccess>]
+type FilePickerMode =
+    | NotSet
+    | Open
+    | Save
+    with
+    override this.ToString() =
+        match this with
+        | NotSet -> "NotSet"
+        | Open -> "Open"
+        | Save -> "Save"
+
+type FilePath(path: FileInfo, extension: string, mode: FilePickerMode) =
+    let mutable _path = path
+    let mutable _extension = extension
+    let mutable _mode = mode
+
+    member this.Path with get() = _path and set(value) = _path <- value
+    member this.Extension with get() = _extension and set(value) = _extension <- value
+    member this.Mode with get() = _mode and set(value) = _mode <- value
+
+    new() = FilePath(null, null, FilePickerMode.NotSet)
+
 /// Specifies whether stack items such as tasks are independant or sequentially dependant
 type ItemOrdering =
     | Independant       // execution of each item is independant of that of its peers
@@ -310,6 +345,7 @@ type StandardRequest =
     | RequestWorkingDirectory   // the filesystem folder where values specific to the current task function can be written and read
     | RequestSaveFlags          // a set of flags controlling the saving of intermediate results
     | RequestJsonEvents         // a byte array representing a collection of TaskEvents in JSON document format
+    | RequestFileMediaReference // a reference to a local media file
     | RequestLogFormatEvents    // a byte array representing a collection of TaskEvents in binary log format
     | RequestOpenJsonFilePath       // the path to a file that stores TaskEvents in JSON document format for open/read
     | RequestSaveJsonFilePath       // the path to a file that stores TaskEvents in JSON document format for save/write
@@ -324,6 +360,7 @@ type StandardRequest =
         | RequestWorkingDirectory -> "RequestWorkingDirectory"
         | RequestSaveFlags -> "RequestSaveFlags"
         | RequestJsonEvents -> "RequestJsonEvents"
+        | RequestFileMediaReference -> "RequestFileMediaReference"
         | RequestLogFormatEvents -> "RequestLogFormatEvents"
         | RequestOpenJsonFilePath -> "RequestOpenJsonFilePath"
         | RequestSaveJsonFilePath -> "RequestSaveJsonFilePath"
@@ -338,6 +375,7 @@ type StandardArgument =
     | SetWorkingDirectory of DirectoryInfo option
     | SetSaveFlags of SaveFlags option
     | SetJsonEvents of byte[]
+    | SetFileMediaReference of FileMediaReference
     | SetLogFormatEvents of byte[]
     | SetOpenJsonFilePath of FileInfo
     | SetSaveJsonFilePath of FileInfo
@@ -352,6 +390,7 @@ type StandardArgument =
         | SetWorkingDirectory dirInfo -> (sprintf "SetWorkingDirectory: %s" (if dirInfo.IsSome then dirInfo.Value.ToString() else "None"))
         | SetSaveFlags saveFlgs -> (sprintf "SetSaveFlags: %s" (if saveFlgs.IsSome then saveFlgs.Value.ToString() else "None"))
         | SetJsonEvents data -> (sprintf "SetJsonEvents: (%d bytes)" data.Length)
+        | SetFileMediaReference fileMediaReference -> (sprintf "SetFileMediaReference: %s" (fileMediaReference.ToString()))
         | SetLogFormatEvents data -> (sprintf "SetLogFormatEvents: (%d bytes)" data.Length)
         | SetOpenJsonFilePath fileInfo -> (sprintf "SetOpenJsonFilePath: %s" fileInfo.FullName)
         | SetSaveJsonFilePath fileInfo -> (sprintf "SetSaveJsonFilePath: %s" fileInfo.FullName)
@@ -376,6 +415,7 @@ and StandardShareIntraModule(arg: StandardArgument) =
             | SetWorkingDirectory dir -> sprintf "WorkingDirectory: %s" (if dir.IsSome then dir.Value.FullName else "[None]")
             | SetSaveFlags flags -> sprintf "SaveFlags: %s" (if flags.IsSome then flags.Value.ToString() else "[None]")
             | SetJsonEvents data -> sprintf "JsonEvents: %d bytes" (data.Length)
+            | SetFileMediaReference fileMediaReference -> sprintf "FileMediaReference: %s of type %s" (Path.GetFileName(fileMediaReference.FilePath)) (fileMediaReference.MimeType)
             | SetLogFormatEvents data -> sprintf "LogFormatEvents: %d bytes" (data.Length)
             | SetOpenJsonFilePath fileInfo -> sprintf "OpenJsonFilePath: %s" (fileInfo.FullName)
             | SetSaveJsonFilePath fileInfo -> sprintf "SaveJsonFilePath: %s" (fileInfo.FullName)
@@ -389,6 +429,7 @@ and StandardShareIntraModule(arg: StandardArgument) =
             | SetWorkingDirectory dir -> if dir.IsSome then UTF8Encoding.UTF8.GetBytes(dir.Value.FullName) else Array.Empty<byte>()
             | SetSaveFlags flags -> if flags.IsSome then JsonSerializer.SerializeToUtf8Bytes(flags.Value.ToArray()) else Array.Empty<byte>()
             | SetJsonEvents data -> data    // note that this UTF8-encoded Json is deliberately pretty-printed
+            | SetFileMediaReference fileMediaReference -> JsonSerializer.SerializeToUtf8Bytes(fileMediaReference)
             | SetLogFormatEvents data -> JsonSerializer.SerializeToUtf8Bytes(data)
             | SetOpenJsonFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)
             | SetSaveJsonFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)
@@ -402,6 +443,7 @@ and StandardShareIntraModule(arg: StandardArgument) =
             | SetWorkingDirectory dir -> writer.WritePropertyName("SetWorkingDirectory"); JsonSerializer.Serialize(writer, if dir.IsSome then dir.Value.FullName else "")
             | SetSaveFlags flags -> writer.WritePropertyName("SetSaveFlags"); JsonSerializer.Serialize(writer, if flags.IsSome then flags.Value.ToString() else "")
             | SetJsonEvents data -> writer.WritePropertyName("SetJsonEvents"); JsonSerializer.Serialize<byte[]>(writer, data)
+            | SetFileMediaReference fileMediaReference -> writer.WritePropertyName("SetFileMediaReference"); JsonSerializer.Serialize<FileMediaReference>(writer, fileMediaReference)
             | SetLogFormatEvents data -> writer.WritePropertyName("SetLogFormatEvents"); JsonSerializer.Serialize<byte[]>(writer, data)
             | SetOpenJsonFilePath fileInfo -> writer.WritePropertyName("SetOpenJsonFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
             | SetSaveJsonFilePath fileInfo -> writer.WritePropertyName("SetSaveJsonFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
@@ -444,6 +486,9 @@ and StandardShareIntraModule(arg: StandardArgument) =
             | "SetJsonEvents" ->
                 let data = JsonSerializer.Deserialize<byte[]>(jsonString)
                 StandardArgument.SetJsonEvents data
+            | "SetFileMediaReference" ->
+                let data = JsonSerializer.Deserialize<FileMediaReference>(jsonString)
+                StandardArgument.SetFileMediaReference data
             | "SetLogFormatEvents" ->
                 let data = JsonSerializer.Deserialize<byte[]>(jsonString)
                 StandardArgument.SetLogFormatEvents data
@@ -595,6 +640,13 @@ module public PatternMatchers =
         | None -> None
         | _ -> invalidArg "arg" "Expecting JsonEvents"
 
+    let private (| FileMediaReference |) argMap =
+        let key = StandardRequestIntraModule(StandardRequest.RequestFileMediaReference)
+        match (lookupArgument key argMap) with
+        | Some(SetFileMediaReference arg) -> Some(arg)
+        | None -> None
+        | _ -> invalidArg "arg" "Expecting a FileMediaReference"
+
     let private (| LogFormatEvents |) argMap =
         let key = StandardRequestIntraModule(StandardRequest.RequestLogFormatEvents)
         match (lookupArgument key argMap) with
@@ -641,6 +693,8 @@ module public PatternMatchers =
     let getSaveFlags argMap = match (argMap) with | SaveFlags arg -> arg
 
     let getJsonEvents argMap = match (argMap) with | JsonEvents arg -> arg
+
+    let getFileMediaReference argMap = match (argMap) with | FileMediaReference arg -> arg
 
     let getLogFormatEvents argMap = match (argMap) with | LogFormatEvents arg -> arg
 

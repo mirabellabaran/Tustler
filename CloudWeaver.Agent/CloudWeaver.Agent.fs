@@ -7,6 +7,7 @@ open System.Threading.Tasks
 open CloudWeaver.Types
 open System.IO
 open System.Text.Json
+open System.Text
 
 type ExecutionStackFrameType =
     | Data of IConsumable
@@ -355,7 +356,14 @@ type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctio
     member this.IsAwaitingResponse with get () =
         uiResponsePending
 
-    member this.AddArgument response =
+    member this.AddArgument(response) =
+        events.Add(TaskEvent.SetArgument(response))
+
+    member this.AddArgument(moduleName, propertyName, data: byte[]) =
+        let jsonString = UTF8Encoding.UTF8.GetString(data)
+        let resolveProperty = ModuleResolver.ModuleLookup(moduleName)
+        let shareIntraModule = resolveProperty.Invoke(propertyName, jsonString)
+        let response = TaskResponse.SetArgument shareIntraModule
         events.Add(TaskEvent.SetArgument(response))
 
     member this.AddEvents evts =

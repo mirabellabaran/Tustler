@@ -1,8 +1,10 @@
-﻿using CloudWeaver.AWS;
+﻿using CloudWeaver;
+using CloudWeaver.AWS;
 using CloudWeaver.Types;
 using Microsoft.Win32;
 using System;
 using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -249,13 +251,9 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var fileMediaReference = new FileMediaReference(tbFilePath.Text, this.Mimetype, this.Extension);
+            var data = SerializableTypeGenerator.CreateFileMediaReference(tbFilePath.Text, this.Mimetype, this.Extension);
 
-            CommandParameter = new UITaskArguments()
-            {
-                Mode = UITaskMode.SetArgument,
-                TaskArguments = new UITaskArgument[] { UITaskArgument.NewFileMediaReference(fileMediaReference) }
-            };
+            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "StandardShareIntraModule", "SetTaskItem", data);
 
             ExecuteCommand();
         }

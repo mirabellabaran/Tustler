@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -203,17 +204,10 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void Select_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var context = (e.OriginalSource as Button).DataContext as Bucket;
+            var bucket = (e.OriginalSource as Button).DataContext as Bucket;
+            var data = JsonSerializer.SerializeToUtf8Bytes(bucket);
 
-            var parameterData = new UITaskArgument?[] {
-                UITaskArgument.NewBucket(context)
-            };
-
-            CommandParameter = new UITaskArguments()
-            {
-                Mode = UITaskMode.SetArgument,
-                TaskArguments = parameterData
-            };
+            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetBucket", UITaskArgument.NewBucket(data));
 
             ExecuteCommand();
         }

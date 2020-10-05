@@ -174,11 +174,7 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             if (!string.IsNullOrWhiteSpace(tbTranscript.Text))
             {
-                CommandParameter = new UITaskArguments()
-                {
-                    Mode = UITaskMode.SetArgument,
-                    TaskArguments = new UITaskArgument[] { UITaskArgument.NewTranscriptionDefaultTranscript(tbTranscript.Text) }
-                };
+                CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "", "", UITaskArgument.NewTranscriptionDefaultTranscript(tbTranscript.Text));
 
                 ExecuteCommand();
             }

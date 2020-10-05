@@ -151,13 +151,8 @@ namespace Tustler.UserControls.TaskMemberControls
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             var selectedTasks = lbTasks.SelectedItems.Cast<TaskItem>();
-            var parameterData = new UITaskArgument[] { UITaskArgument.NewForEach(selectedTasks) };
 
-            CommandParameter = new UITaskArguments()
-            {
-                Mode = UITaskMode.ForEachIndependantTask,
-                TaskArguments = parameterData
-            };
+            CommandParameter = new UITaskArguments(UITaskMode.ForEachIndependantTask, "", "", UITaskArgument.NewForEach(selectedTasks));
 
             ExecuteCommand();
         }

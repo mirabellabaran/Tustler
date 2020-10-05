@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -202,12 +203,9 @@ namespace Tustler.UserControls.TaskMemberControls
             var terminologyNames = (lbTerminologyNames.SelectedItems as IEnumerable<object>)
                 .Cast<Terminology>()
                 .Select(term => term.Name);
+            var data = JsonSerializer.SerializeToUtf8Bytes(terminologyNames);
 
-            CommandParameter = new UITaskArguments()
-            {
-                Mode = UITaskMode.SetArgument,
-                TaskArguments = new UITaskArgument[] { UITaskArgument.NewTranslationTerminologyNames(terminologyNames) }
-            };
+            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "", "", UITaskArgument.NewTranslationTerminologyNames(data));
 
             ExecuteCommand();
         }

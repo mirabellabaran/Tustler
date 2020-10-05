@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CloudWeaver.AWS;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows;
@@ -227,18 +228,16 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             if (cbLanguage.SelectedItem is TustlerModels.LanguageCode languageCode)
             {
-                var arg = LanguageCodesViewModelType switch
+                var domain = LanguageCodesViewModelType switch
                 {
-                    LanguageCodesViewModelType.Transcription => UITaskArgument.NewTranscriptionLanguageCode(languageCode.Code),
-                    LanguageCodesViewModelType.Translation => UITaskArgument.NewTranslationLanguageCodeSource(languageCode.Code),
+                    LanguageCodesViewModelType.Transcription => LanguageDomain.Transcription,
+                    LanguageCodesViewModelType.Translation => LanguageDomain.Translation,
                     _ => null
                 };
 
-                CommandParameter = new UITaskArguments()
-                {
-                    Mode = UITaskMode.SetArgument,
-                    TaskArguments = new UITaskArgument[] { arg }
-                };
+                var data = CloudWeaver.SerializableTypeGenerator.CreateLanguageCode(domain, languageCode.Name, languageCode.Code);
+
+                CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "", "", new UITaskArgument(data));
 
                 ExecuteCommand();
             }

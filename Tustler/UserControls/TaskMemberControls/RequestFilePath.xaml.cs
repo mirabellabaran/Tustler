@@ -15,6 +15,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using TustlerFSharpPlatform;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
+using Path = System.IO.Path;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
@@ -330,20 +331,18 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var filePath = System.IO.Path.HasExtension(tbFilePath.Text) ? tbFilePath.Text : System.IO.Path.ChangeExtension(tbFilePath.Text, FileExtension);
+            var filePath = Path.HasExtension(tbFilePath.Text) ? tbFilePath.Text : Path.ChangeExtension(tbFilePath.Text, FileExtension);
             var fileInfo = new FileInfo(filePath);
-            var pickerMode = PickerMode switch  // the type of this variable is not a simple enum and WPF therefore has no default converter
+            var pickerMode = PickerMode switch
             {
-                FilePickerMode.Open => TustlerFSharpPlatform.FilePickerMode.Open,
-                FilePickerMode.Save => TustlerFSharpPlatform.FilePickerMode.Save,
+                FilePickerMode.Open => CloudWeaver.Types.FilePickerMode.Open,
+                FilePickerMode.Save => CloudWeaver.Types.FilePickerMode.Save,
                 _ => throw new NotImplementedException(),
             };
 
-            CommandParameter = new UITaskArguments()
-            {
-                Mode = UITaskMode.SetArgument,
-                TaskArguments = new UITaskArgument[] { UITaskArgument.NewFilePath(fileInfo, FileExtension, pickerMode) }
-            };
+            var data = CloudWeaver.SerializableTypeGenerator.CreateFilePath(fileInfo, FileExtension, pickerMode);
+
+            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "", "", UITaskArgument.NewFilePath(data));
 
             ExecuteCommand();
         }

@@ -26,7 +26,6 @@ module public Tasks =
                 | SetAWSInterface _ -> Some(AWSRequestIntraModule(RequestAWSInterface) :> IRequestIntraModule)
                 | SetBucket _ -> Some(AWSRequestIntraModule(RequestBucket) :> IRequestIntraModule)
                 | SetBucketsModel _ -> Some(AWSRequestIntraModule(RequestBucketsModel) :> IRequestIntraModule)
-                | SetFileMediaReference _ -> Some(AWSRequestIntraModule(RequestFileMediaReference) :> IRequestIntraModule)
                 | SetS3MediaReference _ -> Some(AWSRequestIntraModule(RequestS3MediaReference) :> IRequestIntraModule)
                 | SetTranscriptionJobsModel _ -> Some(AWSRequestIntraModule(RequestTranscriptionJobsModel) :> IRequestIntraModule)  // see also AWSDisplayValue.DisplayTranscriptionJobsModel
                 | SetTranscriptionJobName _ -> Some(AWSRequestIntraModule(RequestTranscriptionJobName) :> IRequestIntraModule)
@@ -48,6 +47,7 @@ module public Tasks =
                 | SetWorkingDirectory _ -> Some(StandardRequestIntraModule(RequestWorkingDirectory) :> IRequestIntraModule)
                 | SetSaveFlags _ -> Some(StandardRequestIntraModule(RequestSaveFlags) :> IRequestIntraModule)
                 | SetJsonEvents _ -> Some(StandardRequestIntraModule(RequestJsonEvents) :> IRequestIntraModule)
+                | SetFileMediaReference _ -> Some(StandardRequestIntraModule(RequestFileMediaReference) :> IRequestIntraModule)
                 | SetLogFormatEvents _ -> Some(StandardRequestIntraModule(RequestLogFormatEvents) :> IRequestIntraModule)
                 | SetOpenJsonFilePath _ -> Some(StandardRequestIntraModule(RequestOpenJsonFilePath) :> IRequestIntraModule)
                 | SetSaveJsonFilePath _ -> Some(StandardRequestIntraModule(RequestSaveJsonFilePath) :> IRequestIntraModule)
@@ -462,7 +462,7 @@ module public Tasks =
             TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestAWSInterface));
             TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestNotifications));
             TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestBucket));
-            TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestFileMediaReference));
+            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestFileMediaReference));
             |]
 
         match queryMode with
@@ -801,7 +801,7 @@ module public Tasks =
         let inputs = [|
             TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionVocabularyName));
             TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionLanguageCode));
-            TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestFileMediaReference));
+            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestFileMediaReference));
             TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestBucket));
 
             TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestTaskIdentifier));

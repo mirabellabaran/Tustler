@@ -152,7 +152,7 @@ namespace CloudWeaver.AWS.Test
             Assert.IsTrue(transcriptionJobsModelModule.Description().StartsWith("TranscriptionJobsModel: myJob1, myJob2, myJob3"));
             Assert.IsTrue(StringifyBytes(transcriptionJobsModelModule).StartsWith("{\"TranscriptionJobs\":[{\"TranscriptionJobName\":"));
 
-            IShareIntraModule fileMediaReferenceModule = new AWSShareIntraModule(AWSArgument.NewSetFileMediaReference(
+            IShareIntraModule fileMediaReferenceModule = new StandardShareIntraModule(StandardArgument.NewSetFileMediaReference(
                 new FileMediaReference("my path", "audio/x-wav", "wav")));
             Assert.IsTrue(fileMediaReferenceModule.Description().StartsWith("FileMediaReference: my path of type audio/x-wav"));
             Assert.IsTrue(StringifyBytes(fileMediaReferenceModule).StartsWith("{\"FilePath\":\"my path\",\"MimeType\":\"audio/x-wav\",\"Extension\":\"wav\"}"));

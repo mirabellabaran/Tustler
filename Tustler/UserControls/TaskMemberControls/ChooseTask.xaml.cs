@@ -1,5 +1,6 @@
 ﻿using CloudWeaver.Types;
 using System;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -166,14 +167,9 @@ namespace Tustler.UserControls.TaskMemberControls
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             var selectedTask = lbTaskFunctions.SelectedItem as TaskFunctionSpecifier;
-            var taskItem = new TaskItem(selectedTask.ModuleName, selectedTask.TaskName, string.Empty);
-            var parameterData = new UITaskArgument[] { UITaskArgument.NewSelectedTask(taskItem) };
+            var data = CloudWeaver.SerializableTypeGenerator.CreateTaskItem(selectedTask.ModuleName, selectedTask.TaskName);
 
-            CommandParameter = new UITaskArguments()
-            {
-                Mode = UITaskMode.SelectTask,
-                TaskArguments = parameterData
-            };
+            CommandParameter = new UITaskArguments(UITaskMode.SelectTask, "StandardShareIntraModule", "SetTaskItem", data);
 
             ExecuteCommand();
         }

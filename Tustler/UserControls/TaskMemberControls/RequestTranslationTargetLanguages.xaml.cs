@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -173,12 +174,8 @@ namespace Tustler.UserControls.TaskMemberControls
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             var targetLanguageCodes = (lbTargetLanguages.SelectedItems as IEnumerable<object>).Cast<LanguageCode>();
-
-            CommandParameter = new UITaskArguments()
-            {
-                Mode = UITaskMode.SetArgument,
-                TaskArguments = new UITaskArgument[] { UITaskArgument.NewTranslationTargetLanguages(targetLanguageCodes) }
-            };
+            var data = JsonSerializer.SerializeToUtf8Bytes(targetLanguageCodes);
+            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetTranslationTargetLanguages", UITaskArgument.NewTranslationTargetLanguages(data));
 
             ExecuteCommand();
         }
