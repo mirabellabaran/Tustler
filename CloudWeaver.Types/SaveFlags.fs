@@ -14,6 +14,7 @@ type ISaveFlagSet =
     abstract member SetFlag: ISaveFlag -> unit
     abstract member IsSet: ISaveFlag -> bool
     abstract member ToString: unit -> string
+    abstract member ToArray: unit -> string[]
 
 type StandardFlagItem =
     | SaveTaskName
@@ -68,6 +69,7 @@ type StandardFlagSet(flags: StandardFlagItem[]) =
         member this.SetFlag flag = this.SetFlag flag
         member this.IsSet flag = this.IsSet flag
         override this.ToString(): string = System.String.Join(", ", (_set |> Seq.map(fun flag -> sprintf "%s.%s" this.Identifier flag.Identifier)))
+        member this.ToArray(): string [] = (_set |> Seq.map(fun flag -> sprintf "%s.%s" this.Identifier flag.Identifier) |> Seq.toArray)
 
 type SaveFlags(flagSets: ISaveFlagSet[]) =
 
@@ -108,6 +110,7 @@ type SaveFlags(flagSets: ISaveFlagSet[]) =
             SaveFlags()
 
     override this.ToString(): string = System.String.Join(", ", (flagSets |> Seq.map(fun flagSet -> flagSet.ToString())))
+    member this.ToArray(): string[] = (flagSets |> Seq.map(fun flagSet -> flagSet.ToArray()) |> Seq.concat |> Seq.toArray)
     member this.AddFlagSet (flagSet: ISaveFlagSet) = if not (_flagSets.Contains flagSet) then _flagSets <- _flagSets.Add flagSet
     member this.IsSet flag =
         _flagSets

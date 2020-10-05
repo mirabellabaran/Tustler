@@ -198,9 +198,9 @@ and AWSShareIntraModule(arg: AWSArgument) =
             | SetTranslationTerminologyNames terminologyNames -> sprintf "TranslationTerminologyNames: %s" (System.String.Join(", ", terminologyNames))
             | SetTranslationSegments chunker -> sprintf "TranslationSegments: %s (%d segments)" (if chunker.IsJobComplete then "completed" else "incomplete") (chunker.NumChunks)
             | SetSubtitleFilePath fileInfo -> sprintf "SubtitleFilePath: %s" (fileInfo.FullName)
-        member this.AsBytes () =
+        member this.AsBytes () =    // returns either a UTF8-encoded string or a UTF8-encoded Json document as a byte array
             match arg with
-            | SetAWSInterface awsInterface -> UTF8Encoding.UTF8.GetBytes(sprintf "AmazonWebServiceInterface (IsMocked = %b)" awsInterface.RuntimeOptions.IsMocked)
+            | SetAWSInterface awsInterface -> JsonSerializer.SerializeToUtf8Bytes(awsInterface)
             | SetBucket bucket -> JsonSerializer.SerializeToUtf8Bytes(bucket)
             | SetBucketsModel bucketViewModel -> JsonSerializer.SerializeToUtf8Bytes(bucketViewModel)
             | SetS3MediaReference s3MediaReference -> JsonSerializer.SerializeToUtf8Bytes(s3MediaReference)
@@ -215,7 +215,7 @@ and AWSShareIntraModule(arg: AWSArgument) =
             | SetTranslationLanguageCodeSource translationLanguageCode -> UTF8Encoding.UTF8.GetBytes(translationLanguageCode)
             | SetTranslationTargetLanguages languages -> JsonSerializer.SerializeToUtf8Bytes(ConsumablePatternMatcher.getAllLanguageCodes languages)
             | SetTranslationTerminologyNames terminologyNames -> JsonSerializer.SerializeToUtf8Bytes(terminologyNames)
-            | SetTranslationSegments chunker -> if chunker.IsJobComplete then UTF8Encoding.UTF8.GetBytes(chunker.CompletedTranslation) else UTF8Encoding.UTF8.GetBytes("Incomplete translation")
+            | SetTranslationSegments chunker -> JsonSerializer.SerializeToUtf8Bytes(chunker)    //if chunker.IsJobComplete then UTF8Encoding.UTF8.GetBytes(chunker.CompletedTranslation) else UTF8Encoding.UTF8.GetBytes("Incomplete translation")
             | SetSubtitleFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)
         member this.Serialize writer serializerOptions =
             match arg with
@@ -427,6 +427,7 @@ type AWSFlagSet(flags: AWSFlagItem[]) =
         member this.SetFlag flag = this.SetFlag flag
         member this.IsSet flag = this.IsSet flag
         override this.ToString(): string = System.String.Join(", ", (_set |> Seq.map(fun flag -> sprintf "%s.%s" this.Identifier flag.Identifier)))
+        member this.ToArray(): string [] = (_set |> Seq.map(fun flag -> sprintf "%s.%s" this.Identifier flag.Identifier) |> Seq.toArray)
 
 
 /// a library of active recognizers (active pattern functions) that retrieve strongly typed values from a map of arguments

@@ -381,14 +381,14 @@ and StandardShareIntraModule(arg: StandardArgument) =
             | SetSaveJsonFilePath fileInfo -> sprintf "SaveJsonFilePath: %s" (fileInfo.FullName)
             | SetOpenLogFormatFilePath fileInfo -> sprintf "OpenLogFormatFilePath: %s" (fileInfo.FullName)
             | SetSaveLogFormatFilePath fileInfo -> sprintf "SaveLogFormatFilePath: %s" (fileInfo.FullName)
-        member this.AsBytes () =    // UTF-8 bytes only
+        member this.AsBytes () =    // returns either a UTF8-encoded string or a UTF8-encoded Json document as a byte array
             match arg with
             | SetNotificationsList notificationsList -> JsonSerializer.SerializeToUtf8Bytes(notificationsList)
             | SetTaskIdentifier taskId -> if taskId.IsSome then UTF8Encoding.UTF8.GetBytes(taskId.Value) else Array.Empty<byte>()
             | SetTaskItem taskItem -> if taskItem.IsSome then JsonSerializer.SerializeToUtf8Bytes(taskItem.Value) else Array.Empty<byte>()
             | SetWorkingDirectory dir -> if dir.IsSome then UTF8Encoding.UTF8.GetBytes(dir.Value.FullName) else Array.Empty<byte>()
-            | SetSaveFlags flags -> if flags.IsSome then UTF8Encoding.UTF8.GetBytes(flags.Value.ToString()) else Array.Empty<byte>()
-            | SetJsonEvents data -> data
+            | SetSaveFlags flags -> if flags.IsSome then JsonSerializer.SerializeToUtf8Bytes(flags.Value.ToArray()) else Array.Empty<byte>()
+            | SetJsonEvents data -> data    // note that this UTF8-encoded Json is deliberately pretty-printed
             | SetLogFormatEvents data -> JsonSerializer.SerializeToUtf8Bytes(data)
             | SetOpenJsonFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)
             | SetSaveJsonFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)

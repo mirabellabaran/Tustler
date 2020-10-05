@@ -305,6 +305,27 @@ namespace Tustler.UserControls
                         using JsonDocument document = JsonDocument.Parse(stream, options);
                         var taskEvents = Serialization.DeserializeEventsFromJSON(document);
                         agent.AddEvents(taskEvents);
+
+                        //// create a new JsonDocument containing an array of descriptions for each SetArgument
+                        //using var ms = new MemoryStream();
+                        //using var writer = new Utf8JsonWriter(ms, new JsonWriterOptions { Indented = false });
+                        //writer.WriteStartArray();
+                        //foreach (var evt in taskEvents)
+                        //{
+                        //    if (evt is TaskEvent.SetArgument arg)
+                        //    {
+                        //        if (arg.Item is TaskResponse.SetArgument response)
+                        //        {
+                        //            writer.WriteStringValue(response.Item.Description());
+                        //        }
+                        //    }
+                        //}
+                        //writer.WriteEndArray();
+                        //writer.Flush();
+                        //ms.Seek(0L, SeekOrigin.Begin);
+                        //var jsonDocument = JsonDocument.Parse(ms);  // UTF8Encoding.UTF8.GetString(ms.ToArray());
+                        //taskResponses.Add(new ResponseWrapper(this, jsonDocument));
+
                     }
                 }
                 else

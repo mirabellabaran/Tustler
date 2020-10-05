@@ -89,7 +89,7 @@ namespace Tustler.Helpers
                     };
                 }
 
-                // Note that ShowTranscriptionJobsSummary and SetTranscriptionJobsModel share a template as both display the same data type
+                // Note that DisplayTranscriptionJobsModel and SetTranscriptionJobsModel share a template as both display the same data type
                 // (the latter also sets an argument on the events stack)
                 var template = wrapper.TaskResponse switch
                 {
