@@ -19,9 +19,9 @@ using Tustler.Helpers.UIServices;
 using Tustler.Models;
 using Tustler.UserControls.TaskMemberControls;
 using TustlerAWSLib;
-using TustlerFSharpPlatform;
 using TustlerInterfaces;
 using TustlerServicesLib;
+using TustlerUIShared;
 using AWSMiniTasks = CloudWeaver.AWS.MiniTasks;
 using AWSTasks = CloudWeaver.AWS.Tasks;
 
@@ -672,13 +672,8 @@ namespace Tustler.UserControls
                     ctrl.IsButtonEnabled = false;
                 }
 
-                switch (parameterInfo.TaskArguments)
-                {
-                    case UITaskArgument.SelectedTask taskArg:
-                        var task = JsonSerializer.Deserialize<TaskItem>(new ReadOnlySpan<byte>(taskArg.Item));
-                        agent.PushTask(task);
-                        break;
-                }
+                var task = JsonSerializer.Deserialize<TaskItem>(new ReadOnlySpan<byte>(parameterInfo.SerializedArgument));
+                agent.PushTask(task);
 
                 await Dispatcher.InvokeAsync(async () =>
                 {
@@ -728,12 +723,7 @@ namespace Tustler.UserControls
                 }
 
                 // Add a SetArgument event to the events list and reinvoke the function
-                switch (parameterInfo.TaskArguments)
-                {
-                    case UITaskArgument.Bucket bucketArg:
-                        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, bucketArg.Item);
-                        break;
-                }
+                agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, parameterInfo.SerializedArgument);
 
                 if (hasCompleted)
                 {
@@ -785,61 +775,63 @@ namespace Tustler.UserControls
                 }
 
                 // Add a SetArgument event to the events list and reinvoke the function
-                switch (parameterInfo.TaskArguments)
-                {
-                    case UITaskArgument.Bucket bucketArg:
-                        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, bucketArg.Item);
-                        break;
-                    case UITaskArgument.FileMediaReference mediaReferenceArg:
-                        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, mediaReferenceArg.Item);
-                        break;
-                    case UITaskArgument.TranscriptionLanguageCode transcriptionLanguageCodeArg:
-                        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, transcriptionLanguageCodeArg.Item);
-                        break;
-                    case UITaskArgument.TranscriptionDefaultTranscript transcriptionDefaultTranscriptArg:
-                        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, transcriptionDefaultTranscriptArg.Item);
-                        break;
-                    case UITaskArgument.TranslationLanguageCodeSource translationLanguageCodeArg:
-                        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, translationLanguageCodeArg.Item);
-                        break;
-                    case UITaskArgument.TranscriptionVocabularyName vocabularyNameArg:
-                        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, vocabularyNameArg.Item);
-                        break;
-                    case UITaskArgument.TranslationTargetLanguages translationTargetLanguagesArg:
-                        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, translationTargetLanguagesArg.Item);
-                        //var languages = translationTargetLanguagesArg.Item.Select(languageCode => new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(languageCode)));
-                        //var translationTargetLanguages = new AWSIterationStack(Guid.NewGuid(), languages);
-                        //agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationTargetLanguages(translationTargetLanguages))));
-                        break;
-                    case UITaskArgument.TranslationTerminologyNames translationTerminologyNamesArg:
-                        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, translationTerminologyNamesArg.Item);
-                        break;
-                    case UITaskArgument.FilePath filePathArg:
-                        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, filePathArg.Item);
-                        //var fileInfo = filePathArg.Item1;
-                        //var extension = filePathArg.Item2;
-                        //var pickerMode = filePathArg.Item3;
-                        //var arg = extension switch
-                        //{
-                        //    "bin" => pickerMode.Tag switch
-                        //    {
-                        //        FilePickerMode.Tags.Open => StandardArgument.NewSetOpenLogFormatFilePath(fileInfo),
-                        //        FilePickerMode.Tags.Save => StandardArgument.NewSetSaveLogFormatFilePath(fileInfo),
-                        //        _ => throw new NotImplementedException(),
-                        //    },
-                        //    "json" => pickerMode.Tag switch
-                        //    {
-                        //        FilePickerMode.Tags.Open => StandardArgument.NewSetOpenJsonFilePath(fileInfo),
-                        //        FilePickerMode.Tags.Save => StandardArgument.NewSetSaveJsonFilePath(fileInfo),
-                        //        _ => throw new NotImplementedException(),
-                        //    },
-                        //    _ => throw new NotImplementedException(),
-                        //};
-                        //agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(arg)));
-                        break;
-                    default:
-                        throw new ArgumentException($"RunSelectBucketMiniTask: Unknown argument type");
-                }
+                agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, parameterInfo.SerializedArgument);
+
+                //switch (parameterInfo.PropertyName)
+                //{
+                //    case "SetBucket":
+                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, parameterInfo.TaskArgument);
+                //        break;
+                //    case "SetFileMediaReference":
+                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, parameterInfo.TaskArgument);
+                //        break;
+                //    case "SetTranscriptionLanguageCode":
+                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, transcriptionLanguageCodeArg.Item);
+                //        break;
+                //    case "SetTranscriptionDefaultTranscript":
+                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, transcriptionDefaultTranscriptArg.Item);
+                //        break;
+                //    case "SetTranslationLanguageCodeSource":
+                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, translationLanguageCodeArg.Item);
+                //        break;
+                //    case "SetTranscriptionVocabularyName":
+                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, vocabularyNameArg.Item);
+                //        break;
+                //    case "SetTranslationTargetLanguages":
+                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, translationTargetLanguagesArg.Item);
+                //        //var languages = translationTargetLanguagesArg.Item.Select(languageCode => new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(languageCode)));
+                //        //var translationTargetLanguages = new AWSIterationStack(Guid.NewGuid(), languages);
+                //        //agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationTargetLanguages(translationTargetLanguages))));
+                //        break;
+                //    case "SetTranslationTerminologyNames":
+                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, translationTerminologyNamesArg.Item);
+                //        break;
+                //    case "SetFilePath":
+                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, filePathArg.Item);
+                //        //var fileInfo = filePathArg.Item1;
+                //        //var extension = filePathArg.Item2;
+                //        //var pickerMode = filePathArg.Item3;
+                //        //var arg = extension switch
+                //        //{
+                //        //    "bin" => pickerMode.Tag switch
+                //        //    {
+                //        //        FilePickerMode.Tags.Open => StandardArgument.NewSetOpenLogFormatFilePath(fileInfo),
+                //        //        FilePickerMode.Tags.Save => StandardArgument.NewSetSaveLogFormatFilePath(fileInfo),
+                //        //        _ => throw new NotImplementedException(),
+                //        //    },
+                //        //    "json" => pickerMode.Tag switch
+                //        //    {
+                //        //        FilePickerMode.Tags.Open => StandardArgument.NewSetOpenJsonFilePath(fileInfo),
+                //        //        FilePickerMode.Tags.Save => StandardArgument.NewSetSaveJsonFilePath(fileInfo),
+                //        //        _ => throw new NotImplementedException(),
+                //        //    },
+                //        //    _ => throw new NotImplementedException(),
+                //        //};
+                //        //agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(arg)));
+                //        break;
+                //    default:
+                //        throw new ArgumentException($"RunSelectBucketMiniTask: Unknown argument type");
+                //}
 
                 await Dispatcher.InvokeAsync(async () =>
                 {
@@ -859,12 +851,8 @@ namespace Tustler.UserControls
 
             async Task RunUIResponseForEachIndependantTaskAsync(UITaskArguments parameterInfo)
             {
-                // expecting a single argument (an IEnumerable<TaskItem>)
-                var subtasks = parameterInfo.TaskArguments switch
-                {
-                    UITaskArgument.ForEach args => args.Item.ToArray(),
-                    _ => throw new ArgumentException($"Unknown argument type")
-                };
+                // expecting an IEnumerable<TaskItem>
+                var subtasks = JsonSerializer.Deserialize< IEnumerable<TaskItem>>(new ReadOnlySpan<byte>(parameterInfo.SerializedArgument));
 
                 // now that the user has made their selections, push the new tasks on the execution stack
                 // this attempts to pop the first task item (if any) and invoke the callback that adds the next task to the queue
@@ -881,21 +869,21 @@ namespace Tustler.UserControls
 
             var parameterInfo = e.Parameter as UITaskArguments;
 
-            switch (parameterInfo?.Mode.Tag)
+            switch (parameterInfo?.TaskMode)
             {
-                case UITaskMode.Tags.SelectTask:
+                case UITaskMode.SelectTask:
                     await RunUIResponseSelectTaskAsync(parameterInfo).ConfigureAwait(false);
                     break;
-                case UITaskMode.Tags.RestartTask:
+                case UITaskMode.RestartTask:
                     await RunUIResponseRestartTaskAsync(parameterInfo).ConfigureAwait(false);
                     break;
-                case UITaskMode.Tags.SetArgument:
+                case UITaskMode.SetArgument:
                     await RunUIResponseSetArgumentAsync(parameterInfo).ConfigureAwait(false);
                     break;
-                case UITaskMode.Tags.Continue:
+                case UITaskMode.Continue:
                     await RunUIResponseContinueAsync().ConfigureAwait(false);
                     break;
-                case UITaskMode.Tags.ForEachIndependantTask:
+                case UITaskMode.ForEachIndependantTask:
                     await RunUIResponseForEachIndependantTaskAsync(parameterInfo).ConfigureAwait(false);
                     break;
                 default:

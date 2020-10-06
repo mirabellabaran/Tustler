@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CloudWeaver;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,7 +13,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using TustlerFSharpPlatform;
+using TustlerUIShared;
 using TustlerModels;
 
 namespace Tustler.UserControls.TaskMemberControls
@@ -174,8 +175,9 @@ namespace Tustler.UserControls.TaskMemberControls
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             var targetLanguageCodes = (lbTargetLanguages.SelectedItems as IEnumerable<object>).Cast<LanguageCode>();
-            var data = JsonSerializer.SerializeToUtf8Bytes(targetLanguageCodes);
-            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetTranslationTargetLanguages", UITaskArgument.NewTranslationTargetLanguages(data));
+            var data = SerializableTypeGenerator.CreateTranslationTargetLanguageCodes(targetLanguageCodes);
+
+            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetTranslationTargetLanguages", data);
 
             ExecuteCommand();
         }

@@ -1,4 +1,5 @@
-﻿using CloudWeaver.AWS;
+﻿using CloudWeaver;
+using CloudWeaver.AWS;
 using CloudWeaver.Types;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -15,7 +16,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Tustler.Models;
 using TustlerAWSLib;
-using TustlerFSharpPlatform;
+using TustlerUIShared;
 using TustlerModels;
 using TustlerServicesLib;
 
@@ -246,9 +247,9 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             if ((lbBuckets.SelectedItem is Bucket bucket) && (lbBucketItems.SelectedItem is BucketItem bucketItem))
             {
-                var mediaReference = new S3MediaReference(bucket.Name, bucketItem.Key, bucketItem.MimeType, bucketItem.Extension);
+                var data = SerializableTypeGenerator.CreateS3MediaReference(bucket.Name, bucketItem.Key, bucketItem.MimeType, bucketItem.Extension);
 
-                CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "", "", UITaskArgument.NewS3MediaReference(mediaReference));
+                CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "", "", data);
 
                 ExecuteCommand();
             }

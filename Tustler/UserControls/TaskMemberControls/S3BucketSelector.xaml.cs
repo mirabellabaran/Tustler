@@ -11,7 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using TustlerFSharpPlatform;
+using TustlerUIShared;
 using TustlerModels;
 
 namespace Tustler.UserControls.TaskMemberControls
@@ -154,7 +154,7 @@ namespace Tustler.UserControls.TaskMemberControls
             var bucket = (e.OriginalSource as Button).DataContext as Bucket;
             var data = JsonSerializer.SerializeToUtf8Bytes(bucket);
 
-            CommandParameter = new UITaskArguments(UITaskMode.RestartTask, "AWSShareIntraModule", "SetBucket", UITaskArgument.NewBucket(data));
+            CommandParameter = new UITaskArguments(UITaskMode.RestartTask, "AWSShareIntraModule", "SetBucket", data);
 
             ExecuteCommand();
         }

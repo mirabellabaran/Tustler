@@ -9,6 +9,7 @@ using TustlerAWSLib;
 using TustlerModels;
 using TustlerServicesLib;
 using System.Text;
+using Amazon.TranscribeService;
 
 namespace CloudWeaver.AWS.Test
 {
@@ -157,22 +158,27 @@ namespace CloudWeaver.AWS.Test
             Assert.IsTrue(fileMediaReferenceModule.Description().StartsWith("FileMediaReference: my path of type audio/x-wav"));
             Assert.IsTrue(StringifyBytes(fileMediaReferenceModule).StartsWith("{\"FilePath\":\"my path\",\"MimeType\":\"audio/x-wav\",\"Extension\":\"wav\"}"));
 
-            IShareIntraModule transcriptionLanguageCodeModule = new AWSShareIntraModule(AWSArgument.NewSetTranscriptionLanguageCode("en-US"));
-            Assert.IsTrue(transcriptionLanguageCodeModule.Description().StartsWith("TranscriptionLanguageCode: en-US"));
-            Assert.IsTrue(StringifyBytes(transcriptionLanguageCodeModule).StartsWith("en-US"));
+            //IShareIntraModule transcriptionLanguageCodeModule = new AWSShareIntraModule(AWSArgument.NewSetTranscriptionLanguageCode("en-US"));
+            //Assert.IsTrue(transcriptionLanguageCodeModule.Description().StartsWith("TranscriptionLanguageCode: en-US"));
+            //Assert.IsTrue(StringifyBytes(transcriptionLanguageCodeModule).StartsWith("en-US"));
 
             IShareIntraModule transcriptionVocabularyNameModule = new AWSShareIntraModule(AWSArgument.NewSetTranscriptionVocabularyName("[None]"));
             Assert.IsTrue(transcriptionVocabularyNameModule.Description().StartsWith("TranscriptionVocabularyName: [None]"));
             Assert.IsTrue(StringifyBytes(transcriptionVocabularyNameModule).StartsWith("[None]"));
 
-            IShareIntraModule translationLanguageCodeSourceModule = new AWSShareIntraModule(AWSArgument.NewSetTranslationLanguageCodeSource("en"));
+            //IShareIntraModule translationLanguageCodeSourceModule = new AWSShareIntraModule(AWSArgument.NewSetTranslationLanguageCodeSource("en"));
+            //Assert.IsTrue(translationLanguageCodeSourceModule.Description().StartsWith("TranslationLanguageCodeSource: en"));
+            //Assert.IsTrue(StringifyBytes(translationLanguageCodeSourceModule).StartsWith("en"));
+
+            var languageCodeDomain = new LanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US");
+            IShareIntraModule translationLanguageCodeSourceModule = new AWSShareIntraModule(AWSArgument.NewSetLanguage(languageCodeDomain));
             Assert.IsTrue(translationLanguageCodeSourceModule.Description().StartsWith("TranslationLanguageCodeSource: en"));
             Assert.IsTrue(StringifyBytes(translationLanguageCodeSourceModule).StartsWith("en"));
 
             var items = new IShareIterationArgument[]
             {
-                new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(new LanguageCode() { Name="Arabic", Code="ar" })),
-                new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(new LanguageCode() { Name="Azerbaijani", Code="az" }))
+                new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(new TustlerModels.LanguageCode() { Name="Arabic", Code="ar" })),
+                new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(new TustlerModels.LanguageCode() { Name="Azerbaijani", Code="az" }))
             };
             var consumable = new AWSIterationStack(Guid.NewGuid(), items);
             IShareIntraModule translationTargetLanguagesModule = new AWSShareIntraModule(AWSArgument.NewSetTranslationTargetLanguages(consumable));

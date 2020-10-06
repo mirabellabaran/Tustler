@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -10,7 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using TustlerFSharpPlatform;
+using TustlerUIShared;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
@@ -174,7 +175,9 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             if (!string.IsNullOrWhiteSpace(tbTranscript.Text))
             {
-                CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "", "", UITaskArgument.NewTranscriptionDefaultTranscript(tbTranscript.Text));
+                var data = JsonSerializer.SerializeToUtf8Bytes(tbTranscript.Text);
+
+                CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "", "", data);
 
                 ExecuteCommand();
             }

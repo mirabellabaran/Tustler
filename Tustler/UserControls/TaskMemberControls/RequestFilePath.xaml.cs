@@ -13,7 +13,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using TustlerFSharpPlatform;
+using TustlerUIShared;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
 using Path = System.IO.Path;
 
@@ -342,7 +342,7 @@ namespace Tustler.UserControls.TaskMemberControls
 
             var data = CloudWeaver.SerializableTypeGenerator.CreateFilePath(fileInfo, FileExtension, pickerMode);
 
-            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "", "", UITaskArgument.NewFilePath(data));
+            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "", "", data);
 
             ExecuteCommand();
         }

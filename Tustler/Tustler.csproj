@@ -35,10 +35,10 @@
     <ProjectReference Include="..\CloudWeaver.AWS\CloudWeaver.AWS.fsproj" />
     <ProjectReference Include="..\CloudWeaver.Types\CloudWeaver.Types.fsproj" />
     <ProjectReference Include="..\TustlerAWSLib\TustlerAWSLib.csproj" />
-    <ProjectReference Include="..\TustlerFSharpPlatform\TustlerFSharpPlatform.fsproj" />
     <ProjectReference Include="..\TustlerInterfaces\TustlerInterfaces.csproj" />
     <ProjectReference Include="..\TustlerModels\TustlerModels.csproj" />
     <ProjectReference Include="..\TustlerServicesLib\TustlerServicesLib.csproj" />
+    <ProjectReference Include="..\TustlerUIShared\TustlerUIShared.csproj" />
     <ProjectReference Include="..\TustlerWinPlatformLib\TustlerWinPlatformLib.csproj" />
   </ItemGroup>
 

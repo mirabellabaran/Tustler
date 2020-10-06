@@ -32,8 +32,10 @@ module public Tasks =
                 | SetTranscriptJSON _ -> Some(AWSRequestIntraModule(RequestTranscriptJSON) :> IRequestIntraModule)
                 | SetTranscriptionDefaultTranscript _ -> Some(AWSRequestIntraModule(RequestTranscriptionDefaultTranscript) :> IRequestIntraModule)
                 | SetTranscriptURI _ -> Some(AWSRequestIntraModule(RequestTranscriptURI) :> IRequestIntraModule)
-                | SetTranscriptionLanguageCode _ -> Some(AWSRequestIntraModule(RequestTranscriptionLanguageCode) :> IRequestIntraModule)
-                | SetTranslationLanguageCodeSource _ -> Some(AWSRequestIntraModule(RequestTranslationLanguageCodeSource) :> IRequestIntraModule)
+                //| SetTranscriptionLanguageCode _ -> Some(AWSRequestIntraModule(RequestTranscriptionLanguageCode) :> IRequestIntraModule)
+                //| SetTranslationLanguageCodeSource _ -> Some(AWSRequestIntraModule(RequestTranslationLanguageCodeSource) :> IRequestIntraModule)
+                | SetLanguage lang when lang.LanguageDomain = LanguageDomain.Transcription -> Some(AWSRequestIntraModule(RequestTranscriptionLanguageCode) :> IRequestIntraModule)
+                | SetLanguage lang when lang.LanguageDomain = LanguageDomain.Translation -> Some(AWSRequestIntraModule(RequestTranslationLanguageCodeSource) :> IRequestIntraModule)
                 | SetTranslationTargetLanguages _ -> Some(AWSRequestIntraModule(RequestTranslationTargetLanguages) :> IRequestIntraModule)
                 | SetTranscriptionVocabularyName _ -> Some(AWSRequestIntraModule(RequestTranscriptionVocabularyName) :> IRequestIntraModule)
                 | SetTranslationTerminologyNames _ -> Some(AWSRequestIntraModule(RequestTranslationTerminologyNames) :> IRequestIntraModule)
@@ -502,7 +504,7 @@ module public Tasks =
             let jobName = Guid.NewGuid().ToString()
 
             // note: the task name may be used as the output S3 key
-            let jobsModel = Transcribe.startTranscriptionJob awsInterface notifications jobName s3Media.BucketName s3Media.Key languageCode vocabularyName |> Async.RunSynchronously
+            let jobsModel = Transcribe.startTranscriptionJob awsInterface notifications jobName s3Media.BucketName s3Media.Key (languageCode.Code) vocabularyName |> Async.RunSynchronously
 
             seq {
                 yield! getNotificationResponse notifications
@@ -1050,7 +1052,7 @@ module public Tasks =
                         else
                             new TustlerServicesLib.SentenceChunker(defaultTranscript)
 
-                let translator = Translate.getTranslator awsInterface chunker notifications taskId.Value sourceLanguageCode targetLanguageCode.Code terminologyNames
+                let translator = Translate.getTranslator awsInterface chunker notifications taskId.Value (sourceLanguageCode.Code) targetLanguageCode.Code terminologyNames
                 seq {
                     yield TaskResponse.TaskInfo (sprintf "Running %s translation..." targetLanguageCode.Name)
 
@@ -1062,7 +1064,7 @@ module public Tasks =
                     yield (AWSArgument.SetTranslationSegments chunker).toSetArgumentTaskResponse()
 
                     if chunker.IsJobComplete then
-                        yield TaskResponse.TaskComplete ((sprintf "Translation to %s is complete" targetLanguageCode.Name), DateTime.Now)
+                        yield TaskResponse.TaskComplete ((sprintf "Translation from %s to %s is complete" (sourceLanguageCode.Name) (targetLanguageCode.Name)), DateTime.Now)
                     else
                         yield TaskResponse.TaskComplete ((sprintf "Translation to %s is incomplete; not all segments were translated" targetLanguageCode.Name), DateTime.Now)
                 }

@@ -11,7 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using TustlerFSharpPlatform;
+using TustlerUIShared;
 using TustlerModels;
 
 namespace Tustler.UserControls.TaskMemberControls
@@ -228,16 +228,17 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             if (cbLanguage.SelectedItem is TustlerModels.LanguageCode languageCode)
             {
-                var domain = LanguageCodesViewModelType switch
+                LanguageDomain domain = LanguageCodesViewModelType switch
                 {
                     LanguageCodesViewModelType.Transcription => LanguageDomain.Transcription,
                     LanguageCodesViewModelType.Translation => LanguageDomain.Translation,
                     _ => null
                 };
 
-                var data = CloudWeaver.SerializableTypeGenerator.CreateLanguageCode(domain, languageCode.Name, languageCode.Code);
+                var data = CloudWeaver.SerializableTypeGenerator.CreateLanguageCodeDomain(domain, languageCode.Name, languageCode.Code);
 
-                CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "", "", new UITaskArgument(data));
+
+                CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetLanguage", data);
 
                 ExecuteCommand();
             }

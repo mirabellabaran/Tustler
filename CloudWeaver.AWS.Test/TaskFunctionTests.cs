@@ -30,7 +30,7 @@ namespace CloudWeaver.AWS.Test
             var result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestFileMediaReference)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetFileMediaReference(mediaFileReference))));
+            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetFileMediaReference(mediaFileReference))));
 
             result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
@@ -63,7 +63,7 @@ namespace CloudWeaver.AWS.Test
             agent.PushTask(new TaskItem("CloudWeaver.AWS.Tasks", taskName, string.Empty));
 
             var vocabularyName = "Bob";
-            var languageCode = "en-US";
+            var languageCodeDomain = new LanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US");
             var s3MediaReference = new S3MediaReference("tator", "item1", "audio/mpeg", "wav");
 
             var result = await CallTaskAsync(taskFunction, agent);
@@ -73,8 +73,8 @@ namespace CloudWeaver.AWS.Test
 
             result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranscriptionLanguageCode)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptionLanguageCode(languageCode))));
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestLanguage)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetLanguage(languageCodeDomain))));
 
             result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
@@ -260,7 +260,7 @@ namespace CloudWeaver.AWS.Test
             var agent = InitializeTest(taskName, WorkingDirectory, null);
             agent.PushTask(new TaskItem("CloudWeaver.AWS.Tasks", taskName, string.Empty));
 
-            var languageCodeSource = "en";
+            var languageCodeDomain = new LanguageCodeDomain(LanguageDomain.Translation, "English", "en");
             var languages = new TustlerModels.LanguageCode[] {
                     new TustlerModels.LanguageCode() { Name = "French", Code = "fr" }
                 }.Select(languageCode => new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(languageCode)));
@@ -291,8 +291,8 @@ namespace CloudWeaver.AWS.Test
 
             result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranslationLanguageCodeSource)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationLanguageCodeSource(languageCodeSource))));
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestLanguage)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetLanguage(languageCodeDomain))));
 
             result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
@@ -391,7 +391,7 @@ namespace CloudWeaver.AWS.Test
             var agent = InitializeTest(taskName, WorkingDirectory, saveFlags);
             agent.PushTask(new TaskItem("CloudWeaver.AWS.Tasks", taskName, string.Empty));
 
-            var languageCodeSource = "en";
+            var languageCodeDomain = new LanguageCodeDomain(LanguageDomain.Translation, "English", "en");
             var languages = new TustlerModels.LanguageCode[] {
                     new TustlerModels.LanguageCode() { Name = "French", Code = "fr" },
                     new TustlerModels.LanguageCode() { Name = "Danish", Code = "da" },
@@ -434,8 +434,8 @@ namespace CloudWeaver.AWS.Test
 
             result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranslationLanguageCodeSource)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationLanguageCodeSource(languageCodeSource))));
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestLanguage)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetLanguage(languageCodeDomain))));
 
             result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);

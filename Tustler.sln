@@ -23,8 +23,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TustlerServicesLib.Test", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TustlerInterfaces", "TustlerInterfaces\TustlerInterfaces.csproj", "{974CFD92-2F80-41B9-8041-E048D177A0B8}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TustlerFSharpPlatform", "TustlerFSharpPlatform\TustlerFSharpPlatform.fsproj", "{DB2A4791-8B90-48CA-9701-BB09887C721D}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TustlerModels", "TustlerModels\TustlerModels.csproj", "{EF05B5B2-D418-41A9-839E-5777A848B3E8}"
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "CloudWeaver.Agent", "CloudWeaver.Agent\CloudWeaver.Agent.fsproj", "{C2C55EC4-4176-4AC9-88B7-AD6F3115A6E2}"
@@ -33,7 +31,9 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "CloudWeaver.Types", "CloudW
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "CloudWeaver.AWS", "CloudWeaver.AWS\CloudWeaver.AWS.fsproj", "{6B362ABB-6724-4407-AF0C-2B69F5E2B942}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudWeaver.AWS.Test", "CloudWeaver.AWS.Test\CloudWeaver.AWS.Test.csproj", "{78742DA0-2B66-4911-8BEA-A9A55B9EEF85}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CloudWeaver.AWS.Test", "CloudWeaver.AWS.Test\CloudWeaver.AWS.Test.csproj", "{78742DA0-2B66-4911-8BEA-A9A55B9EEF85}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TustlerUIShared", "TustlerUIShared\TustlerUIShared.csproj", "{01D433D6-B686-449E-A95F-1AAB12DB50F0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -65,10 +65,6 @@ Global
 		{974CFD92-2F80-41B9-8041-E048D177A0B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{974CFD92-2F80-41B9-8041-E048D177A0B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{974CFD92-2F80-41B9-8041-E048D177A0B8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{DB2A4791-8B90-48CA-9701-BB09887C721D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DB2A4791-8B90-48CA-9701-BB09887C721D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DB2A4791-8B90-48CA-9701-BB09887C721D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DB2A4791-8B90-48CA-9701-BB09887C721D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{EF05B5B2-D418-41A9-839E-5777A848B3E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{EF05B5B2-D418-41A9-839E-5777A848B3E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EF05B5B2-D418-41A9-839E-5777A848B3E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -89,6 +85,10 @@ Global
 		{78742DA0-2B66-4911-8BEA-A9A55B9EEF85}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{78742DA0-2B66-4911-8BEA-A9A55B9EEF85}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{78742DA0-2B66-4911-8BEA-A9A55B9EEF85}.Release|Any CPU.Build.0 = Release|Any CPU
+		{01D433D6-B686-449E-A95F-1AAB12DB50F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{01D433D6-B686-449E-A95F-1AAB12DB50F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{01D433D6-B686-449E-A95F-1AAB12DB50F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{01D433D6-B686-449E-A95F-1AAB12DB50F0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

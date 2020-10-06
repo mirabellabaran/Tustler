@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using CloudWeaver;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +15,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using TustlerAWSLib;
-using TustlerFSharpPlatform;
+using TustlerUIShared;
 using TustlerModels;
 using TustlerServicesLib;
 
@@ -203,9 +204,9 @@ namespace Tustler.UserControls.TaskMemberControls
             var terminologyNames = (lbTerminologyNames.SelectedItems as IEnumerable<object>)
                 .Cast<Terminology>()
                 .Select(term => term.Name);
-            var data = JsonSerializer.SerializeToUtf8Bytes(terminologyNames);
+            var data = SerializableTypeGenerator.CreateTranslationTerminologyNames(terminologyNames);
 
-            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "", "", UITaskArgument.NewTranslationTerminologyNames(data));
+            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "", "", data);
 
             ExecuteCommand();
         }

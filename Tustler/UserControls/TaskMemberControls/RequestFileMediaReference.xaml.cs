@@ -8,7 +8,7 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using TustlerFSharpPlatform;
+using TustlerUIShared;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
 
 namespace Tustler.UserControls.TaskMemberControls
@@ -253,7 +253,7 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             var data = SerializableTypeGenerator.CreateFileMediaReference(tbFilePath.Text, this.Mimetype, this.Extension);
 
-            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "StandardShareIntraModule", "SetTaskItem", data);
+            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "StandardShareIntraModule", "SetFileMediaReference", data);
 
             ExecuteCommand();
         }

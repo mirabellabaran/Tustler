@@ -12,7 +12,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using TustlerAWSLib;
-using TustlerFSharpPlatform;
+using TustlerUIShared;
 using TustlerModels;
 using TustlerServicesLib;
 

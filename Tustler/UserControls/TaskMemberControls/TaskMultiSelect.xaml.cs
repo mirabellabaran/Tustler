@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -12,7 +13,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using TustlerFSharpPlatform;
+using TustlerUIShared;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
@@ -151,8 +152,9 @@ namespace Tustler.UserControls.TaskMemberControls
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             var selectedTasks = lbTasks.SelectedItems.Cast<TaskItem>();
+            var data = JsonSerializer.SerializeToUtf8Bytes(selectedTasks);
 
-            CommandParameter = new UITaskArguments(UITaskMode.ForEachIndependantTask, "", "", UITaskArgument.NewForEach(selectedTasks));
+            CommandParameter = new UITaskArguments(UITaskMode.ForEachIndependantTask, "", "", data);
 
             ExecuteCommand();
         }

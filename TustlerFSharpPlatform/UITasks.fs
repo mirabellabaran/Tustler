@@ -1,12 +1,5 @@
 ﻿namespace TustlerFSharpPlatform
 
-[<RequireQualifiedAccess>]
-type UITaskMode =
-    | SelectTask
-    | RestartTask           // restart a completed task
-    | SetArgument           // set an argument on the agent
-    | Continue
-    | ForEachIndependantTask
 
 //[<RequireQualifiedAccess>]
 //type UITaskArgument =

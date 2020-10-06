@@ -4,8 +4,8 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using TustlerFSharpPlatform;
 using TustlerServicesLib;
+using TustlerUIShared;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
