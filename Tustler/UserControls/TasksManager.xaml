@@ -106,49 +106,49 @@
             </StackPanel>
         </DataTemplate>
 
-        <DataTemplate x:Key="ChooseTaskTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="ChooseTaskTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:ChooseTask Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
         
-        <DataTemplate x:Key="ApplicationErrorInfoTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="ApplicationErrorInfoTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <Border BorderBrush="DarkGray" BorderThickness="1" Padding="5" Margin="5">
                 <ContentPresenter Content="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Content.TaskResponse.Item}" ContentTemplate="{DynamicResource errorInfo}" />
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="ApplicationMessageInfoTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="ApplicationMessageInfoTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <Border BorderBrush="DarkGray" BorderThickness="1" Padding="5" Margin="5">
                 <ContentPresenter Content="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Content.TaskResponse.Item}" ContentTemplate="{DynamicResource messageInfo}" />
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="TaskInfoTemplate" DataType="{x:Type helpers:ResponseWrapper}">
-            <TextBlock Foreground="LimeGreen" Text="{Binding Path=TaskResponse.Item}" Margin="10,0,0,0" />
+        <DataTemplate x:Key="TaskInfoTemplate" DataType="{x:Type helpers:IResponseWrapper}">
+            <TextBlock Foreground="LimeGreen" Text="{Binding Path=Item}" Margin="10,0,0,0" />
         </DataTemplate>
 
-        <DataTemplate x:Key="TaskCompleteTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="TaskCompleteTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <ScrollViewer MaxWidth="800" HorizontalAlignment="Left" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Foreground="LimeGreen" FontWeight="Bold" Text="{Binding Path=TaskResponse.Item1}" Margin="10,0,0,0" />
-                    <TextBlock Foreground="LimeGreen" FontWeight="Bold" Text="{Binding Path=TaskResponse.Item2, StringFormat=on {0:MMMM dd HH:mm}}" Margin="5,0,0,0" />
+                    <TextBlock Foreground="LimeGreen" FontWeight="Bold" Text="{Binding Path=Item.Item1}" Margin="10,0,0,0" />
+                    <TextBlock Foreground="LimeGreen" FontWeight="Bold" Text="{Binding Path=Item.Item2, StringFormat=on {0:MMMM dd HH:mm}}" Margin="5,0,0,0" />
                 </StackPanel>
             </ScrollViewer>
         </DataTemplate>
 
-        <DataTemplate x:Key="TaskPromptTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="TaskPromptTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:TaskContinue Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
         
-        <DataTemplate x:Key="TaskSelectTemplate" DataType="{x:Type helpers:ResponseWrapper}">
-            <Label Foreground="#637074" Background="#BDD4E7" FontWeight="Bold" Margin="10" Content="{Binding Path=TaskResponse.Item}" />
+        <DataTemplate x:Key="TaskSelectTemplate" DataType="{x:Type helpers:IResponseWrapper}">
+            <Label Foreground="#637074" Background="#BDD4E7" FontWeight="Bold" Margin="10" Content="{Binding Path=Item}" />
         </DataTemplate>
 
-        <DataTemplate x:Key="TaskSequenceTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="TaskSequenceTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
                 <StackPanel Orientation="Vertical">
                     <Label Foreground="#637074" Background="#BDD4AA" FontWeight="Bold" Margin="1" Content="Sub-tasks:" />
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding Path=TaskResponse.Item}" Background="{StaticResource NormalBackground}">
+                        <ItemsControl ItemsSource="{Binding Path=Item}" Background="{StaticResource NormalBackground}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Label Background="#637074" Foreground="#BDD4E7" FontWeight="Bold" Margin="1" Content="{Binding Path=TaskName}" />
@@ -165,18 +165,18 @@
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="TaskMultiSelectTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="TaskMultiSelectTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:TaskMultiSelect Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
         
-        <DataTemplate x:Key="BucketsModelTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="BucketsModelTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:S3BucketSelector Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
         
-        <DataTemplate x:Key="BucketItemsModelTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="BucketItemsModelTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <Border Name="border" BorderBrush="{StaticResource ContrastingBackground}" Height="200" BorderThickness="10" Padding="5" Margin="5">
                 <DockPanel LastChildFill="True">
-                    <DataGrid x:Name="dgBucketItemsModelTemplate" DockPanel.Dock="Left" AutoGenerateColumns="False" CanUserAddRows="false" ItemsSource="{Binding TaskResponse.Item.Argument.Item.BucketItems}">
+                    <DataGrid x:Name="dgBucketItemsModelTemplate" DockPanel.Dock="Left" AutoGenerateColumns="False" CanUserAddRows="false" ItemsSource="{Binding Item.Argument.Item.BucketItems}">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Item Name" Width="280" IsReadOnly="True" Binding="{Binding Path=Key}" />
                         </DataGrid.Columns>
@@ -197,14 +197,14 @@
                                 ContentTemplateSelector="{StaticResource taskManagerChildDataTemplateSelector}"
                                 Content="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" />
 
-                            <uctask:S3ItemManagement Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Grid.RowSpan="2" Context="{Binding TaskResponse.Item.Argument.Item}" SelectedItem="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" Command="{x:Static uc:TaskCommands.StartMiniTask}" />
+                            <uctask:S3ItemManagement Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Grid.RowSpan="2" Context="{Binding Item.Argument.Item}" SelectedItem="{Binding ElementName=dgBucketItemsModelTemplate, Path=SelectedItem}" Command="{x:Static uc:TaskCommands.StartMiniTask}" />
                         </Grid>
                     </Border>
                 </DockPanel>
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="S3MediaReferenceTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="S3MediaReferenceTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
                 <StackPanel Orientation="Vertical">
                     <TextBlock Text="Created New S3 Object:" Style="{StaticResource TaskInfoTextStyle}" Margin="5" />
@@ -216,34 +216,34 @@
                         </UniformGrid.Resources>
                         <StackPanel Orientation="Horizontal">
                             <Label Content="BucketName:" Style="{StaticResource s3LabelStyle}" />
-                            <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item.BucketName}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.BucketName}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <Label Content="Key:" Style="{StaticResource s3LabelStyle}" />
-                            <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item.Key}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.Key}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <Label Content="MimeType:" Style="{StaticResource s3LabelStyle}" />
-                            <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item.MimeType}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.MimeType}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <Label Content="Extension:" Style="{StaticResource s3LabelStyle}" />
-                            <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item.Extension}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.Extension}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                     </UniformGrid>
                 </StackPanel>
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="TranscriptionJobsModelTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="TranscriptionJobsModelTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Transcription Jobs Summary:" Style="{StaticResource TaskInfoTextStyle}" Margin="5" />
-                        <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item.TranscriptionJobs.Count, StringFormat=(Jobs: {0})}" Style="{StaticResource TaskInfoTextStyle}" Margin="5" />
+                        <TextBlock Text="{Binding Path=Item.Argument.Item.TranscriptionJobs.Count, StringFormat=(Jobs: {0})}" Style="{StaticResource TaskInfoTextStyle}" Margin="5" />
                     </StackPanel>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <ItemsControl Margin="20, 10, 20, 10" Background="{StaticResource NormalBackground}" ItemsSource="{Binding Path=TaskResponse.Item.Argument.Item.TranscriptionJobs}" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ItemsControl Margin="20, 10, 20, 10" Background="{StaticResource NormalBackground}" ItemsSource="{Binding Path=Item.Argument.Item.TranscriptionJobs}" ScrollViewer.VerticalScrollBarVisibility="Auto">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Margin="5">
@@ -282,7 +282,7 @@
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="TranscriptionJobTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="TranscriptionJobTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
                 <StackPanel Orientation="Vertical">
                     <TextBlock Text="Completed Transcription Job:" Style="{StaticResource TaskInfoTextStyle}" Margin="5" />
@@ -295,99 +295,99 @@
 
                         <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
                             <Label Content="Job Name:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item.TranscriptionJobName}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.TranscriptionJobName}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0">
                             <Label Content="Job Status:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item.TranscriptionJobStatus}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.TranscriptionJobStatus}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.Column="0">
                             <Label Content="Created:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item.CreationTime, StringFormat=at {0:MMMM dd HH:mm}}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.CreationTime, StringFormat=at {0:MMMM dd HH:mm}}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="3" Grid.Column="0">
                             <Label Content="Started:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item.StartTime, StringFormat=at {0:MMMM dd HH:mm}}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.StartTime, StringFormat=at {0:MMMM dd HH:mm}}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="4" Grid.Column="0">
                             <Label Content="Completed:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item.CompletionTime, StringFormat=at {0:MMMM dd HH:mm}}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.CompletionTime, StringFormat=at {0:MMMM dd HH:mm}}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2">
                             <Label Content="Language Code:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item.LanguageCode}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.LanguageCode}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2">
                             <Label Content="Failure Reason:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item.FailureReason}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.FailureReason}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2">
                             <Label Content="Media Format:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item.MediaFormat}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.MediaFormat}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2">
                             <Label Content="Media Sample Rate (Hz):" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item.MediaSampleRateHertz}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.MediaSampleRateHertz}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2">
                             <Label Content="Output URI:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item.OutputURI}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Argument.Item.OutputURI}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                     </UniformGrid>
                 </StackPanel>
             </Border>
         </DataTemplate>
                       
-        <DataTemplate x:Key="TranscriptionJobNameTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="TranscriptionJobNameTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
                 <UniformGrid Margin="5">
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Transcription Job Name:" Style="{StaticResource TaskInfoLabelStyle}" />
-                        <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
+                        <TextBlock Text="{Binding Path=Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
                     </StackPanel>
                 </UniformGrid>
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="TranscriptURITemplate"  DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="TranscriptURITemplate"  DataType="{x:Type helpers:IResponseWrapper}">
             <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
                 <UniformGrid Margin="5">
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Transcript URI:" Style="{StaticResource TaskInfoLabelStyle}" />
-                        <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
+                        <TextBlock Text="{Binding Path=Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
                     </StackPanel>
                 </UniformGrid>
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="TranscriptJSONTemplate"  DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="TranscriptJSONTemplate"  DataType="{x:Type helpers:IResponseWrapper}">
             <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
                 <UniformGrid Margin="5">
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Transcript JSON:" Style="{StaticResource TaskInfoLabelStyle}" />
-                        <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
+                        <TextBlock Text="{Binding Path=Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
                     </StackPanel>
                 </UniformGrid>
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="DefaultTranscriptTemplate"  DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="DefaultTranscriptTemplate"  DataType="{x:Type helpers:IResponseWrapper}">
             <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
                 <UniformGrid Margin="5">
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Default Transcript:" Style="{StaticResource TaskInfoLabelStyle}" />
-                        <TextBlock Text="{Binding Path=TaskResponse.Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
+                        <TextBlock Text="{Binding Path=Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
                     </StackPanel>
                 </UniformGrid>
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="TranslationSegmentsTemplate"  DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="TranslationSegmentsTemplate"  DataType="{x:Type helpers:IResponseWrapper}">
             <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
                 <StackPanel>
                     <Label Foreground="#637074" Background="#BDD4AA" FontWeight="Bold" Margin="1" Content="Translation segments:" />
                     <ScrollViewer MaxHeight="100" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding Path=TaskResponse.Item.Argument.Item.Summary}" Background="{StaticResource NormalBackground}">
+                        <ItemsControl ItemsSource="{Binding Path=Item.Argument.Item.Summary}" Background="{StaticResource NormalBackground}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid ShowGridLines="False">
@@ -432,59 +432,59 @@
 
         
 
-        <DataTemplate x:Key="FileMediaReferenceRequestTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="FileMediaReferenceRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:RequestFileMediaReference Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
 
-        <DataTemplate x:Key="OpenLogFormatFilePathRequestTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="OpenLogFormatFilePathRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:RequestFilePath PickerMode="Open" FileExtensionDescription="Binary log format files" FileExtension="bin" Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
 
-        <DataTemplate x:Key="SaveLogFormatFilePathRequestTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="SaveLogFormatFilePathRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:RequestFilePath PickerMode="Save" FileExtensionDescription="Binary log format files" FileExtension="bin" Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
 
-        <DataTemplate x:Key="OpenJsonFilePathRequestTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="OpenJsonFilePathRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:RequestFilePath PickerMode="Open" FileExtensionDescription="JSON files" FileExtension="json" Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
 
-        <DataTemplate x:Key="SaveJsonFilePathRequestTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="SaveJsonFilePathRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:RequestFilePath PickerMode="Save" FileExtensionDescription="JSON files" FileExtension="json" Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
 
-        <DataTemplate x:Key="S3MediaReferenceRequestTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="S3MediaReferenceRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:RequestS3MediaReference MediaType="Audio" Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
 
-        <DataTemplate x:Key="BucketRequestTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="BucketRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:RequestS3Bucket Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
 
-        <DataTemplate x:Key="TranscriptionLanguageCodeRequestTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="TranscriptionLanguageCodeRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:RequestLanguageCode Command="{x:Static uc:TaskCommands.UIResponse}" LanguageCodesViewModelType="Transcription" />
         </DataTemplate>
 
-        <DataTemplate x:Key="TranscriptionDefaultTranscriptRequestTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="TranscriptionDefaultTranscriptRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:RequestTranscriptionDefaultTranscript Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
         
-        <DataTemplate x:Key="TranscriptionVocabularyNameRequestTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="TranscriptionVocabularyNameRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:RequestVocabularyName Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
 
-        <DataTemplate x:Key="TranslationLanguageCodeRequestTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="TranslationLanguageCodeRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:RequestLanguageCode Command="{x:Static uc:TaskCommands.UIResponse}" LanguageCodesViewModelType="Translation" />
         </DataTemplate>
 
-        <DataTemplate x:Key="TranslationTargetLanguagesRequestTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="TranslationTargetLanguagesRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:RequestTranslationTargetLanguages Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
 
-        <DataTemplate x:Key="TranslationTerminologyNamesRequestTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="TranslationTerminologyNamesRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:RequestTranslationTerminologyNames Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
 
-        <DataTemplate x:Key="TranslationLanguageCodeSourceRequestTemplate" DataType="{x:Type helpers:ResponseWrapper}">
+        <DataTemplate x:Key="TranslationLanguageCodeSourceRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:RequestLanguageCode Command="{x:Static uc:TaskCommands.UIResponse}" LanguageCodesViewModelType="Translation" />
         </DataTemplate>
         

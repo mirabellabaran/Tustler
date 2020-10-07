@@ -202,7 +202,6 @@ type AWSArgument =
 
 /// Wrapper for the arguments used by this module
 and AWSShareIntraModule(arg: AWSArgument) =
-    let getAsBytes (sim: IShareIntraModule) = UTF8Encoding.UTF8.GetString(sim.AsBytes())
     interface IShareIntraModule with
         member this.ModuleTag with get() = Tag "AWSShareIntraModule"
         member this.Identifier with get() = Identifier (CommonUtilities.toString arg)
@@ -226,7 +225,7 @@ and AWSShareIntraModule(arg: AWSArgument) =
             | SetTranslationTerminologyNames terminologyNames -> sprintf "TranslationTerminologyNames: %s" (System.String.Join(", ", terminologyNames))
             | SetTranslationSegments chunker -> sprintf "TranslationSegments: %s (%d segments)" (if chunker.IsJobComplete then "completed" else "incomplete") (chunker.NumChunks)
             | SetSubtitleFilePath fileInfo -> sprintf "SubtitleFilePath: %s" (fileInfo.FullName)
-        member this.AsBytes () =    // returns either a UTF8-encoded string or a UTF8-encoded Json document as a byte array
+        member this.AsBytes serializerOptions =    // returns either a UTF8-encoded string or a UTF8-encoded Json document as a byte array
             match arg with
             | SetAWSInterface awsInterface -> JsonSerializer.SerializeToUtf8Bytes(awsInterface)
             | SetBucket bucket -> JsonSerializer.SerializeToUtf8Bytes(bucket)
@@ -240,7 +239,7 @@ and AWSShareIntraModule(arg: AWSArgument) =
             //| SetTranscriptionLanguageCode transcriptionLanguageCode -> UTF8Encoding.UTF8.GetBytes(transcriptionLanguageCode)
             | SetTranscriptionVocabularyName vocabularyName -> UTF8Encoding.UTF8.GetBytes(vocabularyName)
             //| SetTranslationLanguageCodeSource translationLanguageCode -> UTF8Encoding.UTF8.GetBytes(translationLanguageCode)
-            | SetLanguage languageCodeDomain -> JsonSerializer.SerializeToUtf8Bytes(languageCodeDomain)
+            | SetLanguage languageCodeDomain -> JsonSerializer.SerializeToUtf8Bytes(languageCodeDomain, serializerOptions)
             | SetTranslationTargetLanguages languages -> JsonSerializer.SerializeToUtf8Bytes(ConsumablePatternMatcher.getAllLanguageCodes languages)
             | SetTranslationTerminologyNames terminologyNames -> JsonSerializer.SerializeToUtf8Bytes(terminologyNames)
             | SetTranslationSegments chunker -> JsonSerializer.SerializeToUtf8Bytes(chunker)    //if chunker.IsJobComplete then UTF8Encoding.UTF8.GetBytes(chunker.CompletedTranslation) else UTF8Encoding.UTF8.GetBytes("Incomplete translation")
@@ -311,7 +310,7 @@ and AWSShareIntraModule(arg: AWSArgument) =
             //    let data = JsonSerializer.Deserialize<string>(jsonString)
             //    AWSArgument.SetTranslationLanguageCodeSource data
             | "SetLanguage" ->
-                let data = JsonSerializer.Deserialize<LanguageCodeDomain>(jsonString)
+                let data = JsonSerializer.Deserialize<LanguageCodeDomain>(jsonString, serializerOptions)
                 AWSArgument.SetLanguage data
             | "SetTranslationTargetLanguages" ->
                 let consumable = JsonSerializer.Deserialize<RetainingStack>(jsonString, serializerOptions)

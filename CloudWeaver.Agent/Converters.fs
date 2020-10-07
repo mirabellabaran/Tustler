@@ -153,3 +153,87 @@ module public Converters =
             writer.WritePropertyName("Tasks")
             JsonSerializer.Serialize(writer, (instance :> IEnumerable<TaskItem>))
             writer.WriteEndObject()
+
+    /// Json converter for LanguageCodeDomain (contains an enum-like union type)
+    type LanguageCodeDomainConverter() =
+        inherit JsonConverter<LanguageCodeDomain>()
+
+        override this.Read(reader, _typeToConvert, _options) =
+            let dict = System.Collections.Generic.Dictionary<string, JsonValue>()
+            if reader.TokenType = JsonTokenType.StartObject then
+                while reader.Read() && reader.TokenType <> JsonTokenType.EndObject do
+                    match reader.TokenType with
+                    | JsonTokenType.PropertyName ->
+                        let propertyName = reader.GetString()
+                        if reader.Read() then
+                            let data =
+                                match reader.TokenType with
+                                | JsonTokenType.String ->
+                                    let str = reader.GetString()
+                                    JsonValue.String str
+                                | _ -> raise (JsonException "Expected only string properties")
+                            dict.Add(propertyName, data)
+                    | _ -> ()
+
+            if (dict.ContainsKey "LanguageDomain") && (dict.ContainsKey "Name") && (dict.ContainsKey "Code") then
+                let languageDomain =
+                    let strValue = JsonValue.getString (dict.["LanguageDomain"])
+                    match strValue with
+                    | "Transcription" -> LanguageDomain.Transcription
+                    | "Translation" -> LanguageDomain.Translation
+                    | _ -> invalidArg "LanguageDomain" "Value not set"
+                let name = JsonValue.getString (dict.["Name"])
+                let code = JsonValue.getString (dict.["Code"])
+                LanguageCodeDomain(languageDomain, name, code)
+            else                
+                raise (JsonException("Error parsing LanguageCodeDomain"))
+
+
+        override this.Write(writer, instance, _options) =
+            writer.WriteStartObject()
+            writer.WriteString("LanguageDomain", instance.LanguageDomain.ToString())
+            writer.WriteString("Name", instance.Name)
+            writer.WriteString("Code", instance.Code)
+            writer.WriteEndObject()
+
+    /// Json converter for FilePickerPath (contains an enum-like union type)
+    type FilePickerPathConverter() =
+        inherit JsonConverter<FilePickerPath>()
+
+        override this.Read(reader, _typeToConvert, _options) =
+            let dict = System.Collections.Generic.Dictionary<string, JsonValue>()
+            if reader.TokenType = JsonTokenType.StartObject then
+                while reader.Read() && reader.TokenType <> JsonTokenType.EndObject do
+                    match reader.TokenType with
+                    | JsonTokenType.PropertyName ->
+                        let propertyName = reader.GetString()
+                        if reader.Read() then
+                            let data =
+                                match reader.TokenType with
+                                | JsonTokenType.String ->
+                                    let str = reader.GetString()
+                                    JsonValue.String str
+                                | _ -> raise (JsonException "Expected only string properties")
+                            dict.Add(propertyName, data)
+                    | _ -> ()
+
+            if (dict.ContainsKey "Path") && (dict.ContainsKey "Extension") && (dict.ContainsKey "Mode") then
+                let path = JsonValue.getString (dict.["Path"])
+                let extension = JsonValue.getString (dict.["Extension"])
+                let mode =
+                    let strValue = JsonValue.getString (dict.["Mode"])
+                    match strValue with
+                    | "Open" -> FilePickerMode.Open
+                    | "Save" -> FilePickerMode.Save
+                    | _ -> invalidArg "FilePickerMode" "Value not set"
+                FilePickerPath(path, extension, mode)
+            else                
+                raise (JsonException("Error parsing LanguageCodeDomain"))
+
+
+        override this.Write(writer, instance, _options) =
+            writer.WriteStartObject()
+            writer.WriteString("Path", instance.Path)
+            writer.WriteString("Extension", instance.Extension)
+            writer.WriteString("Mode", instance.Mode.ToString())
+            writer.WriteEndObject()

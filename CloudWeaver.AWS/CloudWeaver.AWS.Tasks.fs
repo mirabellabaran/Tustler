@@ -36,6 +36,7 @@ module public Tasks =
                 //| SetTranslationLanguageCodeSource _ -> Some(AWSRequestIntraModule(RequestTranslationLanguageCodeSource) :> IRequestIntraModule)
                 | SetLanguage lang when lang.LanguageDomain = LanguageDomain.Transcription -> Some(AWSRequestIntraModule(RequestTranscriptionLanguageCode) :> IRequestIntraModule)
                 | SetLanguage lang when lang.LanguageDomain = LanguageDomain.Translation -> Some(AWSRequestIntraModule(RequestTranslationLanguageCodeSource) :> IRequestIntraModule)
+                | SetLanguage _ -> invalidArg "arg" "Unexpected SetLanguage parameters"
                 | SetTranslationTargetLanguages _ -> Some(AWSRequestIntraModule(RequestTranslationTargetLanguages) :> IRequestIntraModule)
                 | SetTranscriptionVocabularyName _ -> Some(AWSRequestIntraModule(RequestTranscriptionVocabularyName) :> IRequestIntraModule)
                 | SetTranslationTerminologyNames _ -> Some(AWSRequestIntraModule(RequestTranslationTerminologyNames) :> IRequestIntraModule)
@@ -51,10 +52,11 @@ module public Tasks =
                 | SetJsonEvents _ -> Some(StandardRequestIntraModule(RequestJsonEvents) :> IRequestIntraModule)
                 | SetFileMediaReference _ -> Some(StandardRequestIntraModule(RequestFileMediaReference) :> IRequestIntraModule)
                 | SetLogFormatEvents _ -> Some(StandardRequestIntraModule(RequestLogFormatEvents) :> IRequestIntraModule)
-                | SetOpenJsonFilePath _ -> Some(StandardRequestIntraModule(RequestOpenJsonFilePath) :> IRequestIntraModule)
-                | SetSaveJsonFilePath _ -> Some(StandardRequestIntraModule(RequestSaveJsonFilePath) :> IRequestIntraModule)
-                | SetOpenLogFormatFilePath _ -> Some(StandardRequestIntraModule(RequestOpenLogFormatFilePath) :> IRequestIntraModule)
-                | SetSaveLogFormatFilePath _ -> Some(StandardRequestIntraModule(RequestSaveLogFormatFilePath) :> IRequestIntraModule)
+                | SetFilePath path when path.Mode = FilePickerMode.Open && path.Extension = "json" -> Some(StandardRequestIntraModule(RequestOpenJsonFilePath) :> IRequestIntraModule)
+                | SetFilePath path when path.Mode = FilePickerMode.Save && path.Extension = "json" -> Some(StandardRequestIntraModule(RequestSaveJsonFilePath) :> IRequestIntraModule)
+                | SetFilePath path when path.Mode = FilePickerMode.Open && path.Extension = "bin" -> Some(StandardRequestIntraModule(RequestOpenLogFormatFilePath) :> IRequestIntraModule)
+                | SetFilePath path when path.Mode = FilePickerMode.Save && path.Extension = "bin" -> Some(StandardRequestIntraModule(RequestSaveLogFormatFilePath) :> IRequestIntraModule)
+                | SetFilePath _ -> invalidArg "arg" "Unexpected SetFilePath parameters"
 
             | _ -> None     // ignore request types from other modules
         | _ -> None
@@ -1244,7 +1246,7 @@ module public Tasks =
 
             if logFormatEvents.IsNone then
                 try
-                    let jsonData = File.ReadAllBytes(jsonFilePath.FullName)
+                    let jsonData = File.ReadAllBytes(jsonFilePath.Path)
                     let options = new JsonDocumentOptions(AllowTrailingCommas = true)
                     let document = JsonDocument.Parse(ReadOnlyMemory(jsonData), options)
 
@@ -1259,7 +1261,7 @@ module public Tasks =
                         yield TaskResponse.TaskComplete ("Task completed with errors", DateTime.Now)
                     }
             else
-                File.WriteAllBytes(binaryFilePath.FullName, logFormatEvents.Value)
+                File.WriteAllBytes(binaryFilePath.Path, logFormatEvents.Value)
                 seq {
                     yield TaskResponse.TaskComplete ("Saved event data in binary log format", DateTime.Now)
                 }
@@ -1302,13 +1304,13 @@ module public Tasks =
             let jsonEvents = argsRecord.JsonEvents
 
             if jsonEvents.IsNone then
-                let logFormatData = File.ReadAllBytes(logFormatFilePath.FullName)
+                let logFormatData = File.ReadAllBytes(logFormatFilePath.Path)
 
                 seq {
                     yield TaskResponse.TaskConvertToJson logFormatData
                 }
             else
-                File.WriteAllBytes(jsonFilePath.FullName, jsonEvents.Value)
+                File.WriteAllBytes(jsonFilePath.Path, jsonEvents.Value)
                 seq {
                     yield TaskResponse.TaskComplete ("Saved event data as JSON", DateTime.Now)
                 }

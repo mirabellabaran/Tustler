@@ -20,12 +20,67 @@ namespace CloudWeaver.AWS.Test
             // the following will all throw if not correct
 
             TestRequest(
+                new AWSRequestIntraModule(AWSRequest.RequestBucket),
+                SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US"),
+                agent);
+
+            TestRequest(
+                new AWSRequestIntraModule(AWSRequest.RequestBucket),
+                SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Translation, "English", "en"),
+                agent);
+
+            TestRequest(
                 new StandardRequestIntraModule(StandardRequest.RequestFileMediaReference),
                 SerializableTypeGenerator.CreateFileMediaReference("some file path", "audio/x-wav", "wav"),
                 agent);
 
             TestRequest(
+                new StandardRequestIntraModule(StandardRequest.RequestOpenJsonFilePath),
+                SerializableTypeGenerator.CreateFilePath(new System.IO.FileInfo("some path"), "json", FilePickerMode.Open),
+                agent);
+
+            TestRequest(
+                new StandardRequestIntraModule(StandardRequest.RequestSaveJsonFilePath),
+                SerializableTypeGenerator.CreateFilePath(new System.IO.FileInfo("some path"), "json", FilePickerMode.Save),
+                agent);
+
+            TestRequest(
+                new StandardRequestIntraModule(StandardRequest.RequestOpenLogFormatFilePath),
+                SerializableTypeGenerator.CreateFilePath(new System.IO.FileInfo("some path"), "bin", FilePickerMode.Open),
+                agent);
+
+            TestRequest(
+                new StandardRequestIntraModule(StandardRequest.RequestSaveLogFormatFilePath),
+                SerializableTypeGenerator.CreateFilePath(new System.IO.FileInfo("some path"), "bin", FilePickerMode.Save),
+                agent);
+
+            TestRequest(
+                new AWSRequestIntraModule(AWSRequest.RequestTranscriptionLanguageCode),
+                SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US"),
+                agent);
+
+            TestRequest(
+                new AWSRequestIntraModule(AWSRequest.RequestTranscriptionDefaultTranscript),
+                SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US"),
+                agent);
+
+            TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestTranslationLanguageCodeSource),
+                SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US"),
+                agent);
+
+            TestRequest(
+                new AWSRequestIntraModule(AWSRequest.RequestTranscriptionVocabularyName),
+                SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US"),
+                agent);
+
+            TestRequest(
+                new AWSRequestIntraModule(AWSRequest.RequestTranslationTargetLanguages),
+                SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US"),
+                agent);
+
+            TestRequest(
+                new AWSRequestIntraModule(AWSRequest.RequestTranslationTerminologyNames),
                 SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US"),
                 agent);
         }
@@ -73,6 +128,16 @@ namespace CloudWeaver.AWS.Test
             )
             {
                 result = "SetLanguage";
+            }
+            else if (request is StandardRequestIntraModule stdReq &&
+                (
+                stdReq.Request == StandardRequest.RequestOpenJsonFilePath ||
+                stdReq.Request == StandardRequest.RequestSaveJsonFilePath ||
+                stdReq.Request == StandardRequest.RequestOpenLogFormatFilePath ||
+                stdReq.Request == StandardRequest.RequestSaveLogFormatFilePath
+                ))
+            {
+                result = "SetFilePath";
             }
             else
             {

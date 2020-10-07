@@ -569,18 +569,22 @@ namespace CloudWeaver.AWS.Test
 
             agent.ConvertToBinary += Agent_ConvertToBinary;
 
-            var jsonFilePath = new FileInfo(Path.Combine(WorkingDirectory, TestDataFolderName, jsonFileFilename));
-            var logFilePath = new FileInfo(Path.Combine(WorkingDirectory, TestDataFolderName, logFileFilename));
+            var jsonFilePath = new FilePickerPath(
+                Path.Combine(WorkingDirectory, TestDataFolderName, jsonFileFilename),
+                "json", FilePickerMode.Open);
+            var logFilePath = new FilePickerPath(
+                Path.Combine(WorkingDirectory, TestDataFolderName, logFileFilename),
+                "bin", FilePickerMode.Save);
 
             var result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestOpenJsonFilePath)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetOpenJsonFilePath(jsonFilePath))));
+            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetFilePath(jsonFilePath))));
 
             result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestSaveLogFormatFilePath)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetSaveLogFormatFilePath(logFilePath))));
+            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetFilePath(logFilePath))));
 
             result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
@@ -622,18 +626,23 @@ namespace CloudWeaver.AWS.Test
 
             agent.ConvertToJson += Agent_ConvertToJson;
 
-            var jsonFilePath = new FileInfo(Path.Combine(WorkingDirectory, TestDataFolderName, jsonFileFilename));
-            var logFilePath = new FileInfo(Path.Combine(WorkingDirectory, TestDataFolderName, logFileFilename));
+            var logFilePath = new FilePickerPath(
+                Path.Combine(WorkingDirectory, TestDataFolderName, logFileFilename),
+                "bin", FilePickerMode.Open);
+
+            var jsonFilePath = new FilePickerPath(
+                Path.Combine(WorkingDirectory, TestDataFolderName, jsonFileFilename),
+                "json", FilePickerMode.Save);
 
             var result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestOpenLogFormatFilePath)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetOpenLogFormatFilePath(logFilePath))));
+            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetFilePath(logFilePath))));
 
             result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestSaveJsonFilePath)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetSaveJsonFilePath(jsonFilePath))));
+            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetFilePath(jsonFilePath))));
 
             result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);

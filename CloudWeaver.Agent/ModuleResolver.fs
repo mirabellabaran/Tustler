@@ -16,13 +16,11 @@ open TustlerServicesLib
 /// The standard module (StandardShareIntraModule) includes a SaveFlags argument type which also requires resolving
 /// in that a flag item may be defined in any module e.g. standard vs AWS flag items
 /// </remarks>
-type ModuleResolver (flagSetLookup: Dictionary<string, Func<string, Dictionary<string, ISaveFlagSet>, Dictionary<string, ISaveFlagSet>>>) =
-
-    let _flagSetLookup = flagSetLookup
+type ModuleResolver (serializerOptions, flagSetLookup: Dictionary<string, Func<string, Dictionary<string, ISaveFlagSet>, Dictionary<string, ISaveFlagSet>>>) =
 
     /// Get the deserializer for Standard modules (wraps the flag module resolver)
     member this.Deserialize with get () =
-        Func<_, _, _>(fun propertyName jsonString -> StandardShareIntraModule.Deserialize propertyName jsonString _flagSetLookup :> IShareIntraModule)
+        Func<_, _, _>(fun propertyName jsonString -> StandardShareIntraModule.Deserialize propertyName jsonString serializerOptions flagSetLookup :> IShareIntraModule)
 
     /// Deserialize and add a new Standard flag itme
     static member FoldInStandardValue (serializedFlagItem: string) (source: Dictionary<string, ISaveFlagSet>) =
@@ -69,6 +67,13 @@ type ModuleResolver (flagSetLookup: Dictionary<string, Func<string, Dictionary<s
     /// <returns>A deserialization function appropriate for the module</returns>
     static member ModuleLookup (moduleTag: string) =
 
+        let serializerOptions = JsonSerializerOptions()
+        serializerOptions.Converters.Add(RetainingStackConverter())
+        serializerOptions.Converters.Add(TaskSequenceConverter())
+        serializerOptions.Converters.Add(SentenceChunkerConverter())
+        serializerOptions.Converters.Add(LanguageCodeDomainConverter())
+        serializerOptions.Converters.Add(FilePickerPathConverter())
+
         let ToFunc flagModuleTag = 
             let flagResolver =
                 match flagModuleTag with
@@ -85,12 +90,7 @@ type ModuleResolver (flagSetLookup: Dictionary<string, Func<string, Dictionary<s
                     KeyValuePair( "AWSFlag", ToFunc "AWSFlag" );
                 }
                 Dictionary<string, (Func<string, Dictionary<string, ISaveFlagSet>, Dictionary<string, ISaveFlagSet>>)>(pairs)
-            ModuleResolver(flagSetLookup).Deserialize
-
-        let serializerOptions = JsonSerializerOptions()
-        serializerOptions.Converters.Add(RetainingStackConverter())
-        serializerOptions.Converters.Add(TaskSequenceConverter())
-        serializerOptions.Converters.Add(SentenceChunkerConverter())
+            ModuleResolver(serializerOptions, flagSetLookup).Deserialize
 
         /// Get the deserializer for Standard or AWS modules (wraps the flag module resolver for Standard modules)
         match moduleTag with

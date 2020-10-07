@@ -38,7 +38,7 @@ type IShareIntraModule =
     abstract member ModuleTag : ModuleTag with get
     abstract member Identifier : WrappedItemIdentifier with get
     abstract member Description : unit -> string
-    abstract member AsBytes : unit -> byte[]
+    abstract member AsBytes : JsonSerializerOptions -> byte[]
     abstract member Serialize : Utf8JsonWriter -> JsonSerializerOptions -> unit
     abstract member ToString: unit -> string
 
@@ -96,7 +96,7 @@ type FilePickerMode =
         | Open -> "Open"
         | Save -> "Save"
 
-type FilePath(path: FileInfo, extension: string, mode: FilePickerMode) =
+type FilePickerPath(path: string, extension: string, mode: FilePickerMode) =
     let mutable _path = path
     let mutable _extension = extension
     let mutable _mode = mode
@@ -105,7 +105,7 @@ type FilePath(path: FileInfo, extension: string, mode: FilePickerMode) =
     member this.Extension with get() = _extension and set(value) = _extension <- value
     member this.Mode with get() = _mode and set(value) = _mode <- value
 
-    new() = FilePath(null, null, FilePickerMode.NotSet)
+    new() = FilePickerPath(null, null, FilePickerMode.NotSet)
 
 /// Specifies whether stack items such as tasks are independant or sequentially dependant
 type ItemOrdering =
@@ -377,10 +377,11 @@ type StandardArgument =
     | SetJsonEvents of byte[]
     | SetFileMediaReference of FileMediaReference
     | SetLogFormatEvents of byte[]
-    | SetOpenJsonFilePath of FileInfo
-    | SetSaveJsonFilePath of FileInfo
-    | SetOpenLogFormatFilePath of FileInfo
-    | SetSaveLogFormatFilePath of FileInfo
+    | SetFilePath of FilePickerPath   // set by RequestOpenJsonFilePath, RequestSaveJsonFilePath, RequestOpenLogFormatFilePath and RequestSaveLogFormatFilePath
+    //| SetOpenJsonFilePath of FileInfo
+    //| SetSaveJsonFilePath of FileInfo
+    //| SetOpenLogFormatFilePath of FileInfo
+    //| SetSaveLogFormatFilePath of FileInfo
     with
     override this.ToString() =
         match this with
@@ -392,17 +393,17 @@ type StandardArgument =
         | SetJsonEvents data -> (sprintf "SetJsonEvents: (%d bytes)" data.Length)
         | SetFileMediaReference fileMediaReference -> (sprintf "SetFileMediaReference: %s" (fileMediaReference.ToString()))
         | SetLogFormatEvents data -> (sprintf "SetLogFormatEvents: (%d bytes)" data.Length)
-        | SetOpenJsonFilePath fileInfo -> (sprintf "SetOpenJsonFilePath: %s" fileInfo.FullName)
-        | SetSaveJsonFilePath fileInfo -> (sprintf "SetSaveJsonFilePath: %s" fileInfo.FullName)
-        | SetOpenLogFormatFilePath fileInfo -> (sprintf "SetOpenLogFormatFilePath: %s" fileInfo.FullName)
-        | SetSaveLogFormatFilePath fileInfo -> (sprintf "SetSaveLogFormatFilePath: %s" fileInfo.FullName)
+        | SetFilePath filePath -> (sprintf "SetFilePath: %s" filePath.Path)
+        //| SetOpenJsonFilePath fileInfo -> (sprintf "SetOpenJsonFilePath: %s" fileInfo.FullName)
+        //| SetSaveJsonFilePath fileInfo -> (sprintf "SetSaveJsonFilePath: %s" fileInfo.FullName)
+        //| SetOpenLogFormatFilePath fileInfo -> (sprintf "SetOpenLogFormatFilePath: %s" fileInfo.FullName)
+        //| SetSaveLogFormatFilePath fileInfo -> (sprintf "SetSaveLogFormatFilePath: %s" fileInfo.FullName)
 
     member this.toTaskResponse() = TaskResponse.SetArgument (StandardShareIntraModule(this))
     member this.toTaskEvent() = TaskEvent.SetArgument(this.toTaskResponse());
 
 /// Wraps standard argument types
 and StandardShareIntraModule(arg: StandardArgument) =
-    let getAsBytes (sim: IShareIntraModule) = UTF8Encoding.UTF8.GetString(sim.AsBytes())
     interface IShareIntraModule with
         member this.ModuleTag with get() = Tag "StandardShareIntraModule"
         member this.Identifier with get() = Identifier (CommonUtilities.toString arg)
@@ -417,11 +418,12 @@ and StandardShareIntraModule(arg: StandardArgument) =
             | SetJsonEvents data -> sprintf "JsonEvents: %d bytes" (data.Length)
             | SetFileMediaReference fileMediaReference -> sprintf "FileMediaReference: %s of type %s" (Path.GetFileName(fileMediaReference.FilePath)) (fileMediaReference.MimeType)
             | SetLogFormatEvents data -> sprintf "LogFormatEvents: %d bytes" (data.Length)
-            | SetOpenJsonFilePath fileInfo -> sprintf "OpenJsonFilePath: %s" (fileInfo.FullName)
-            | SetSaveJsonFilePath fileInfo -> sprintf "SaveJsonFilePath: %s" (fileInfo.FullName)
-            | SetOpenLogFormatFilePath fileInfo -> sprintf "OpenLogFormatFilePath: %s" (fileInfo.FullName)
-            | SetSaveLogFormatFilePath fileInfo -> sprintf "SaveLogFormatFilePath: %s" (fileInfo.FullName)
-        member this.AsBytes () =    // returns either a UTF8-encoded string or a UTF8-encoded Json document as a byte array
+            | SetFilePath filePath -> sprintf "FilePath: %s (%s file) %s" (filePath.Mode.ToString()) (filePath.Extension) (filePath.Path)
+            //| SetOpenJsonFilePath fileInfo -> sprintf "OpenJsonFilePath: %s" (fileInfo.FullName)
+            //| SetSaveJsonFilePath fileInfo -> sprintf "SaveJsonFilePath: %s" (fileInfo.FullName)
+            //| SetOpenLogFormatFilePath fileInfo -> sprintf "OpenLogFormatFilePath: %s" (fileInfo.FullName)
+            //| SetSaveLogFormatFilePath fileInfo -> sprintf "SaveLogFormatFilePath: %s" (fileInfo.FullName)
+        member this.AsBytes serializerOptions =    // returns either a UTF8-encoded string or a UTF8-encoded Json document as a byte array
             match arg with
             | SetNotificationsList notificationsList -> JsonSerializer.SerializeToUtf8Bytes(notificationsList)
             | SetTaskIdentifier taskId -> if taskId.IsSome then UTF8Encoding.UTF8.GetBytes(taskId.Value) else Array.Empty<byte>()
@@ -431,10 +433,11 @@ and StandardShareIntraModule(arg: StandardArgument) =
             | SetJsonEvents data -> data    // note that this UTF8-encoded Json is deliberately pretty-printed
             | SetFileMediaReference fileMediaReference -> JsonSerializer.SerializeToUtf8Bytes(fileMediaReference)
             | SetLogFormatEvents data -> JsonSerializer.SerializeToUtf8Bytes(data)
-            | SetOpenJsonFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)
-            | SetSaveJsonFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)
-            | SetOpenLogFormatFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)
-            | SetSaveLogFormatFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)
+            | SetFilePath filePath -> JsonSerializer.SerializeToUtf8Bytes(filePath, serializerOptions)
+            //| SetOpenJsonFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)
+            //| SetSaveJsonFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)
+            //| SetOpenLogFormatFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)
+            //| SetSaveLogFormatFilePath fileInfo -> UTF8Encoding.UTF8.GetBytes(fileInfo.FullName)
         member this.Serialize writer _serializerOptions =
             match arg with
             | SetNotificationsList _notificationsList -> writer.WritePropertyName("SetNotificationsList"); JsonSerializer.Serialize(writer, "") // don't serialize the value
@@ -445,14 +448,15 @@ and StandardShareIntraModule(arg: StandardArgument) =
             | SetJsonEvents data -> writer.WritePropertyName("SetJsonEvents"); JsonSerializer.Serialize<byte[]>(writer, data)
             | SetFileMediaReference fileMediaReference -> writer.WritePropertyName("SetFileMediaReference"); JsonSerializer.Serialize<FileMediaReference>(writer, fileMediaReference)
             | SetLogFormatEvents data -> writer.WritePropertyName("SetLogFormatEvents"); JsonSerializer.Serialize<byte[]>(writer, data)
-            | SetOpenJsonFilePath fileInfo -> writer.WritePropertyName("SetOpenJsonFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
-            | SetSaveJsonFilePath fileInfo -> writer.WritePropertyName("SetSaveJsonFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
-            | SetOpenLogFormatFilePath fileInfo -> writer.WritePropertyName("SetOpenLogFormatFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
-            | SetSaveLogFormatFilePath fileInfo -> writer.WritePropertyName("SetSaveLogFormatFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
+            | SetFilePath filePath -> writer.WritePropertyName("SetFilePath"); JsonSerializer.Serialize<FilePickerPath>(writer, filePath)
+            //| SetOpenJsonFilePath fileInfo -> writer.WritePropertyName("SetOpenJsonFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
+            //| SetSaveJsonFilePath fileInfo -> writer.WritePropertyName("SetSaveJsonFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
+            //| SetOpenLogFormatFilePath fileInfo -> writer.WritePropertyName("SetOpenLogFormatFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
+            //| SetSaveLogFormatFilePath fileInfo -> writer.WritePropertyName("SetSaveLogFormatFilePath"); JsonSerializer.Serialize<string>(writer, fileInfo.FullName)
 
     member this.Argument with get() = arg
 
-    static member Deserialize propertyName (jsonString:string) (flagResolverDictionary: Dictionary<string, Func<string, Dictionary<string, ISaveFlagSet>, Dictionary<string, ISaveFlagSet>>>) =
+    static member Deserialize propertyName (jsonString:string) serializerOptions (flagResolverDictionary: Dictionary<string, Func<string, Dictionary<string, ISaveFlagSet>, Dictionary<string, ISaveFlagSet>>>) =
         let standardArgument =
             match propertyName with
             | "SetNotificationsList" ->
@@ -492,22 +496,25 @@ and StandardShareIntraModule(arg: StandardArgument) =
             | "SetLogFormatEvents" ->
                 let data = JsonSerializer.Deserialize<byte[]>(jsonString)
                 StandardArgument.SetLogFormatEvents data
-            | "SetOpenJsonFilePath" ->
-                let path = JsonSerializer.Deserialize<string>(jsonString)
-                let fileInfo = new FileInfo(path)
-                StandardArgument.SetOpenJsonFilePath fileInfo
-            | "SetSaveJsonFilePath" ->
-                let path = JsonSerializer.Deserialize<string>(jsonString)
-                let fileInfo = new FileInfo(path)
-                StandardArgument.SetSaveJsonFilePath fileInfo
-            | "SetOpenLogFormatFilePath" ->
-                let path = JsonSerializer.Deserialize<string>(jsonString)
-                let fileInfo = new FileInfo(path)
-                StandardArgument.SetOpenLogFormatFilePath fileInfo
-            | "SetSaveLogFormatFilePath" ->
-                let path = JsonSerializer.Deserialize<string>(jsonString)
-                let fileInfo = new FileInfo(path)
-                StandardArgument.SetSaveLogFormatFilePath fileInfo
+            | "SetFilePath" ->
+                let path = JsonSerializer.Deserialize<FilePickerPath>(jsonString, serializerOptions)
+                StandardArgument.SetFilePath path
+            //| "SetOpenJsonFilePath" ->
+            //    let path = JsonSerializer.Deserialize<string>(jsonString)
+            //    let fileInfo = new FileInfo(path)
+            //    StandardArgument.SetOpenJsonFilePath fileInfo
+            //| "SetSaveJsonFilePath" ->
+            //    let path = JsonSerializer.Deserialize<string>(jsonString)
+            //    let fileInfo = new FileInfo(path)
+            //    StandardArgument.SetSaveJsonFilePath fileInfo
+            //| "SetOpenLogFormatFilePath" ->
+            //    let path = JsonSerializer.Deserialize<string>(jsonString)
+            //    let fileInfo = new FileInfo(path)
+            //    StandardArgument.SetOpenLogFormatFilePath fileInfo
+            //| "SetSaveLogFormatFilePath" ->
+            //    let path = JsonSerializer.Deserialize<string>(jsonString)
+            //    let fileInfo = new FileInfo(path)
+            //    StandardArgument.SetSaveLogFormatFilePath fileInfo
 
             | _ -> invalidArg "propertyName" (sprintf "Property %s was not recognized" propertyName)
 
@@ -657,30 +664,30 @@ module public PatternMatchers =
     let private (| OpenJsonFilePath |) argMap =
         let key = StandardRequestIntraModule(StandardRequest.RequestOpenJsonFilePath)
         match (lookupArgument key argMap) with
-        | Some(SetOpenJsonFilePath arg) -> Some(arg)
+        | Some(SetFilePath arg) -> if arg.Mode = FilePickerMode.Open && arg.Extension = "json" then Some(arg) else invalidArg "arg" "Expecting a FilePath for 'Open Json File'"
         | None -> None
-        | _ -> invalidArg "arg" "Expecting an OpenJsonFilePath"
+        | _ -> invalidArg "arg" "Expecting a FilePath for 'Open Json File'"
 
     let private (| SaveJsonFilePath |) argMap =
         let key = StandardRequestIntraModule(StandardRequest.RequestSaveJsonFilePath)
         match (lookupArgument key argMap) with
-        | Some(SetSaveJsonFilePath arg) -> Some(arg)
+        | Some(SetFilePath arg) -> if arg.Mode = FilePickerMode.Save && arg.Extension = "json" then Some(arg) else invalidArg "arg" "Expecting a FilePath for 'Save Json File'"
         | None -> None
-        | _ -> invalidArg "arg" "Expecting an SaveJsonFilePath"
+        | _ -> invalidArg "arg" "Expecting a FilePath for 'Save Json File'"
 
     let private (| OpenLogFormatFilePath |) argMap =
         let key = StandardRequestIntraModule(StandardRequest.RequestOpenLogFormatFilePath)
         match (lookupArgument key argMap) with
-        | Some(SetOpenLogFormatFilePath arg) -> Some(arg)
+        | Some(SetFilePath arg) -> if arg.Mode = FilePickerMode.Open && arg.Extension = "bin" then Some(arg) else invalidArg "arg" "Expecting a FilePath for 'Open Log Format File'"
         | None -> None
-        | _ -> invalidArg "arg" "Expecting an OpenLogFormatFilePath"
+        | _ -> invalidArg "arg" "Expecting a FilePath for 'Open Log Format File'"
 
     let private (| SaveLogFormatFilePath |) argMap =
         let key = StandardRequestIntraModule(StandardRequest.RequestSaveLogFormatFilePath)
         match (lookupArgument key argMap) with
-        | Some(SetSaveLogFormatFilePath arg) -> Some(arg)
+        | Some(SetFilePath arg) -> if arg.Mode = FilePickerMode.Save && arg.Extension = "bin" then Some(arg) else invalidArg "arg" "Expecting a FilePath for 'Save Log Format File'"
         | None -> None
-        | _ -> invalidArg "arg" "Expecting an SaveLogFormatFilePath"
+        | _ -> invalidArg "arg" "Expecting a FilePath for 'Save Log Format File'"
     
     let getNotifications argMap = match (argMap) with | Notifications arg -> arg
 
