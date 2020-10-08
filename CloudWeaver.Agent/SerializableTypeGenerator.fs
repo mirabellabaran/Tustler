@@ -58,6 +58,25 @@ type SerializableTypeGenerator() =
 
 
 
+    /// Create a serialized representation of AWS module TranscriptionDefaultTranscript
+    static member CreateTranscriptionDefaultTranscript(defaultTranscript: string) = JsonSerializer.SerializeToUtf8Bytes(defaultTranscript)
+
+    /// Create a serialized representation of AWS module TranscriptionVocabularyName
+    static member CreateTranscriptionVocabularyName(name: string, serializerOptions) =
+    
+        let vocabularyName = VocabularyName(name)
+
+        JsonSerializer.SerializeToUtf8Bytes(vocabularyName, serializerOptions)
+
+    /// Create a serialized representation of an AWS module S3MediaReference
+    static member CreateBucket(name: string, creationDate: DateTime) =
+
+        let items = [|
+            KeyValuePair<string, string option>("Name", Some(name))
+            KeyValuePair<string, string option>("CreationDate", Some(creationDate.ToString("o")))   // use "o" format for round-tripping the datetime
+        |]
+
+        SerializableTypeGenerator.CreateJson(new Dictionary<_,_>(items))
 
     /// Create a serialized representation of an AWS module S3MediaReference
     static member CreateS3MediaReference(bucketName: string, key: string, mimeType: string, extension: string) =
@@ -92,7 +111,7 @@ type SerializableTypeGenerator() =
         SerializableTypeGenerator.CreateJson(new Dictionary<_,_>(items))
 
     /// Create a serialized representation of AWS module TranslationTargetLanguageCodes
-    static member CreateTranslationTargetLanguageCodes(languages: IEnumerable<LanguageCode>) =
+    static member CreateTranslationTargetLanguageCodes(languages: IEnumerable<LanguageCode>, serializerOptions) =
 
         let languageCodes =
             languages
@@ -101,7 +120,7 @@ type SerializableTypeGenerator() =
             )
 
         let stack = AWSIterationStack(Guid.NewGuid(), languageCodes)
-        JsonSerializer.SerializeToUtf8Bytes(stack)
+        JsonSerializer.SerializeToUtf8Bytes<RetainingStack>(stack, serializerOptions)
 
     /// Create a serialized representation of AWS module TranslationTerminologyNames
     static member CreateTranslationTerminologyNames(terminologyNames: IEnumerable<string>) =

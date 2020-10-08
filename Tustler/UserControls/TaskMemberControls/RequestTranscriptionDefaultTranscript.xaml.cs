@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CloudWeaver;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
@@ -175,7 +176,8 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             if (!string.IsNullOrWhiteSpace(tbTranscript.Text))
             {
-                var data = JsonSerializer.SerializeToUtf8Bytes(tbTranscript.Text);
+                var data = SerializableTypeGenerator.CreateTranscriptionDefaultTranscript(tbTranscript.Text);
+                //var data = JsonSerializer.SerializeToUtf8Bytes(tbTranscript.Text);
 
                 CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "", "", data);
 

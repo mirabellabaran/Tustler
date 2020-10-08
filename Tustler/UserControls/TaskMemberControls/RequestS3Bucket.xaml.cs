@@ -16,6 +16,7 @@ using TustlerAWSLib;
 using TustlerUIShared;
 using TustlerModels;
 using TustlerServicesLib;
+using CloudWeaver;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
@@ -205,7 +206,8 @@ namespace Tustler.UserControls.TaskMemberControls
         private void Select_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             var bucket = (e.OriginalSource as Button).DataContext as Bucket;
-            var data = JsonSerializer.SerializeToUtf8Bytes(bucket);
+            var data = SerializableTypeGenerator.CreateBucket(bucket.Name, bucket.CreationDate);
+            //var data = JsonSerializer.SerializeToUtf8Bytes(bucket);
 
             CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetBucket", data);
 

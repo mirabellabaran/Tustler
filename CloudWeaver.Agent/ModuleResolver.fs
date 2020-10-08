@@ -67,12 +67,8 @@ type ModuleResolver (serializerOptions, flagSetLookup: Dictionary<string, Func<s
     /// <returns>A deserialization function appropriate for the module</returns>
     static member ModuleLookup (moduleTag: string) =
 
-        let serializerOptions = JsonSerializerOptions()
-        serializerOptions.Converters.Add(RetainingStackConverter())
-        serializerOptions.Converters.Add(TaskSequenceConverter())
+        let serializerOptions = CreateSerializerOptions()
         serializerOptions.Converters.Add(SentenceChunkerConverter())
-        serializerOptions.Converters.Add(LanguageCodeDomainConverter())
-        serializerOptions.Converters.Add(FilePickerPathConverter())
 
         let ToFunc flagModuleTag = 
             let flagResolver =

@@ -256,9 +256,9 @@ and AWSShareIntraModule(arg: AWSArgument) =
             | SetTranscriptURI transcriptURI -> writer.WritePropertyName("SetTranscriptURI"); JsonSerializer.Serialize<string>(writer, transcriptURI)
             | SetTranscriptionJobsModel transcriptionJobsViewModel -> writer.WritePropertyName("SetTranscriptionJobsModel"); JsonSerializer.Serialize<TranscriptionJobsViewModel>(writer, transcriptionJobsViewModel)
             //| SetTranscriptionLanguageCode transcriptionLanguageCode -> writer.WritePropertyName("SetTranscriptionLanguageCode"); JsonSerializer.Serialize<string>(writer, transcriptionLanguageCode)
-            | SetTranscriptionVocabularyName vocabularyName -> writer.WritePropertyName("SetTranscriptionVocabularyName"); JsonSerializer.Serialize<string>(writer, vocabularyName)
+            | SetTranscriptionVocabularyName vocabularyName -> writer.WritePropertyName("SetTranscriptionVocabularyName"); JsonSerializer.Serialize<VocabularyName>(writer, new VocabularyName(vocabularyName), serializerOptions)
             //| SetTranslationLanguageCodeSource translationLanguageCode -> writer.WritePropertyName("SetTranslationLanguageCodeSource"); JsonSerializer.Serialize<string>(writer, translationLanguageCode)
-            | SetLanguage languageCodeDomain -> writer.WritePropertyName("SetLanguage"); JsonSerializer.Serialize<LanguageCodeDomain>(writer, languageCodeDomain)
+            | SetLanguage languageCodeDomain -> writer.WritePropertyName("SetLanguage"); JsonSerializer.Serialize<LanguageCodeDomain>(writer, languageCodeDomain, serializerOptions)
             | SetTranslationTargetLanguages languages -> writer.WritePropertyName("SetTranslationTargetLanguages"); JsonSerializer.Serialize<RetainingStack>(writer, languages :?> RetainingStack, serializerOptions)
             | SetTranslationTerminologyNames terminologyNames -> writer.WritePropertyName("SetTranslationTerminologyNames"); JsonSerializer.Serialize<IEnumerable<string>>(writer, terminologyNames)
             | SetTranslationSegments chunker -> writer.WritePropertyName("SetTranslationSegments"); JsonSerializer.Serialize<SentenceChunker>(writer, chunker, serializerOptions)
@@ -273,42 +273,36 @@ and AWSShareIntraModule(arg: AWSArgument) =
         let awsArgument =
             match propertyName with
             | "SetAWSInterface" ->
-                let data = JsonSerializer.Deserialize<AmazonWebServiceInterface>(jsonString)
+                let data = JsonSerializer.Deserialize<AmazonWebServiceInterface>(jsonString, serializerOptions)
                 AWSArgument.SetAWSInterface data
             | "SetBucket" ->
-                let data = JsonSerializer.Deserialize<Bucket>(jsonString)
+                let data = JsonSerializer.Deserialize<Bucket>(jsonString, serializerOptions)
                 AWSArgument.SetBucket data
             | "SetBucketsModel" ->
-                let data = JsonSerializer.Deserialize<BucketViewModel>(jsonString)
+                let data = JsonSerializer.Deserialize<BucketViewModel>(jsonString, serializerOptions)
                 AWSArgument.SetBucketsModel data
             | "SetFileUpload" ->
-                let data = JsonSerializer.Deserialize<S3MediaReference>(jsonString)
+                let data = JsonSerializer.Deserialize<S3MediaReference>(jsonString, serializerOptions)
                 AWSArgument.SetS3MediaReference data
             | "SetTranscriptionJobName" ->
-                let data = JsonSerializer.Deserialize<string>(jsonString)
+                let data = JsonSerializer.Deserialize<string>(jsonString, serializerOptions)
                 AWSArgument.SetTranscriptionJobName data
             | "SetTranscriptJSON" ->
-                let data = JsonSerializer.Deserialize<byte[]>(jsonString)
+                let data = JsonSerializer.Deserialize<byte[]>(jsonString, serializerOptions)
                 let rom = ReadOnlyMemory<byte>(data)
                 AWSArgument.SetTranscriptJSON rom
             | "SetTranscriptionDefaultTranscript" ->
-                let data = JsonSerializer.Deserialize<string>(jsonString)
+                let data = JsonSerializer.Deserialize<string>(jsonString, serializerOptions)
                 AWSArgument.SetTranscriptionDefaultTranscript data
             | "SetTranscriptURI" ->
-                let data = JsonSerializer.Deserialize<string>(jsonString)
+                let data = JsonSerializer.Deserialize<string>(jsonString, serializerOptions)
                 AWSArgument.SetTranscriptURI data
             | "SetTranscriptionJobsModel" ->
-                let data = JsonSerializer.Deserialize<TranscriptionJobsViewModel>(jsonString)
+                let data = JsonSerializer.Deserialize<TranscriptionJobsViewModel>(jsonString, serializerOptions)
                 AWSArgument.SetTranscriptionJobsModel data
-            //| "SetTranscriptionLanguageCode" ->
-            //    let data = JsonSerializer.Deserialize<string>(jsonString)
-            //    AWSArgument.SetTranscriptionLanguageCode data
             | "SetTranscriptionVocabularyName" ->
-                let data = JsonSerializer.Deserialize<string>(jsonString)
-                AWSArgument.SetTranscriptionVocabularyName data
-            //| "SetTranslationLanguageCodeSource" ->
-            //    let data = JsonSerializer.Deserialize<string>(jsonString)
-            //    AWSArgument.SetTranslationLanguageCodeSource data
+                let data = JsonSerializer.Deserialize<VocabularyName>(jsonString, serializerOptions)
+                AWSArgument.SetTranscriptionVocabularyName (if data.VocabularyName.IsSome then data.VocabularyName.Value else null)
             | "SetLanguage" ->
                 let data = JsonSerializer.Deserialize<LanguageCodeDomain>(jsonString, serializerOptions)
                 AWSArgument.SetLanguage data
@@ -316,13 +310,13 @@ and AWSShareIntraModule(arg: AWSArgument) =
                 let consumable = JsonSerializer.Deserialize<RetainingStack>(jsonString, serializerOptions)
                 AWSArgument.SetTranslationTargetLanguages consumable
             | "SetTranslationTerminologyNames" ->
-                let data = JsonSerializer.Deserialize<IEnumerable<string>>(jsonString)
+                let data = JsonSerializer.Deserialize<IEnumerable<string>>(jsonString, serializerOptions)
                 AWSArgument.SetTranslationTerminologyNames (new List<string>(data))
             | "SetTranslationSegments" ->
                 let data = JsonSerializer.Deserialize<SentenceChunker>(jsonString, serializerOptions)
                 AWSArgument.SetTranslationSegments data
             | "SetSubtitleFilePath" ->
-                let path = JsonSerializer.Deserialize<string>(jsonString)
+                let path = JsonSerializer.Deserialize<string>(jsonString, serializerOptions)
                 let fileInfo = new FileInfo(path)
                 AWSArgument.SetSubtitleFilePath fileInfo
             | _ -> invalidArg "propertyName" (sprintf "Property %s was not recognized" propertyName)

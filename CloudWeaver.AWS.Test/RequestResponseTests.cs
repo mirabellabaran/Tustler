@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Text;
 using TustlerAWSLib;
 using TustlerInterfaces;
+using TustlerModels;
 using TustlerServicesLib;
 
 namespace CloudWeaver.AWS.Test
@@ -17,16 +18,14 @@ namespace CloudWeaver.AWS.Test
         {
             var agent = InitializeTest();
 
+            var serializerOptions = Converters.CreateSerializerOptions();
+            Assert.IsTrue(serializerOptions.Converters.Count == 6);
+
             // the following will all throw if not correct
 
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestBucket),
-                SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US"),
-                agent);
-
-            TestRequest(
-                new AWSRequestIntraModule(AWSRequest.RequestBucket),
-                SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Translation, "English", "en"),
+                SerializableTypeGenerator.CreateBucket("test bucket", DateTime.SpecifyKind(new DateTime(2020, 1, 1, 12, 45, 30), DateTimeKind.Local)),
                 agent);
 
             TestRequest(
@@ -60,28 +59,38 @@ namespace CloudWeaver.AWS.Test
                 agent);
 
             TestRequest(
-                new AWSRequestIntraModule(AWSRequest.RequestTranscriptionDefaultTranscript),
-                SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US"),
+                new AWSRequestIntraModule(AWSRequest.RequestTranslationLanguageCodeSource),
+                SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "English", "en"),
                 agent);
 
             TestRequest(
-                new AWSRequestIntraModule(AWSRequest.RequestTranslationLanguageCodeSource),
-                SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US"),
+                new AWSRequestIntraModule(AWSRequest.RequestTranscriptionDefaultTranscript),
+                SerializableTypeGenerator.CreateTranscriptionDefaultTranscript("my default transcript"),
                 agent);
 
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestTranscriptionVocabularyName),
-                SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US"),
+                SerializableTypeGenerator.CreateTranscriptionVocabularyName("my vocabulary", serializerOptions),
+                agent);
+
+            // with null
+            TestRequest(
+                new AWSRequestIntraModule(AWSRequest.RequestTranscriptionVocabularyName),
+                SerializableTypeGenerator.CreateTranscriptionVocabularyName(null, serializerOptions),
                 agent);
 
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestTranslationTargetLanguages),
-                SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US"),
+                SerializableTypeGenerator.CreateTranslationTargetLanguageCodes(new LanguageCode[]
+                {
+                    new TustlerModels.LanguageCode() { Name = "Arabic", Code = "ar" },
+                    new TustlerModels.LanguageCode() { Name = "Azerbaijani", Code = "az" }
+                }, serializerOptions),
                 agent);
 
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestTranslationTerminologyNames),
-                SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US"),
+                SerializableTypeGenerator.CreateTranslationTerminologyNames(new List<string>() { "Bob", "Sally" }),
                 agent);
         }
 

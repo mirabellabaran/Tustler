@@ -39,7 +39,7 @@ module public Serialization =
         writer.WriteEndObject()
 
     let private DeserializeEvent (serializedTaskEvent: JsonElement) serializerOptions =
-        let mutable taskEvent = None
+        let mutable taskEvent: TaskEvent option = None
 
         serializedTaskEvent.EnumerateObject()
         |> Seq.fold (fun (acc: string option) (property: JsonProperty) -> 
@@ -90,9 +90,7 @@ module public Serialization =
     let SerializeEventsAsJSON events =
 
         let writerOptions = JsonWriterOptions(Indented = true)
-        let serializerOptions = JsonSerializerOptions()
-        serializerOptions.Converters.Add(RetainingStackConverter())
-        serializerOptions.Converters.Add(TaskSequenceConverter())
+        let serializerOptions = Converters.CreateSerializerOptions()
         serializerOptions.Converters.Add(SentenceChunkerConverter())
 
         use stream = new MemoryStream()
@@ -117,9 +115,7 @@ module public Serialization =
     let SerializeEventsAsBytes events skipCount =
         
         let writerOptions = JsonWriterOptions(Indented = false)
-        let serializerOptions = JsonSerializerOptions()
-        serializerOptions.Converters.Add(RetainingStackConverter())
-        serializerOptions.Converters.Add(TaskSequenceConverter())
+        let serializerOptions = Converters.CreateSerializerOptions()
         serializerOptions.Converters.Add(SentenceChunkerConverter())
 
         events
@@ -142,9 +138,7 @@ module public Serialization =
     /// Serialize the provided events as a JSON document
     let DeserializeEventsFromJSON (document:JsonDocument) =
 
-        let serializerOptions = JsonSerializerOptions()
-        serializerOptions.Converters.Add(RetainingStackConverter())
-        serializerOptions.Converters.Add(TaskSequenceConverter())
+        let serializerOptions = Converters.CreateSerializerOptions()
         serializerOptions.Converters.Add(SentenceChunkerConverter())
 
         document.RootElement.EnumerateObject()
@@ -166,9 +160,7 @@ module public Serialization =
     let DeserializeEventsFromBytes (blocks: List<byte[]>) =
         
         let documentOptions = new JsonDocumentOptions(AllowTrailingCommas = true)
-        let serializerOptions = JsonSerializerOptions()
-        serializerOptions.Converters.Add(RetainingStackConverter())
-        serializerOptions.Converters.Add(TaskSequenceConverter())
+        let serializerOptions = Converters.CreateSerializerOptions()
         serializerOptions.Converters.Add(SentenceChunkerConverter())
 
         blocks

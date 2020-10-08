@@ -175,7 +175,8 @@ namespace Tustler.UserControls.TaskMemberControls
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             var targetLanguageCodes = (lbTargetLanguages.SelectedItems as IEnumerable<object>).Cast<LanguageCode>();
-            var data = SerializableTypeGenerator.CreateTranslationTargetLanguageCodes(targetLanguageCodes);
+            var jsonSerializerOptions = Converters.CreateSerializerOptions();
+            var data = SerializableTypeGenerator.CreateTranslationTargetLanguageCodes(targetLanguageCodes, jsonSerializerOptions);
 
             CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetTranslationTargetLanguages", data);
 
