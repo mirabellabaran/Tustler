@@ -70,13 +70,13 @@ namespace CloudWeaver.AWS.Test
             var jsonFilePath = Path.Combine(WorkingDirectory, "test.json");
             var jsonData = File.ReadAllBytes(jsonFilePath);
             IShareIntraModule jsonEventsModule = new StandardShareIntraModule(StandardArgument.NewSetJsonEvents(jsonData));
-            Assert.IsTrue(jsonEventsModule.Description().StartsWith("JsonEvents: 8961 bytes"));
+            Assert.IsTrue(jsonEventsModule.Description().StartsWith("JsonEvents: 10038 bytes"));
             Assert.IsTrue(StringifyBytes(jsonEventsModule, options).StartsWith("{\r\n  \"Items\": [\r\n    {\r\n      \"Tag\": \"StandardShareIntraModule\",\r\n      \"TaskEvent.SetArgument\":"));
 
             var binaryFilePath = Path.Combine(WorkingDirectory, "test.bin");
             var binaryData = File.ReadAllBytes(binaryFilePath);
             IShareIntraModule logFormatEventsModule = new StandardShareIntraModule(StandardArgument.NewSetLogFormatEvents(binaryData));
-            Assert.IsTrue(logFormatEventsModule.Description().StartsWith("LogFormatEvents: 6390 bytes"));
+            Assert.IsTrue(logFormatEventsModule.Description().StartsWith("LogFormatEvents: 7213 bytes"));
             Assert.IsTrue(StringifyBytes(logFormatEventsModule, options).StartsWith("\"2AAAAHsiVGFnIjoiU3RhbmRhcmRTaGFyZUludHJhTW9kdWxlIiwiVGFza0V2ZW50LlNldEFyZ3VtZW50Ijp7IlNldFNhdmVGbGFncyI6IlN0YW5kY"));
 
             var path = Path.Combine(WorkingDirectory, "SallyRide d2a8856b.json");
