@@ -4,11 +4,12 @@ namespace TustlerUIShared
 {
     public enum UITaskMode
     {
-        SelectTask,
-        RestartTask,           // restart a completed task
-        SetArgument,           // set an argument on the agent
-        Continue,
-        ForEachIndependantTask
+        SelectTask,             // choose a task from a list of tasks
+        RestartTask,            // restart a completed task
+        SetArgument,            // set an argument on the agent
+        SelectDefaultArguments, // select which of the default arguments should be passed to the agent
+        Continue,               // continue running the task following a prompt
+        ForEachIndependantTask  // collect a list of independant tasks to run
     }
 
     /// <summary>

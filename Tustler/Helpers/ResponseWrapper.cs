@@ -13,7 +13,6 @@ namespace Tustler.Helpers
     public interface IResponseWrapper
     {
         public IOwnerType Owner { get; }
-        public TaskResponse TaskResponse { get; }
         public object Item { get; }             // the wrapped item inside the TaskResponse (support for XAML binding)
     }
 
@@ -62,5 +61,20 @@ namespace Tustler.Helpers
                 };
             }
         }
+    }
+
+    public class DescriptionWrapper : IResponseWrapper
+    {
+        public DescriptionWrapper(IOwnerType owner, IEnumerable<string> descriptions)
+        {
+            Owner = owner;
+            Descriptions = descriptions;
+        }
+
+        public IOwnerType Owner { get; }
+
+        public IEnumerable<string> Descriptions { get; }
+
+        public object Item => Descriptions;
     }
 }

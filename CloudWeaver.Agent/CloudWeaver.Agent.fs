@@ -387,11 +387,6 @@ type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctio
     member this.ContinueWith loggedEvents =
         continueWith this loggedEvents
 
-    //member this.SerializeUnloggedEventsAsBytes () =
-    //    let unloggedSerializedData = CloudWeaver.Serialization.SerializeEventsAsBytes events loggedCount
-    //    loggedCount <- events.Count
-    //    unloggedSerializedData
-
     member this.LastCallResponseList () = if retainResponses then taskResponses.Value else new List<TaskResponse>()
 
     [<CLIEvent>]

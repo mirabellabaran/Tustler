@@ -23,6 +23,10 @@
         <helpers:TaskManagerDataTemplateSelector x:Key="taskManagerDataTemplateSelector"/>
         <helpers:TaskManagerChildDataTemplateSelector x:Key="taskManagerChildDataTemplateSelector"/>
 
+        <DataTemplate x:Key="DescriptionWrapperTemplate" DataType="{x:Type helpers:IResponseWrapper}">
+            <uctask:SelectDefaultArguments Command="{x:Static uc:TaskCommands.UIResponse}" />
+        </DataTemplate>
+
         <!-- Called within the BucketItemsModelTemplate ContentControl (DataGrid.SelectedItem) -->
         <DataTemplate x:Key="BucketItemTemplate" DataType="{x:Type local:BucketItem}">
             <Border Name="border" BorderBrush="BlanchedAlmond" CornerRadius="3" BorderThickness="3" Padding="5" Margin="5">

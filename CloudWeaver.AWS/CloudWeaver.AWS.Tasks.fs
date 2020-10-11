@@ -820,11 +820,20 @@ module public Tasks =
         | Invoke ->
             seq {
                 let argMap = integrateUIRequestArguments resolvable_arguments
-                let unresolvedRequests = getUnResolvedRequests argMap inputs
+
+                // don't include the internally resolvable arguments or they will be saved (see TaskSaveEvents below)
+                let unresolvedRequests = getUnResolvedRequests argMap [|
+                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionVocabularyName));
+                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionLanguageCode));
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestFileMediaReference));
+                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestBucket));
+                |]
 
                 if unresolvedRequests.Length = 0 then
+
                     // restored from a previous session OR resolved by request to the UI
                     yield TaskResponse.TaskSaveEvents SaveEventsFilter.ArgumentsOnly     // save the resolved arguments (if not already saved)
+
                     yield TaskResponse.TaskSequence ([|
                         TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "UploadMediaFile", Description = "Upload a media file to transcribe");
                         TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "StartTranscription", Description = "Start a transcription job");

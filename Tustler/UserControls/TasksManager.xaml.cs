@@ -278,68 +278,73 @@ namespace Tustler.UserControls
             e.CanExecute = (isNewRunMode || isRunLogMode);
         }
 
-        private async Task FirstRun()
+        private static TaskEvent[] ReadDefaultArguments(string taskFolderPath)
         {
-            try
+            TaskEvent[] taskEvents;
+
+            // attempt to restore event stack arguments from a previous session
+            var serializedDataPath = Path.Combine(taskFolderPath, EventStackArgumentRestoreName);
+            if (File.Exists(serializedDataPath))
             {
-                Mouse.OverrideCursor = Cursors.Wait;
-
-                // attempt to restore event stack arguments from a previous session
-                var taskFolderPath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.TaskSpecifier.TaskName);
-                if (Directory.Exists(taskFolderPath))
+                var options = new JsonDocumentOptions
                 {
-                    var serializedDataPath = Path.Combine(taskFolderPath, EventStackArgumentRestoreName);
-                    if (File.Exists(serializedDataPath))
+                    AllowTrailingCommas = true
+                };
+
+                using var stream = File.OpenRead(serializedDataPath);
+                using JsonDocument document = JsonDocument.Parse(stream, options);
+                taskEvents = Serialization.DeserializeEventsFromJSON(document);
+            }
+            else
+            {
+                taskEvents = Array.Empty<TaskEvent>();
+            }
+
+            return taskEvents;
+        }
+
+        private bool PrepareTaskFirstRun(string taskFolderPath)
+        {
+            var runImmediately = true;
+
+            if (Directory.Exists(taskFolderPath))
+            {
+                var taskEvents = ReadDefaultArguments(taskFolderPath);
+                if (taskEvents.Length > 0)
+                {
+                    // create a list of descriptions for each SetArgument
+                    List<string> descriptions = new List<string>(taskEvents.Length);
+                    foreach (var evt in taskEvents)
                     {
-                        var options = new JsonDocumentOptions
+                        if (evt is TaskEvent.SetArgument arg)
                         {
-                            AllowTrailingCommas = true
-                        };
-
-                        using var stream = File.OpenRead(serializedDataPath);
-                        using JsonDocument document = JsonDocument.Parse(stream, options);
-                        var taskEvents = Serialization.DeserializeEventsFromJSON(document);
-                        agent.AddEvents(taskEvents);
-
-                        //// create a new JsonDocument containing an array of descriptions for each SetArgument
-                        //using var ms = new MemoryStream();
-                        //using var writer = new Utf8JsonWriter(ms, new JsonWriterOptions { Indented = false });
-                        //writer.WriteStartArray();
-                        //foreach (var evt in taskEvents)
-                        //{
-                        //    if (evt is TaskEvent.SetArgument arg)
-                        //    {
-                        //        if (arg.Item is TaskResponse.SetArgument response)
-                        //        {
-                        //            writer.WriteStringValue(response.Item.Description());
-                        //        }
-                        //    }
-                        //}
-                        //writer.WriteEndArray();
-                        //writer.Flush();
-                        //ms.Seek(0L, SeekOrigin.Begin);
-                        //var jsonDocument = JsonDocument.Parse(ms);  // UTF8Encoding.UTF8.GetString(ms.ToArray());
-                        //taskResponses.Add(new ResponseWrapper(this, jsonDocument));
-
+                            if (arg.Item is TaskResponse.SetArgument response)
+                            {
+                                descriptions.Add(response.Item.Description());
+                            }
+                        }
                     }
+
+                    // wait on user selection of defaults
+                    runImmediately = false;
+                    taskResponses.Add(new DescriptionWrapper(this, descriptions));
                 }
-                else
-                {
-                    Directory.CreateDirectory(taskFolderPath);
-                }
+            }
+            else
+            {
+                Directory.CreateDirectory(taskFolderPath);
+            }
 
-                lbTaskResponses.ItemsSource = taskResponses;
+            // these next three arguments are standard internally resolvable arguments
 
-                async Task StartNew()
-                {
-                    agent.SetWorkingDirectory(new DirectoryInfo(taskFolderPath));
+            agent.SetWorkingDirectory(new DirectoryInfo(taskFolderPath));
 
-                    // set a default task identifier
-                    agent.SetTaskIdentifier(Guid.NewGuid().ToString());
+            // set a default task identifier
+            agent.SetTaskIdentifier(Guid.NewGuid().ToString());
 
-                    // set the save flags
-                    var saveFlags = new SaveFlags(new ISaveFlagSet[]
-                    {
+            // set the save flags
+            var saveFlags = new SaveFlags(new ISaveFlagSet[]
+            {
                         new StandardFlagSet(new StandardFlagItem[]
                         {
                             StandardFlagItem.SaveTaskName
@@ -350,15 +355,35 @@ namespace Tustler.UserControls
                             AWSFlagItem.TranscribeSaveDefaultTranscript,
                             AWSFlagItem.TranslateSaveTranslation
                         })
-                    });
-                    agent.SetSaveFlags(saveFlags);
+            });
+            agent.SetSaveFlags(saveFlags);
 
-                    // set the current task (this is normally set by the agent)
-                    var task = new TaskItem(this.TaskSpecifier.ModuleName, this.TaskSpecifier.TaskName, string.Empty);
-                    agent.PushTask(task);
+            // set the current task (this is normally set by the agent)
+            var task = new TaskItem(this.TaskSpecifier.ModuleName, this.TaskSpecifier.TaskName, string.Empty);
+            agent.PushTask(task);
 
-                    await CheckQueue().ConfigureAwait(false);
-                }
+            return runImmediately;
+        }
+
+        async Task StartNew(string taskFolderPath)
+        {
+            var runImmediately = PrepareTaskFirstRun(taskFolderPath);
+
+            if (runImmediately)
+            {
+                await CheckQueue().ConfigureAwait(false);
+            }
+        }
+
+        private async Task FirstRun()
+        {
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                var taskFolderPath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.TaskSpecifier.TaskName);
+
+                lbTaskResponses.ItemsSource = taskResponses;
 
                 var logMode = (rbRunLog.IsChecked.HasValue && rbRunLog.IsChecked.Value) && (lbLogFiles.SelectedItem is object);
                 if (logMode)
@@ -372,12 +397,12 @@ namespace Tustler.UserControls
                     }
                     else
                     {
-                        await StartNew().ConfigureAwait(false);
+                        await StartNew(taskFolderPath).ConfigureAwait(false);
                     }
                 }
                 else
                 {
-                    await StartNew().ConfigureAwait(false);
+                    await StartNew(taskFolderPath).ConfigureAwait(false);
                 }
             }
             finally
@@ -680,6 +705,36 @@ namespace Tustler.UserControls
                 });
             }
 
+            async Task RunUIResponseSelectDefaultArgumentsAsync(UITaskArguments parameterInfo)
+            {
+                if (e.OriginalSource is SelectDefaultArguments ctrl)
+                {
+                    ctrl.IsButtonEnabled = false;
+                }
+
+                var selectedArguments = JsonSerializer.Deserialize<IEnumerable<bool>>(new ReadOnlySpan<byte>(parameterInfo.SerializedArgument)).ToArray();
+
+                // re-read the default arguments list and add only the user-selected items to the agent
+                var taskFolderPath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.TaskSpecifier.TaskName);
+                var taskEvents = ReadDefaultArguments(taskFolderPath);
+
+                if (taskEvents.Length > 0)
+                {
+                    if (selectedArguments.Length != taskEvents.Length)
+                    {
+                        throw new InvalidOperationException($"Default arguments processing: User selection ({selectedArguments.Length} items) does not match length of events list ({taskEvents.Length} items)");
+                    }
+
+                    var selectedEvents = taskEvents.Zip(selectedArguments).Where(item => item.Second).Select(item => item.First);
+                    agent.AddEvents(selectedEvents);
+                }
+
+                await Dispatcher.InvokeAsync(async () =>
+                {
+                    await CheckQueue().ConfigureAwait(false);
+                });
+            }
+
             /// A UI component has been selected that restarts an already completed task e.g. S3FetchItems
             async Task RunUIResponseRestartTaskAsync(UITaskArguments parameterInfo)
             {
@@ -691,7 +746,13 @@ namespace Tustler.UserControls
                 {
                     // how many responses ago was the last TaskSelect?:
                     //  pare back a copy of the responses collection to the last TaskSelect
-                    var tempStack = new Stack<TaskResponse>(taskResponses.Select(wrapper => wrapper.TaskResponse));
+                    var tempStack = new Stack<TaskResponse>(taskResponses.Select(wrapper =>
+                        wrapper switch
+                        {
+                            ResponseWrapper rw => rw.TaskResponse,
+                            DescriptionWrapper dw => TaskResponse.NewTaskInfo("Description wrapper placeholder"),
+                            _ => throw new ArgumentException("Unknown IResponseWrapper type", nameof(wrapper))
+                        }));
                     TaskResponse? lastResponse = null;
                     while (!tempStack.Peek().IsTaskSelect)
                     {
@@ -776,62 +837,6 @@ namespace Tustler.UserControls
                 // Add a SetArgument event to the events list and reinvoke the function
                 agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, parameterInfo.SerializedArgument);
 
-                //switch (parameterInfo.PropertyName)
-                //{
-                //    case "SetBucket":
-                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, parameterInfo.TaskArgument);
-                //        break;
-                //    case "SetFileMediaReference":
-                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, parameterInfo.TaskArgument);
-                //        break;
-                //    case "SetTranscriptionLanguageCode":
-                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, transcriptionLanguageCodeArg.Item);
-                //        break;
-                //    case "SetTranscriptionDefaultTranscript":
-                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, transcriptionDefaultTranscriptArg.Item);
-                //        break;
-                //    case "SetTranslationLanguageCodeSource":
-                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, translationLanguageCodeArg.Item);
-                //        break;
-                //    case "SetTranscriptionVocabularyName":
-                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, vocabularyNameArg.Item);
-                //        break;
-                //    case "SetTranslationTargetLanguages":
-                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, translationTargetLanguagesArg.Item);
-                //        //var languages = translationTargetLanguagesArg.Item.Select(languageCode => new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(languageCode)));
-                //        //var translationTargetLanguages = new AWSIterationStack(Guid.NewGuid(), languages);
-                //        //agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationTargetLanguages(translationTargetLanguages))));
-                //        break;
-                //    case "SetTranslationTerminologyNames":
-                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, translationTerminologyNamesArg.Item);
-                //        break;
-                //    case "SetFilePath":
-                //        agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, filePathArg.Item);
-                //        //var fileInfo = filePathArg.Item1;
-                //        //var extension = filePathArg.Item2;
-                //        //var pickerMode = filePathArg.Item3;
-                //        //var arg = extension switch
-                //        //{
-                //        //    "bin" => pickerMode.Tag switch
-                //        //    {
-                //        //        FilePickerMode.Tags.Open => StandardArgument.NewSetOpenLogFormatFilePath(fileInfo),
-                //        //        FilePickerMode.Tags.Save => StandardArgument.NewSetSaveLogFormatFilePath(fileInfo),
-                //        //        _ => throw new NotImplementedException(),
-                //        //    },
-                //        //    "json" => pickerMode.Tag switch
-                //        //    {
-                //        //        FilePickerMode.Tags.Open => StandardArgument.NewSetOpenJsonFilePath(fileInfo),
-                //        //        FilePickerMode.Tags.Save => StandardArgument.NewSetSaveJsonFilePath(fileInfo),
-                //        //        _ => throw new NotImplementedException(),
-                //        //    },
-                //        //    _ => throw new NotImplementedException(),
-                //        //};
-                //        //agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(arg)));
-                //        break;
-                //    default:
-                //        throw new ArgumentException($"RunSelectBucketMiniTask: Unknown argument type");
-                //}
-
                 await Dispatcher.InvokeAsync(async () =>
                 {
                     await RunTask().ConfigureAwait(false);
@@ -878,6 +883,9 @@ namespace Tustler.UserControls
                     break;
                 case UITaskMode.SetArgument:
                     await RunUIResponseSetArgumentAsync(parameterInfo).ConfigureAwait(false);
+                    break;
+                case UITaskMode.SelectDefaultArguments:
+                    await RunUIResponseSelectDefaultArgumentsAsync(parameterInfo).ConfigureAwait(false);
                     break;
                 case UITaskMode.Continue:
                     await RunUIResponseContinueAsync().ConfigureAwait(false);
