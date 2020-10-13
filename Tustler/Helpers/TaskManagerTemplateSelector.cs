@@ -32,7 +32,7 @@ namespace Tustler.Helpers
                     "RequestTranscriptionLanguageCode" => element.FindResource("TranscriptionLanguageCodeRequestTemplate") as DataTemplate,
                     "RequestTranscriptionVocabularyName" => element.FindResource("TranscriptionVocabularyNameRequestTemplate") as DataTemplate,
                     "RequestTranscriptionDefaultTranscript" => element.FindResource("TranscriptionDefaultTranscriptRequestTemplate") as DataTemplate,
-
+                    "RequestTranscriptURI" => element.FindResource("TranscriptURIRequestTemplate") as DataTemplate,
                     "RequestTranslationLanguageCode" => element.FindResource("TranslationLanguageCodeRequestTemplate") as DataTemplate,
                     "RequestTranslationTargetLanguages" => element.FindResource("TranslationTargetLanguagesRequestTemplate") as DataTemplate,
                     "RequestTranslationTerminologyNames" => element.FindResource("TranslationTerminologyNamesRequestTemplate") as DataTemplate,

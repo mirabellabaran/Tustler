@@ -222,7 +222,8 @@ namespace TustlerAWSLib.Mocks
 
             if (itemExists)
             {
-                var data = Encoding.UTF8.GetBytes("This is mocked stream data");
+                var content = "{\"jobName\": \"d2a8856b - bd9a - 49bf - a54a - 5d91df4b73f7\",\"accountId\": \"261914005867\", \"results\": { \"transcripts\": [ { \"transcript\": \"You know, Sally Ride is such an amazing figure in NASA's history...\" } ] }, \"status\": \"COMPLETED\" }";
+                var data = Encoding.UTF8.GetBytes(content);
                 var memstream = new MemoryStream(data);
 
                 return await Task.FromResult(new AWSResult<Stream>(memstream, null));

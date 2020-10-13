@@ -7,6 +7,7 @@ open CloudWeaver.AWS
 open System.Collections.Generic
 open System
 open TustlerModels
+open TustlerServicesLib
 
 type SerializableTypeGenerator() =
 
@@ -23,16 +24,24 @@ type SerializableTypeGenerator() =
 
         ms.ToArray()
         
-    /// Create a serialized representation of a Standard module TaskItem
-    static member CreateTaskItem(moduleName: string, taskName: string) : byte[] =
+    /// Create a serialized representation of an enumerable of Standard module TaskItems
+    static member CreateTaskItems(tasks: IEnumerable<TaskFunctionSpecifier>) : byte[] =
 
-        let items = [|
-            KeyValuePair<string, string option>("ModuleName", Some(moduleName))
-            KeyValuePair<string, string option>("TaskName", Some(taskName))
-            KeyValuePair<string, string option>("Description", Some(System.String.Empty))
-        |]
+        use ms = new System.IO.MemoryStream()
+        use writer = new Utf8JsonWriter(ms, new JsonWriterOptions( Indented = false ));
+        writer.WriteStartArray()
+        tasks
+        |> Seq.iter (fun task ->
+            writer.WriteStartObject()
+            writer.WriteString("ModuleName", task.ModuleName)
+            writer.WriteString("TaskName", task.TaskName)
+            writer.WriteString("Description", System.String.Empty)
+            writer.WriteEndObject()
+        )
+        writer.WriteEndArray()
+        writer.Flush()
 
-        SerializableTypeGenerator.CreateJson(new Dictionary<_,_>(items))
+        ms.ToArray()
 
     /// Create a serialized representation of a Standard module FilePath
     static member CreateFilePath(fileInfo: FileInfo, fileExtension: string, pickerMode: FilePickerMode) =
@@ -68,7 +77,7 @@ type SerializableTypeGenerator() =
 
         JsonSerializer.SerializeToUtf8Bytes(vocabularyName, serializerOptions)
 
-    /// Create a serialized representation of an AWS module S3MediaReference
+    /// Create a serialized representation of an AWS module S3 Bucket
     static member CreateBucket(name: string, creationDate: DateTime) =
 
         let items = [|
@@ -77,6 +86,21 @@ type SerializableTypeGenerator() =
         |]
 
         SerializableTypeGenerator.CreateJson(new Dictionary<_,_>(items))
+
+    ///// Create a serialized representation of an AWS module S3 Bucket Item
+    //static member CreateBucketItem(key: string, bucketName: string, size: int64, lastModified: DateTime, owner: string, mimeType: string, extension: string) =
+
+    //    let items = [|
+    //        KeyValuePair<string, string option>("Key", Some(key))
+    //        KeyValuePair<string, string option>("BucketName", Some(bucketName))
+    //        KeyValuePair<string, string option>("Size", Some(size.ToString()))
+    //        KeyValuePair<string, string option>("LastModified", Some(lastModified.ToString("o")))   // use "o" format for round-tripping the datetime
+    //        KeyValuePair<string, string option>("Owner", Some(owner))
+    //        KeyValuePair<string, string option>("MimeType", Some(mimeType))
+    //        KeyValuePair<string, string option>("Extension", Some(extension))
+    //    |]
+
+    //    SerializableTypeGenerator.CreateJson(new Dictionary<_,_>(items))
 
     /// Create a serialized representation of an AWS module S3MediaReference
     static member CreateS3MediaReference(bucketName: string, key: string, mimeType: string, extension: string) =

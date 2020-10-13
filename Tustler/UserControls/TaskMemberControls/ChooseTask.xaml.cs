@@ -1,5 +1,6 @@
 ﻿using CloudWeaver.Types;
 using System;
+using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -166,8 +167,17 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var selectedTask = lbTaskFunctions.SelectedItem as TaskFunctionSpecifier;
-            var data = CloudWeaver.SerializableTypeGenerator.CreateTaskItem(selectedTask.ModuleName, selectedTask.TaskName);
+            // get an in-order list of the list box item containers
+            // some of these may be null if the container has not yet been generated
+            var listBoxItems = Enumerable.Range(0, lbTaskFunctions.Items.Count)
+                .Select(index => lbTaskFunctions.ItemContainerGenerator.ContainerFromIndex(index))
+                .Cast<ListBoxItem>()
+                .ToArray();
+
+            // the container must be generated if it is selected so filter out null containers
+            var taskItems = listBoxItems.Where(item => item is object && item.IsSelected).Select(item => item.DataContext as TaskFunctionSpecifier);
+
+            var data = CloudWeaver.SerializableTypeGenerator.CreateTaskItems(taskItems);
 
             CommandParameter = new UITaskArguments(UITaskMode.SelectTask, "StandardShareIntraModule", "SetTaskItem", data);
 

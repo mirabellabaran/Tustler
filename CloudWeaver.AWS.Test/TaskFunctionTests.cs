@@ -131,10 +131,10 @@ namespace CloudWeaver.AWS.Test
         }
 
         [TestMethod]
-        public async Task TestDownloadTranscriptFile()
+        public async Task TestDownloadTranscript()
         {
-            var taskName = "DownloadTranscriptFile";
-            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.DownloadTranscriptFile;
+            var taskName = "DownloadTranscript";
+            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.DownloadTranscript;
             var saveFlags = new SaveFlags(new ISaveFlagSet[]
             {
                 new AWSFlagSet(new AWSFlagItem[] {
@@ -148,18 +148,6 @@ namespace CloudWeaver.AWS.Test
             agent.PushTask(new TaskItem("CloudWeaver.AWS.Tasks", taskName, string.Empty));
 
             var result = await CallTaskAsync(taskFunction, agent);
-            Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestSaveFlags)" });
-
-            result = await CallTaskAsync(taskFunction, agent);
-            Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestWorkingDirectory)" });
-
-            result = await CallTaskAsync(taskFunction, agent);
-            Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestTaskIdentifier)" });
-
-            result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranscriptURI)" });
             agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptURI(transcriptURI))));
@@ -176,24 +164,66 @@ namespace CloudWeaver.AWS.Test
             Assert.IsTrue(result.Length == 3);
             Assert.IsTrue(CheckAllStartWith(result, new string[] {
                     "Notification: Message=Download succeeded; Detail=Task: Download",
-                    "SetArgument: AWSShareIntraModule(SetTranscriptJSON: System.ReadOnlyMemory<Byte>[",
+                    "SetArgument: AWSShareIntraModule(SetTranscriptJSON: 256 bytes)",
                     "TaskComplete: Downloaded transcript file"
                 }));
         }
 
         [TestMethod]
-        public async Task TestExtractTranscript()
+        public async Task TestSaveTranscript()
         {
             const string transcriptJSONTestFilename = "SallyRide d2a8856b.json";
 
-            var taskName = "ExtractTranscript";
-            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.ExtractTranscript;
+            var taskName = "SaveTranscript";
+            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.SaveTranscript;
+            var saveFlags = new SaveFlags(new ISaveFlagSet[]
+            {
+                new AWSFlagSet(new AWSFlagItem[] {
+                    AWSFlagItem.TranscribeSaveJSONTranscript
+                })
+            });
+            var agent = InitializeTest(taskName, WorkingDirectory, saveFlags);
+            agent.PushTask(new TaskItem("CloudWeaver.AWS.Tasks", taskName, string.Empty));
+
+            var transcriptJSONTestFilePath = Path.Combine(WorkingDirectory, transcriptJSONTestFilename);
+            var jsonData = File.ReadAllBytes(transcriptJSONTestFilePath);
+
+            var result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestSaveFlags)" });
+
+            result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestTaskIdentifier)" });
+
+            result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestWorkingDirectory)" });
+
+            result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranscriptJSON)" });
+            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptJSON(jsonData))));
+
+            result = await CallTaskAsync(taskFunction, agent);
+            Assert.IsTrue(result.Length == 1);
+            Assert.IsTrue(CheckAllStartWith(result, new string[] {
+                    "TaskComplete: Saved JSON transcript to"
+                }));
+        }
+
+        [TestMethod]
+        public async Task TestExtractTranscribedDefault()
+        {
+            const string transcriptJSONTestFilename = "SallyRide d2a8856b.json";
+
+            var taskName = "ExtractTranscribedDefault";
+            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.ExtractTranscribedDefault;
             var agent = InitializeTest(taskName, WorkingDirectory, null);
             agent.PushTask(new TaskItem("CloudWeaver.AWS.Tasks", taskName, string.Empty));
 
             var transcriptJSONTestFilePath = Path.Combine(WorkingDirectory, transcriptJSONTestFilename);
-            var contents = File.ReadAllBytes(transcriptJSONTestFilePath);
-            var jsonData = new ReadOnlyMemory<byte>(contents);
+            var jsonData = File.ReadAllBytes(transcriptJSONTestFilePath);
 
             var result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
@@ -213,10 +243,10 @@ namespace CloudWeaver.AWS.Test
         }
 
         [TestMethod]
-        public async Task TestSaveTranscript()
+        public async Task TestSaveTranscribedDefault()
         {
-            var taskName = "SaveTranscript";
-            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.SaveTranscript;
+            var taskName = "SaveTranscribedDefault";
+            Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskFunction = Tasks.SaveTranscribedDefault;
             var saveFlags = new SaveFlags(new ISaveFlagSet[]
             {
                 new AWSFlagSet(new AWSFlagItem[] {
@@ -248,7 +278,7 @@ namespace CloudWeaver.AWS.Test
             result = await CallTaskAsync(taskFunction, agent);
             Assert.IsTrue(result.Length == 1);
             Assert.IsTrue(CheckAllStartWith(result, new string[] {
-                    "TaskComplete: Saved transcript data to"
+                    "TaskComplete: Saved transcribed text to"
                 }));
         }
 
@@ -508,8 +538,7 @@ namespace CloudWeaver.AWS.Test
             agent.PushTask(new TaskItem("CloudWeaver.AWS.Tasks", taskName, string.Empty));
 
             var transcriptJSONTestFilePath = Path.Combine(WorkingDirectory, TestDataFolderName, transcriptJSONTestFilename);
-            var contents = File.ReadAllBytes(transcriptJSONTestFilePath);
-            var jsonData = new ReadOnlyMemory<byte>(contents);
+            var jsonData = File.ReadAllBytes(transcriptJSONTestFilePath);
 
             var subTitleFileInfo = new FileInfo(Path.Combine(WorkingDirectory, TestDataFolderName, subTitleFilename));
 

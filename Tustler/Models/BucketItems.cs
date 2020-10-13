@@ -82,6 +82,18 @@ namespace Tustler.Models
             };
         }
 
+        internal static bool IsRequiredExtension(string extension, BucketItem item)
+        {
+            if (item.Extension is null)
+            {
+                return false;
+            }
+            else
+            {
+                return item.Extension == extension;
+            }
+        }
+
         /// <summary>
         /// Set a filter on the view, showing only the specified mime types e.g. audio
         /// </summary>
@@ -94,12 +106,12 @@ namespace Tustler.Models
     }
 
     /// <summary>
-    /// A local filterable instance used by the Transcribe functions that consumes bucket items from the global instance
+    /// A local filterable instance that consumes bucket items from the global instance
     /// </summary>
-    /// <remarks>Used to select audio media for transcription</remarks>
-    public class MediaFilteredBucketItemViewModel
+    /// <remarks>Used to select items by mimetype (e.g. audio media for transcription) or to select items by their extension</remarks>
+    public class FilteredBucketItemViewModel
     {
-        public MediaFilteredBucketItemViewModel()
+        public FilteredBucketItemViewModel()
         {
             BucketItems = new ObservableCollection<BucketItem>();
         }
@@ -110,9 +122,27 @@ namespace Tustler.Models
             private set;
         }
 
+        public void Clear()
+        {
+            BucketItems.Clear();
+        }
+
         public void Select(BucketItemViewModel bucketItemViewModel, BucketItemMediaType selectedMediaType)
         {
-            var filtered = bucketItemViewModel.BucketItems.Where(item => BucketItemViewSourceModel.IsRequiredMediaType(selectedMediaType, (item as BucketItem)));
+            if (bucketItemViewModel is null) throw new ArgumentNullException(nameof(bucketItemViewModel));
+
+            var filtered = bucketItemViewModel.BucketItems.Where(item => BucketItemViewSourceModel.IsRequiredMediaType(selectedMediaType, item));
+            foreach (var item in filtered)
+            {
+                BucketItems.Add(item);
+            }
+        }
+
+        public void Select(BucketItemViewModel bucketItemViewModel, string extension)
+        {
+            if (bucketItemViewModel is null) throw new ArgumentNullException(nameof(bucketItemViewModel));
+
+            var filtered = bucketItemViewModel.BucketItems.Where(item => BucketItemViewSourceModel.IsRequiredExtension(extension, item));
             foreach (var item in filtered)
             {
                 BucketItems.Add(item);

@@ -130,7 +130,7 @@ namespace CloudWeaver.AWS.Test
             Assert.IsTrue(StringifyBytes(transcriptionJobNameModule, options).StartsWith("test_job"));
 
             var path = Path.Combine(WorkingDirectory, "SallyRide d2a8856b.json");
-            var data = new ReadOnlyMemory<byte>(File.ReadAllBytes(path));
+            var data = File.ReadAllBytes(path);
             IShareIntraModule transcriptionJsonModule = new AWSShareIntraModule(AWSArgument.NewSetTranscriptJSON(data));
             Assert.IsTrue(transcriptionJsonModule.Description().StartsWith("TranscriptJSON: 59850 bytes"));
             Assert.IsTrue(StringifyBytes(transcriptionJsonModule, options).StartsWith("\"ew0KICAgICJqb2JOYW1lIjogImQyYTg4NTZiLWJkOWEtNDliZi1hNTRhLTVkOTFkZjRiNzNmNyIsDQogICAgImFjY291bnRJZCI6ICIyNjE5MTQwM"));

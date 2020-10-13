@@ -75,49 +75,13 @@ module public Tasks =
 
     // Get the first unresolved request and send to the UI to resolve the value
     let private resolveByRequest (unresolvedRequests: TaskResponse []) =
-    //let private resolveByRequest (args:InfiniteList<MaybeResponse>) (required:TaskResponse[]) =
-        //// take all arguments that are set and map them to an AWSRequest or StandardRequest type
-        //let resolvedRequests =
-        //    args
-        //    |> Seq.takeWhile (fun mr -> mr.IsSet)
-        //    |> Seq.choose (fun mr ->
-        //        mapResponseToRequest mr.Value
-        //    )
-        //    |> Set.ofSeq
-
-        //let unresolvedRequests =
-        //    required
-        //    |> Seq.choose(fun response ->
-        //        match response with
-        //        | TaskResponse.RequestArgument arg -> Some(arg)
-        //        | _ -> None
-        //    )
-        //    |> Seq.filter (fun request -> not (resolvedRequests.Contains(request)))
-        //    |> Seq.map (fun request -> TaskResponse.RequestArgument request)
 
         let requestStack = Stack(unresolvedRequests)
 
         if requestStack.Count > 0 then
             Seq.singleton (requestStack.Pop())
-            //Seq.cast requestStack
         else
             Seq.empty
-
-    ///// Find the first unset argument (skipping arguments resolved via UI request) and call the matching resolver function to set the argument value
-    //let private resolveLocally (args:InfiniteList<MaybeResponse>) (argsRecord:TaskArgumentRecord) awsInterface notifications (resolvers:LocalResolverFunction[]) =
-    //    // get the resolver for the last unset argument
-    //    let resolverIndex = 
-    //        args
-    //        |> Seq.skip argsRecord.InitialArgs      // skip over the UI-resolved required arguments
-    //        |> Seq.takeWhile (fun mr -> mr.IsSet)
-    //        |> Seq.length
-    //    resolvers.[resolverIndex] argsRecord awsInterface notifications
-
-    ///// Integrate with the default record any request arguments that have been set using the TaskArgumentRecord updater function
-    //let private integrateUIRequestArguments (args:InfiniteList<MaybeResponse>) (defaultArgs:TaskArgumentRecord) =
-    //    args
-    //    |> Seq.takeWhile (fun mr -> mr.IsSet)
-    //    |> Seq.fold (fun (argsRecord:TaskArgumentRecord) mr -> argsRecord.Update mr.Value) defaultArgs
 
     /// Create a map that contains those request arguments that are currently set
     let private integrateUIRequestArguments (args:InfiniteList<MaybeResponse>) =
@@ -135,34 +99,6 @@ module public Tasks =
                 map
         ) (Map.empty)
 
-    let private getLastSetArgument (args:InfiniteList<MaybeResponse>) =
-        args
-        |> Seq.takeWhile (fun mr -> mr.IsSet)
-        |> Seq.choose (fun mr ->
-            match mr.Value with
-            | TaskResponse.SetArgument arg -> Some(arg)
-            | _ -> None
-        )
-        |> Seq.tryLast
-
-    ///// Integrate with the default record any request arguments that have been set using the TaskArgumentRecord updater function
-    //let private integrateUIRequestArguments (args:InfiniteList<MaybeResponse>) (defaultArgs:TaskArgumentRecord) =
-    //    args
-    //    |> Seq.takeWhile (fun mr -> mr.IsSet)
-    //    |> Seq.fold (fun (argsRecord:TaskArgumentRecord) mr -> argsRecord.Update mr.Value) defaultArgs
-
-    /// Validate the supplied arguments by type and position; all or some of the arguments can be unset (MaybeResponse.IsNotSet)
-    //let private validateArgs expectedNum argChecker (args: InfiniteList<MaybeResponse>) =
-    //    if args.Count > expectedNum then
-    //        invalidArg "expectedNum" (sprintf "Expecting up to %d set argument values" expectedNum)
-    //    args
-    //    |> Seq.takeWhile (fun mr -> mr.IsSet)   // only examine arguments that are set
-    //    |> Seq.iteri(fun index mr ->
-    //        match mr with
-    //        | MaybeResponse.Just tr -> argChecker index tr
-    //        | MaybeResponse.Nothing -> ()
-    //    )
-
     /// Get any notifications generated from the last AWS call (errors or informational messages)
     let private getNotificationResponse (notifications: NotificationsList) =
         Seq.map (fun note -> TaskResponse.Notification note) notifications.Notifications
@@ -176,84 +112,10 @@ module public Tasks =
         | Inputs -> Seq.empty
         | Outputs -> Seq.empty
         | Invoke ->
-            seq { yield TaskResponse.TaskInfo "Minimal task function" }
-
-    let SaveLastArgument(queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
-
-        let saveLastArgument argMap (lastArg: IShareIntraModule) =
-
-            let argsRecord = {|
-                TaskIdentifier = PatternMatchers.getTaskIdentifier argMap;
-                WorkingDirectory = PatternMatchers.getWorkingDirectory argMap;
-                TranslationTargetLanguages = PatternMatchers.getTranslationTargetLanguages argMap;
-                TranslationSegments = PatternMatchers.getTranslationSegments argMap;
-            |}
-
-            let taskId = argsRecord.TaskIdentifier.Value
-            let workingDirectory = argsRecord.WorkingDirectory.Value
-            //let targetLanguageCode = PatternMatchers.Consumable.getLanguageCode (argsRecord.TranslationTargetLanguages.Value)
-            //let chunker = argsRecord.TranslationSegments.Value
-
-            //let writerOptions = JsonWriterOptions(Indented = false)
-            //let serializerOptions = JsonSerializerOptions()
-            //serializerOptions.Converters.Add(RetainingStackConverter())
-            //serializerOptions.Converters.Add(TaskSequenceConverter())
-            //serializerOptions.Converters.Add(SentenceChunkerConverter())
-
-            //use stream = new MemoryStream()
-            //let result = using (new Utf8JsonWriter(stream, writerOptions)) (fun writer ->
-            //    lastArg.Serialize writer serializerOptions
-            //    writer.Flush()
-            //    stream.ToArray()
-            //)
-            let result: byte[] = Array.empty
-
             seq {
-                // MG add Label to IShareIntraModule
-                let fileName = "poo"   //sprintf "Translation-%s-%s.txt" taskId.Value targetLanguageCode.Code
-                let filePath = Path.Combine(workingDirectory.Value.FullName, fileName)
-                File.WriteAllBytes(filePath, result)
-
-                yield TaskResponse.TaskInfo (sprintf "Working directory is: %s" workingDirectory.Value.FullName)
-                yield TaskResponse.TaskComplete ((sprintf "Saved translation to %s" fileName), DateTime.Now)
+                yield TaskResponse.TaskInfo "Minimal task function"
+                yield TaskResponse.TaskComplete ("Task complete", DateTime.Now)
             }
-
-        let inputs = [|
-             TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
-             TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranslationSegments));
-             TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranslationTargetLanguages));
-             TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory));
-             TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestTaskIdentifier));
-         |]
-
-        match queryMode with
-        | Description -> Seq.singleton (TaskResponse.TaskDescription "Save the last argument added to the event stack")
-        | Inputs -> Seq.ofArray inputs
-        | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestBucketsModel)))
-        | Invoke ->
-            seq {
-                let lastArg = getLastSetArgument resolvable_arguments
-
-                if lastArg.IsSome then
-                    let argMap = integrateUIRequestArguments resolvable_arguments
-                    let unresolvedRequests = getUnResolvedRequests argMap inputs
-
-                    if unresolvedRequests.Length = 0 then
-                        yield! saveLastArgument argMap lastArg.Value
-                    else
-                        yield! resolveByRequest unresolvedRequests
-                else
-                    yield TaskResponse.TaskComplete ("Nothing to save (no argument set)", DateTime.Now)
-            }
-
-
-    /// Read the default arguments file in the working directory (if it exists) and request the UI to select which arguments to set
-    let ReadDefaultArguments (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
-        ()
-
-
-
-
 
     let S3FetchItems (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
@@ -591,7 +453,7 @@ module public Tasks =
             }
 
     [<HideFromUI>]
-    let DownloadTranscriptFile (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let DownloadTranscript (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         let (|CompiledMatch|_|) pattern input =
             if input = null then None
@@ -612,17 +474,11 @@ module public Tasks =
                 AWSInterface = PatternMatchers.getAWSInterface argMap;
                 Notifications = PatternMatchers.getNotifications argMap;
                 TranscriptURI = PatternMatchers.getTranscriptURI argMap;
-                TaskIdentifier = PatternMatchers.getTaskIdentifier argMap;
-                WorkingDirectory = PatternMatchers.getWorkingDirectory argMap;
-                SaveFlags = PatternMatchers.getSaveFlags argMap;
             |}
 
             let awsInterface = argsRecord.AWSInterface.Value
             let notifications = argsRecord.Notifications.Value
             let transcriptURI = argsRecord.TranscriptURI.Value      // e.g. https://s3.ap-southeast-2.amazonaws.com/tator/d2a8856b-bd9a-49bf-a54a-5d91df4b73f7.json
-            let taskId = argsRecord.TaskIdentifier.Value
-            let workingDirectory = argsRecord.WorkingDirectory.Value
-            let saveFlags = argsRecord.SaveFlags.Value
 
             seq {
                 let parsed = parseBucketItemRef transcriptURI
@@ -635,24 +491,11 @@ module public Tasks =
                 let transcriptData =
                     if parsed.IsSome then
                         let bucketName, key = parsed.Value
-
-                        if saveFlags.IsSome && workingDirectory.IsSome && taskId.IsSome then
-                            if saveFlags.Value.IsSet (AWSFlag(AWSFlagItem.TranscribeSaveJSONTranscript)) then
-                                let filePath = Path.Combine(workingDirectory.Value.FullName, (sprintf "Transcript-%s.json" taskId.Value))
-                                let successfulDownload = S3.downloadBucketItemToFile awsInterface notifications bucketName key filePath |> Async.RunSynchronously
-                                if successfulDownload then
-                                    let rawData = File.ReadAllBytesAsync(filePath) |> Async.AwaitTask |> Async.RunSynchronously
-                                    Some(ReadOnlyMemory(rawData))
-                                else
-                                    None
-                            else
-                                let rawData = S3.downloadBucketItemAsBytes awsInterface notifications bucketName key |> Async.RunSynchronously
-                                if isNull rawData then
-                                    None
-                                else
-                                    Some(ReadOnlyMemory(rawData))
+                        let rawData = S3.downloadBucketItemAsBytes awsInterface notifications bucketName key |> Async.RunSynchronously
+                        if isNull rawData then
+                            None
                         else
-                            None                            
+                            Some(rawData)
                     else
                         None
 
@@ -671,9 +514,6 @@ module public Tasks =
             TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestAWSInterface));
             TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestNotifications));
             TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptURI));
-            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestTaskIdentifier));
-            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory));
-            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
             |]
 
         match queryMode with
@@ -692,7 +532,71 @@ module public Tasks =
             }
 
     [<HideFromUI>]
-    let ExtractTranscript (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let SaveTranscript (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+
+        let saveTranscript argMap =
+            let argsRecord = {|
+                TranscriptJSON = PatternMatchers.getTranscriptJSON argMap;
+                WorkingDirectory = PatternMatchers.getWorkingDirectory argMap;
+                TaskIdentifier = PatternMatchers.getTaskIdentifier argMap;
+            |}
+
+            let transcript = argsRecord.TranscriptJSON.Value
+            let workingDirectory = argsRecord.WorkingDirectory.Value
+            let taskId = argsRecord.TaskIdentifier.Value
+
+            seq {
+                if workingDirectory.IsSome && taskId.IsSome then
+                    let filePath = Path.Combine(workingDirectory.Value.FullName, (sprintf "Transcript-%s.json" taskId.Value))
+                    File.WriteAllBytes(filePath, transcript)
+                    yield TaskResponse.TaskComplete ((sprintf "Saved JSON transcript to %s" filePath), DateTime.Now)
+                else
+                    yield TaskResponse.TaskComplete ("Check variables: WorkingDirectory && TaskIdentifier", DateTime.Now)
+            }
+
+        let inputs = [|
+            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
+            TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionDefaultTranscript));
+            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory));
+            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestTaskIdentifier));
+            |]
+
+        match queryMode with
+        | Description -> Seq.singleton (TaskResponse.TaskDescription "Save the JSON transcript produced by transcribing a media file")
+        | Inputs -> Seq.ofArray inputs
+        | Outputs -> Seq.empty
+        | Invoke ->
+            seq {
+                let argMap = integrateUIRequestArguments resolvable_arguments
+                let unresolvedRequests = getUnResolvedRequests argMap [|
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
+                    |]
+
+                if unresolvedRequests.Length = 0 then
+                    let saveFlags = (PatternMatchers.getSaveFlags argMap).Value
+
+                    if saveFlags.IsSome then
+                        if saveFlags.Value.IsSet (AWSFlag(AWSFlagItem.TranscribeSaveJSONTranscript)) then
+                            let unresolvedRequests = getUnResolvedRequests argMap [|
+                                TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptJSON));
+                                TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory));
+                                TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestTaskIdentifier));
+                                |]
+
+                            if unresolvedRequests.Length = 0 then
+                                yield! saveTranscript argMap
+                            else
+                                yield! resolveByRequest unresolvedRequests
+                        else
+                            yield TaskResponse.TaskComplete ("Save flag not set (TranscribeSaveJSONTranscript)", DateTime.Now)
+                    else
+                        yield TaskResponse.TaskComplete ("Check variable: SaveFlags", DateTime.Now)
+                else
+                    yield! resolveByRequest unresolvedRequests
+            }
+
+    [<HideFromUI>]
+    let ExtractTranscribedDefault (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         let extractTranscript argMap =
             let argsRecord = {|
@@ -734,7 +638,7 @@ module public Tasks =
             }
 
     [<HideFromUI>]
-    let SaveTranscript (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let SaveTranscribedDefault (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
 
         let saveTranscript argMap =
             let argsRecord = {|
@@ -750,7 +654,7 @@ module public Tasks =
                 if workingDirectory.IsSome && taskId.IsSome then
                     let filePath = Path.Combine(workingDirectory.Value.FullName, (sprintf "Transcript-%s.txt" taskId.Value))
                     File.WriteAllTextAsync(filePath, defaultTranscript) |> Async.AwaitTask |> Async.RunSynchronously
-                    yield TaskResponse.TaskComplete ((sprintf "Saved transcript data to %s" filePath), DateTime.Now)
+                    yield TaskResponse.TaskComplete ((sprintf "Saved transcribed text to %s" filePath), DateTime.Now)
                 else
                     yield TaskResponse.TaskComplete ("Check variables: WorkingDirectory && TaskIdentifier", DateTime.Now)
             }
@@ -835,12 +739,13 @@ module public Tasks =
                     yield TaskResponse.TaskSaveEvents SaveEventsFilter.ArgumentsOnly     // save the resolved arguments (if not already saved)
 
                     yield TaskResponse.TaskSequence ([|
-                        TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "UploadMediaFile", Description = "Upload a media file to transcribe");
+                        TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "UploadMediaFile", Description = "Upload a media file for transcription");
                         TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "StartTranscription", Description = "Start a transcription job");
                         TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "MonitorTranscription", Description = "Monitor the transcription job");
-                        TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "DownloadTranscriptFile", Description = "Download the transcription job output file from S3");
-                        TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "ExtractTranscript", Description = "Extract the transcript from the transcription job output file");
-                        TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "SaveTranscript", Description = "Save the extracted transcript to a file");
+                        TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "DownloadTranscript", Description = "Download the transcription job output file from S3");
+                        TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "SaveTranscript", Description = "Save the JSON transcript to a file");
+                        TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "ExtractTranscribedDefault", Description = "Extract the transcribed text from the JSON transcript");
+                        TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "SaveTranscribedDefault", Description = "Save the extracted transcribed text to a file");
                     |])
                     yield TaskResponse.TaskComplete ("Starting task", DateTime.Now)
                 else

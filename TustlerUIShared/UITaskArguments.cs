@@ -7,6 +7,7 @@ namespace TustlerUIShared
         SelectTask,             // choose a task from a list of tasks
         RestartTask,            // restart a completed task
         SetArgument,            // set an argument on the agent
+        TransformSetArgument,   // transform the argument and then set the argument on the agent
         SelectDefaultArguments, // select which of the default arguments should be passed to the agent
         Continue,               // continue running the task following a prompt
         ForEachIndependantTask  // collect a list of independant tasks to run

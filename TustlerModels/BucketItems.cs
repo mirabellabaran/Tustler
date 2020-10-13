@@ -80,7 +80,6 @@ namespace TustlerModels
     public class BucketItemViewModel : INotifyPropertyChanged, IDeletableViewModelItem, INotifiableViewModel<Notification>
     {
         public event PropertyChangedEventHandler PropertyChanged;
-        private BucketItemViewModelMode mode;
 
         public BucketItemViewModel()
         {

@@ -87,9 +87,9 @@ namespace TustlerAWSLib.Utilities
         private static readonly byte[] contentProperty = Encoding.UTF8.GetBytes("content");
         private static readonly byte[] typeProperty = Encoding.UTF8.GetBytes("type");
 
-        public static async Task<string> ParseTranscriptData(ReadOnlyMemory<byte> transcriptData, NotificationsList notifications)
+        public static async Task<string> ParseTranscriptData(byte[] transcriptData, NotificationsList notifications)
         {
-            AWSResult<string> result = await ParseTranscriptDataAsync(transcriptData);
+            AWSResult<string> result = await ParseTranscriptDataAsync(new ReadOnlyMemory<byte>(transcriptData));
 
             if (result.IsError)
             {
@@ -102,9 +102,9 @@ namespace TustlerAWSLib.Utilities
             }
         }
 
-        public static async Task<IEnumerable<WordTiming>> ParseWordTimingData(ReadOnlyMemory<byte> transcriptData, NotificationsList notifications)
+        public static async Task<IEnumerable<WordTiming>> ParseWordTimingData(byte[] transcriptData, NotificationsList notifications)
         {
-            AWSResult<IEnumerable<WordTiming>> result = await ParseWordTimingDataAsync(transcriptData);
+            AWSResult<IEnumerable<WordTiming>> result = await ParseWordTimingDataAsync(new ReadOnlyMemory<byte>(transcriptData));
 
             if (result.IsError)
             {

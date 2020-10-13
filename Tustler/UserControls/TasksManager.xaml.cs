@@ -20,6 +20,7 @@ using Tustler.Models;
 using Tustler.UserControls.TaskMemberControls;
 using TustlerAWSLib;
 using TustlerInterfaces;
+using TustlerModels;
 using TustlerServicesLib;
 using TustlerUIShared;
 using AWSMiniTasks = CloudWeaver.AWS.MiniTasks;
@@ -75,9 +76,10 @@ namespace Tustler.UserControls
                         "UploadMediaFile" => AWSTasks.UploadMediaFile,
                         "StartTranscription" => AWSTasks.StartTranscription,
                         "MonitorTranscription" => AWSTasks.MonitorTranscription,
-                        "DownloadTranscriptFile" => AWSTasks.DownloadTranscriptFile,
-                        "ExtractTranscript" => AWSTasks.ExtractTranscript,
+                        "DownloadTranscript" => AWSTasks.DownloadTranscript,
                         "SaveTranscript" => AWSTasks.SaveTranscript,
+                        "ExtractTranscribedDefault" => AWSTasks.ExtractTranscribedDefault,
+                        "SaveTranscribedDefault" => AWSTasks.SaveTranscribedDefault,
 
                         "CreateSubTitles" => AWSTasks.CreateSubTitles,
 
@@ -689,15 +691,15 @@ namespace Tustler.UserControls
 
         private async void UIResponse_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            async Task RunUIResponseSelectTaskAsync(UITaskArguments parameterInfo)
+            async Task RunUIResponseSelectTasksAsync(UITaskArguments parameterInfo)
             {
                 if (e.OriginalSource is ChooseTask ctrl)
                 {
                     ctrl.IsButtonEnabled = false;
                 }
 
-                var task = JsonSerializer.Deserialize<TaskItem>(new ReadOnlySpan<byte>(parameterInfo.SerializedArgument));
-                agent.PushTask(task);
+                var tasks = JsonSerializer.Deserialize<IEnumerable<TaskItem>>(new ReadOnlySpan<byte>(parameterInfo.SerializedArgument));
+                agent.PushTasks(tasks, ItemOrdering.Sequential);
 
                 await Dispatcher.InvokeAsync(async () =>
                 {
@@ -800,6 +802,19 @@ namespace Tustler.UserControls
                 }
             }
 
+            /// The argument needs transforming before setting an argument on the agent
+            async Task RunUIResponseTransformArgumentAsync(UITaskArguments parameterInfo)
+            {
+                var bucketItem = JsonSerializer.Deserialize<BucketItem>(new ReadOnlySpan<byte>(parameterInfo.SerializedArgument));
+
+                var s3URI = $"https://s3.ap-southeast-2.amazonaws.com/{bucketItem.BucketName}/{bucketItem.Key}";
+                var data = JsonSerializer.SerializeToUtf8Bytes<string>(s3URI);
+
+                var parameters = new UITaskArguments(UITaskMode.SetArgument, parameterInfo.ModuleName, "SetTranscriptURI", data);
+                await RunUIResponseSetArgumentAsync(parameters).ConfigureAwait(false);
+            }
+
+            /// Set an argument on the agent
             async Task RunUIResponseSetArgumentAsync(UITaskArguments parameterInfo)
             {
                 // disable the Continue button and restart the task
@@ -812,6 +827,9 @@ namespace Tustler.UserControls
                         ctrl.IsButtonEnabled = false;
                         break;
                     case RequestS3Bucket ctrl:
+                        ctrl.IsButtonEnabled = false;
+                        break;
+                    case RequestS3BucketItem ctrl:
                         ctrl.IsButtonEnabled = false;
                         break;
                     case RequestLanguageCode ctrl:
@@ -876,13 +894,16 @@ namespace Tustler.UserControls
             switch (parameterInfo?.TaskMode)
             {
                 case UITaskMode.SelectTask:
-                    await RunUIResponseSelectTaskAsync(parameterInfo).ConfigureAwait(false);
+                    await RunUIResponseSelectTasksAsync(parameterInfo).ConfigureAwait(false);
                     break;
                 case UITaskMode.RestartTask:
                     await RunUIResponseRestartTaskAsync(parameterInfo).ConfigureAwait(false);
                     break;
                 case UITaskMode.SetArgument:
                     await RunUIResponseSetArgumentAsync(parameterInfo).ConfigureAwait(false);
+                    break;
+                case UITaskMode.TransformSetArgument:
+                    await RunUIResponseTransformArgumentAsync(parameterInfo).ConfigureAwait(false);
                     break;
                 case UITaskMode.SelectDefaultArguments:
                     await RunUIResponseSelectDefaultArgumentsAsync(parameterInfo).ConfigureAwait(false);

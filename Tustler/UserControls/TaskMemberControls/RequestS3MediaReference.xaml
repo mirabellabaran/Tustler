@@ -13,7 +13,7 @@
     </UserControl.CommandBindings>
     
     <UserControl.Resources>
-        <local:MediaFilteredBucketItemViewModel x:Key="audioBucketItemsInstance"/>
+        <local:FilteredBucketItemViewModel x:Key="audioBucketItemsInstance"/>
 
         <DataTemplate DataType="{x:Type model:Bucket}">
             <TextBlock Text="{Binding Path=Name}" HorizontalAlignment="Stretch" />

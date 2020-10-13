@@ -92,7 +92,7 @@ namespace TustlerModels.Services
                         using var memoryStream = new MemoryStream();
                         sourceStream.CopyTo(memoryStream);
                         sourceStream.Close();
-                        return memoryStream.GetBuffer();
+                        return memoryStream.ToArray();      // was GetBuffer()
                     }
 
                     notifications.ShowMessage("Download succeeded", $"Task: Download text item from S3 completed @ {DateTime.Now.ToShortTimeString()}");

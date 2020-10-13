@@ -176,6 +176,7 @@ namespace Tustler.UserControls.TaskMemberControls
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             // get an in-order list of the list box item containers
+            // some of these may be null if the container has not yet been generated
             var items = Enumerable.Range(0, lbDescriptions.Items.Count)
                 .Select(index => lbDescriptions.ItemContainerGenerator.ContainerFromIndex(index))
                 .Cast<ListBoxItem>()
@@ -185,7 +186,8 @@ namespace Tustler.UserControls.TaskMemberControls
             var wrapper = this.DataContext as DescriptionWrapper;
 
             // set a boolean flag for each item in the list of descriptions (selected or not selected)
-            var flags = wrapper.Descriptions.Select((desc, index) => items[index].IsSelected);
+            // note the need for a check that each ListBoxItem is generated (may be null)
+            var flags = wrapper.Descriptions.Select((desc, index) => items[index] is object? items[index].IsSelected : false);
             var data = JsonSerializer.SerializeToUtf8Bytes(flags);
 
             CommandParameter = new UITaskArguments(UITaskMode.SelectDefaultArguments, "", "", data);

@@ -166,13 +166,14 @@ namespace Tustler.UserControls
             Bucket selectedBucket = (Bucket)listBox.SelectedItem;
 
             var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
-            var audioBucketItemsInstance = this.FindResource("audioBucketItemsInstance") as MediaFilteredBucketItemViewModel;
+            var audioBucketItemsInstance = this.FindResource("audioBucketItemsInstance") as FilteredBucketItemViewModel;
             
             try
             {
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                await bucketItemsInstance.Refresh(awsInterface, notifications, selectedBucket.Name).ConfigureAwait(true);
+                await bucketItemsInstance.ForceRefresh(awsInterface, notifications, selectedBucket.Name).ConfigureAwait(true);
+                audioBucketItemsInstance.Clear();
                 audioBucketItemsInstance.Select(bucketItemsInstance, BucketItemMediaType.Audio);
             }
             finally

@@ -16,7 +16,7 @@
 
     <UserControl.Resources>
         <model:TranscriptionJobsViewModel x:Key="transcriptionJobsInstance" />
-        <local:MediaFilteredBucketItemViewModel x:Key="audioBucketItemsInstance"/>
+        <local:FilteredBucketItemViewModel x:Key="audioBucketItemsInstance"/>
     </UserControl.Resources>
     
     <DockPanel Background="{StaticResource ContrastingBackground}" Margin="20">

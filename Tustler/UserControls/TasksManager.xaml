@@ -369,12 +369,16 @@
                 <UniformGrid Margin="5">
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Transcript JSON:" Style="{StaticResource TaskInfoLabelStyle}" />
-                        <TextBlock Text="{Binding Path=Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
+                        <TextBlock Text="{Binding Path=Item.Argument.Item.Length, StringFormat=(Length: {0})}" Style="{StaticResource TaskInfoTextStyle}" />
                     </StackPanel>
                 </UniformGrid>
             </Border>
         </DataTemplate>
 
+        <DataTemplate x:Key="TranscriptURIRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
+            <uctask:RequestS3BucketItem BucketItemExtension="json" BucketItemExtensionDescription="JSON" Command="{x:Static uc:TaskCommands.UIResponse}" />
+        </DataTemplate>
+        
         <DataTemplate x:Key="DefaultTranscriptTemplate"  DataType="{x:Type helpers:IResponseWrapper}">
             <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
                 <UniformGrid Margin="5">

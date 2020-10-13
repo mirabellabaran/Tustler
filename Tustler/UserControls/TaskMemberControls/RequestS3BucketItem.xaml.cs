@@ -1,10 +1,9 @@
 ﻿using CloudWeaver;
-using CloudWeaver.AWS;
-using CloudWeaver.Types;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -16,24 +15,24 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Tustler.Models;
 using TustlerAWSLib;
-using TustlerUIShared;
 using TustlerModels;
 using TustlerServicesLib;
+using TustlerUIShared;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
     /// <summary>
-    /// Interaction logic for RequestS3MediaReference.xaml
+    /// Interaction logic for RequestS3BucketItem.xaml
     /// </summary>
-    public partial class RequestS3MediaReference : UserControl, ICommandSource
+    public partial class RequestS3BucketItem : UserControl, ICommandSource
     {
         #region IsButtonEnabled DependencyProperty
         public static readonly DependencyProperty IsButtonEnabledProperty =
-            DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(RequestS3MediaReference), new PropertyMetadata(true, PropertyChangedCallback));
+            DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(RequestS3BucketItem), new PropertyMetadata(true, PropertyChangedCallback));
 
         private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
         {
-            if (dependencyObject is RequestS3MediaReference ctrl)
+            if (dependencyObject is RequestS3BucketItem ctrl)
             {
                 if (dependencyPropertyChangedEventArgs.NewValue != null)
                 {
@@ -53,25 +52,82 @@ namespace Tustler.UserControls.TaskMemberControls
         }
         #endregion
 
-        #region MediaType DependencyProperty
-        public static readonly DependencyProperty MediaTypeProperty =
+        #region BucketItemExtensionDescription DependencyProperty
+        public static readonly DependencyProperty BucketItemExtensionDescriptionProperty =
             DependencyProperty.Register(
-                "MediaType",
-                typeof(BucketItemMediaType),
-                typeof(RequestS3MediaReference));
+                "BucketItemExtensionDescription",
+                typeof(string),
+                typeof(RequestS3BucketItem));
 
-        public BucketItemMediaType MediaType
+        /// <summary>
+        /// A description of the required extension filter e.g. 'image' or 'JSON'
+        /// </summary>
+        public string BucketItemExtensionDescription
         {
             get
             {
-                return (BucketItemMediaType)GetValue(MediaTypeProperty);
+                return (string)GetValue(BucketItemExtensionDescriptionProperty);
             }
             set
             {
-                SetValue(MediaTypeProperty, value);
+                SetValue(BucketItemExtensionDescriptionProperty, value);
             }
         }
         #endregion
+
+        #region BucketItemExtension DependencyProperty
+        public static readonly DependencyProperty BucketItemExtensionProperty =
+            DependencyProperty.Register(
+                "BucketItemExtension",
+                typeof(string),
+                typeof(RequestS3BucketItem));
+
+        /// <summary>
+        /// The file extension of the required filter e.g. 'json', 'jpg' or 'doc'
+        /// </summary>
+        public string BucketItemExtension
+        {
+            get
+            {
+                return (string)GetValue(BucketItemExtensionProperty);
+            }
+            set
+            {
+                SetValue(BucketItemExtensionProperty, value);
+            }
+        }
+        #endregion
+
+        private readonly AmazonWebServiceInterface awsInterface;
+        private readonly NotificationsList notifications;
+
+        public RequestS3BucketItem()
+        {
+            InitializeComponent();
+
+            var serviceProvider = (Application.Current as App).ServiceProvider;
+
+            this.awsInterface = serviceProvider.GetRequiredService<AmazonWebServiceInterface>();
+            this.notifications = this.FindResource("applicationNotifications") as NotificationsList;
+
+            LayoutRoot.DataContext = this;      // child elements of LayoutRoot control use this as the context
+        }
+
+        private async void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            BucketViewModel bucketViewModel = this.FindResource("bucketsInstance") as BucketViewModel;
+
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                await bucketViewModel.Refresh(awsInterface, false, notifications).ConfigureAwait(true);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
 
         #region ICommandSource
 
@@ -112,10 +168,9 @@ namespace Tustler.UserControls.TaskMemberControls
         private void AddCommand(ICommand newCommand)
         {
             EventHandler handler = new EventHandler(CanExecuteChanged);
-            //canExecuteChangedHandler = handler;
+
             if (newCommand != null)
             {
-                //newCommand.CanExecuteChanged += canExecuteChangedHandler;
                 newCommand.CanExecuteChanged += handler;
             }
         }
@@ -155,13 +210,13 @@ namespace Tustler.UserControls.TaskMemberControls
             DependencyProperty.Register(
                 "Command",
                 typeof(ICommand),
-                typeof(RequestS3MediaReference),
+                typeof(RequestS3BucketItem),
                 new PropertyMetadata((ICommand)null,
                 new PropertyChangedCallback(CommandChanged)));
 
         private static void CommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            RequestS3MediaReference ctrl = (RequestS3MediaReference)d;
+            RequestS3BucketItem ctrl = (RequestS3BucketItem)d;
             ctrl.HookUpCommand((ICommand)e.OldValue, (ICommand)e.NewValue);
         }
 
@@ -172,57 +227,6 @@ namespace Tustler.UserControls.TaskMemberControls
         }
 
         #endregion
-
-        private readonly AmazonWebServiceInterface awsInterface;
-        private readonly NotificationsList notifications;
-
-        public RequestS3MediaReference()
-        {
-            InitializeComponent();
-
-            var serviceProvider = (Application.Current as App).ServiceProvider;
-
-            this.awsInterface = serviceProvider.GetRequiredService<AmazonWebServiceInterface>();
-            this.notifications = this.FindResource("applicationNotifications") as NotificationsList;
-        }
-
-        private async void UserControl_Loaded(object sender, RoutedEventArgs e)
-        {
-            BucketViewModel bucketViewModel = this.FindResource("bucketsInstance") as BucketViewModel;
-
-            try
-            {
-                Mouse.OverrideCursor = Cursors.Wait;
-
-                await bucketViewModel.Refresh(awsInterface, false, notifications).ConfigureAwait(true);
-            }
-            finally
-            {
-                Mouse.OverrideCursor = null;
-            }
-        }
-
-        private async void BucketsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            var listBox = (ListBox)e.Source;
-            Bucket selectedBucket = (Bucket)listBox.SelectedItem;
-
-            var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
-            var audioBucketItemsInstance = this.FindResource("audioBucketItemsInstance") as FilteredBucketItemViewModel;
-
-            try
-            {
-                Mouse.OverrideCursor = Cursors.Wait;
-
-                await bucketItemsInstance.ForceRefresh(awsInterface, notifications, selectedBucket.Name).ConfigureAwait(true);
-                audioBucketItemsInstance.Clear();
-                audioBucketItemsInstance.Select(bucketItemsInstance, MediaType);
-            }
-            finally
-            {
-                Mouse.OverrideCursor = null;
-            }
-        }
 
         private void ExecuteCommand()
         {
@@ -241,29 +245,53 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void Continue_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = (lbBuckets.SelectedItem is Bucket _) && (lbBucketItems.SelectedItem is BucketItem _);
+            e.CanExecute = (lbBucketItems.SelectedItem is object);
         }
 
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            if ((lbBuckets.SelectedItem is Bucket bucket) && (lbBucketItems.SelectedItem is BucketItem bucketItem))
+            var bucketItem = lbBucketItems.SelectedItem as BucketItem;
+
+            var data = JsonSerializer.SerializeToUtf8Bytes(bucketItem);
+
+            CommandParameter = new UITaskArguments(UITaskMode.TransformSetArgument, "AWSShareIntraModule", "BucketItem", data);
+
+            ExecuteCommand();
+        }
+
+        private async void BucketsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var listBox = e.Source as ListBox;
+            Bucket selectedBucket = listBox.SelectedItem as Bucket;
+
+            var bucketItemsInstance = this.FindResource("bucketItemsInstance") as BucketItemViewModel;
+            var filteredBucketItemsInstance = this.FindResource("filteredBucketItemsInstance") as FilteredBucketItemViewModel;
+
+            try
             {
-                var data = SerializableTypeGenerator.CreateS3MediaReference(bucket.Name, bucketItem.Key, bucketItem.MimeType, bucketItem.Extension);
+                Mouse.OverrideCursor = Cursors.Wait;
 
-                CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetS3MediaReference", data);
-
-                ExecuteCommand();
+                await bucketItemsInstance.ForceRefresh(awsInterface, notifications, selectedBucket.Name).ConfigureAwait(true);
+                filteredBucketItemsInstance.Clear();
+                if (this.BucketItemExtension is null)
+                    filteredBucketItemsInstance.Select(bucketItemsInstance, BucketItemMediaType.All);
+                else
+                    filteredBucketItemsInstance.Select(bucketItemsInstance, this.BucketItemExtension);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
             }
         }
     }
 
-    public static class S3MediaReferenceCommands
+    public static class RequestS3BucketItemCommands
     {
         public static readonly RoutedUICommand Continue = new RoutedUICommand
             (
                 "Continue",
                 "Continue",
-                typeof(S3MediaReferenceCommands),
+                typeof(RequestS3BucketItemCommands),
                 null
             );
     }
