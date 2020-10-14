@@ -1,15 +1,124 @@
 ﻿using CloudWeaver.Types;
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Tustler.Helpers;
 using TustlerServicesLib;
 using TustlerUIShared;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
+    public class IndexedSpecifier: IEqualityComparer    //, IComparable
+    {
+        public IndexedSpecifier(int index, TaskFunctionSpecifier specifier)
+        {
+            Index = index;
+            FunctionSpecifier = specifier;
+        }
+
+        public int Index { get; }
+
+        public TaskFunctionSpecifier FunctionSpecifier { get; }
+
+        public int CompareTo(object o)
+        {
+            if (o is IndexedSpecifier idxSpec)
+            {
+                return this.Index.CompareTo(idxSpec.Index);
+            }
+            else
+                throw new ArgumentNullException(nameof(o));
+        }
+
+        #region IEqualityComparer (on Index; used for HashSet)
+
+        public new bool Equals(object x, object y)
+        {
+            if ((x is IndexedSpecifier xx) && (y is IndexedSpecifier yy))
+                return xx.Index.Equals(yy.Index);
+            else
+                throw new ArgumentNullException($"{nameof(x)} and {nameof(y)} must not be null");
+        }
+
+        public int GetHashCode(object obj)
+        {
+            if (obj is IndexedSpecifier idxSpec)
+                return idxSpec.Index.GetHashCode();
+            else
+                throw new ArgumentNullException(nameof(obj));
+        }
+
+        #endregion
+
+        //#region IComparable (on TaskName; used for sorting)
+
+        //public override int GetHashCode()
+        //{
+        //    return HashCode.Combine(FunctionSpecifier.TaskName);
+        //}
+
+        //public override bool Equals(object obj)
+        //{
+        //    if (ReferenceEquals(this, obj))
+        //    {
+        //        return true;
+        //    }
+
+        //    if (obj is null)
+        //    {
+        //        return false;
+        //    }
+
+        //    if (obj is IndexedSpecifier idxSpec)
+        //        return this.FunctionSpecifier.TaskName.Equals(idxSpec.FunctionSpecifier.TaskName, StringComparison.InvariantCulture);
+        //    else
+        //        return false;
+        //}
+
+        //public static bool operator ==(IndexedSpecifier left, IndexedSpecifier right)
+        //{
+        //    if (left is null)
+        //    {
+        //        return right is null;
+        //    }
+
+        //    return left.Equals(right);
+        //}
+
+        //public static bool operator !=(IndexedSpecifier left, IndexedSpecifier right)
+        //{
+        //    return !(left == right);
+        //}
+
+        //public static bool operator <(IndexedSpecifier left, IndexedSpecifier right)
+        //{
+        //    return left is null ? right is object : left.CompareTo(right) < 0;
+        //}
+
+        //public static bool operator <=(IndexedSpecifier left, IndexedSpecifier right)
+        //{
+        //    return left is null || left.CompareTo(right) <= 0;
+        //}
+
+        //public static bool operator >(IndexedSpecifier left, IndexedSpecifier right)
+        //{
+        //    return left is object && left.CompareTo(right) > 0;
+        //}
+
+        //public static bool operator >=(IndexedSpecifier left, IndexedSpecifier right)
+        //{
+        //    return left is null ? right is null : left.CompareTo(right) >= 0;
+        //}
+
+        //#endregion
+    }
+
     /// <summary>
     /// Interaction logic for ChooseTask.xaml
     /// </summary>
@@ -41,9 +150,48 @@ namespace Tustler.UserControls.TaskMemberControls
         }
         #endregion
 
+        #region Available DependencyProperty
+        public static readonly DependencyProperty AvailableProperty =
+            DependencyProperty.Register("Available", typeof(IEnumerable<IndexedSpecifier>), typeof(ChooseTask));
+
+        /// <summary>
+        ///  Available (non-selected) Task Functions
+        /// </summary>
+        public IEnumerable<IndexedSpecifier> Available
+        {
+            get { return (IEnumerable<IndexedSpecifier>) GetValue(AvailableProperty); }
+            set { SetValue(AvailableProperty, value); }
+        }
+        #endregion
+
+        #region Selected DependencyProperty
+        public static readonly DependencyProperty SelectedProperty =
+            DependencyProperty.Register("Selected", typeof(IEnumerable<IndexedSpecifier>), typeof(ChooseTask));
+
+        /// <summary>
+        ///  Selected Task Functions
+        /// </summary>
+        public IEnumerable<IndexedSpecifier> Selected
+        {
+            get { return (IEnumerable<IndexedSpecifier>)GetValue(SelectedProperty); }
+            set { SetValue(SelectedProperty, value); }
+        }
+        #endregion
+
         public ChooseTask()
         {
             InitializeComponent();
+
+            LayoutRoot.DataContext = this;      // child elements of LayoutRoot control use this as the context to access Available and Selected properties
+        }
+
+        private void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            var wrapper = this.DataContext as ResponseWrapper;
+            var taskFunctions = wrapper.Owner.TaskFunctions.Select((specifier, index) => new IndexedSpecifier(index, specifier));
+
+            this.Available = taskFunctions;
+            this.Selected = Enumerable.Empty<IndexedSpecifier>();
         }
 
         #region ICommandSource
@@ -145,6 +293,97 @@ namespace Tustler.UserControls.TaskMemberControls
 
         #endregion
 
+        private void ExecuteAction(Action<ImmutableHashSet<IndexedSpecifier>, ImmutableHashSet<IndexedSpecifier>> action)
+        {
+            var available = lbAvailable.Items.Cast<IndexedSpecifier>().ToImmutableHashSet();
+            var selected = lbSelected.Items.Cast<IndexedSpecifier>().ToImmutableHashSet();
+
+            action(available, selected);
+        }
+
+        private void Select_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = lbAvailable is object && lbAvailable.SelectedItems.Count > 0;
+        }
+
+        private void Select_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            var currentSelection = lbAvailable.SelectedItems.Cast<IndexedSpecifier>().ToImmutableHashSet();
+
+            ExecuteAction((available, selected) =>
+            {
+                this.Available = available.Except(currentSelection);
+                this.Selected = selected.Concat(currentSelection);
+            });
+        }
+
+        private void Unselect_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = lbSelected is object && lbSelected.SelectedItems.Count > 0;
+        }
+
+        private void Unselect_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            var currentSelection = lbSelected.SelectedItems.Cast<IndexedSpecifier>().ToImmutableHashSet();
+
+            ExecuteAction((available, selected) =>
+            {
+                this.Available = available.Concat(currentSelection);
+                this.Selected = selected.Except(currentSelection);
+            });
+        }
+
+        private void MoveUp_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = (lbSelected is object) && (lbSelected.SelectedItems.Count == 1)
+                && (lbSelected.SelectedIndex > 0);
+        }
+
+        private void MoveUp_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            var currentIndex = lbSelected.SelectedIndex;
+
+            if (currentIndex > 0)
+            {
+                var currentItem = lbSelected.SelectedItem as IndexedSpecifier;
+
+                var selected = lbSelected.Items.Cast<IndexedSpecifier>().ToImmutableArray();
+
+                var builder = ImmutableArray.CreateBuilder<IndexedSpecifier>(selected.Length);
+                builder.AddRange(selected);
+                builder.Remove(currentItem);
+                builder.Insert(currentIndex - 1, currentItem);
+
+                this.Selected = builder;
+            }
+        }
+
+        private void MoveDown_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = (lbSelected is object) && (lbSelected.SelectedItems.Count == 1)
+                && (lbSelected.SelectedIndex < lbSelected.Items.Count - 1);
+        }
+
+        private void MoveDown_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            var currentIndex = lbSelected.SelectedIndex;
+            var length = lbSelected.Items.Count;
+
+            if (currentIndex >= 0 && currentIndex < length - 1)
+            {
+                var currentItem = lbSelected.SelectedItem as IndexedSpecifier;
+
+                var selected = lbSelected.Items.Cast<IndexedSpecifier>().ToImmutableArray();
+
+                var builder = ImmutableArray.CreateBuilder<IndexedSpecifier>(selected.Length);
+                builder.AddRange(selected);
+                builder.RemoveAt(currentIndex);
+                builder.Insert(currentIndex + 1, currentItem);
+
+                this.Selected = builder;
+            }
+        }
+
         private void ExecuteCommand()
         {
             if (this.Command != null)
@@ -162,20 +401,14 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void Continue_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = (lbTaskFunctions.SelectedItem is object);
+            e.CanExecute = (lbSelected is object) && (lbSelected.Items.Count > 0);
         }
 
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            // get an in-order list of the list box item containers
-            // some of these may be null if the container has not yet been generated
-            var listBoxItems = Enumerable.Range(0, lbTaskFunctions.Items.Count)
-                .Select(index => lbTaskFunctions.ItemContainerGenerator.ContainerFromIndex(index))
-                .Cast<ListBoxItem>()
-                .ToArray();
+            var selectedItems = lbSelected.Items.Cast<IndexedSpecifier>();
 
-            // the container must be generated if it is selected so filter out null containers
-            var taskItems = listBoxItems.Where(item => item is object && item.IsSelected).Select(item => item.DataContext as TaskFunctionSpecifier);
+            var taskItems = selectedItems.Select(idxSpec => idxSpec.FunctionSpecifier);
 
             var data = CloudWeaver.SerializableTypeGenerator.CreateTaskItems(taskItems);
 
@@ -187,6 +420,38 @@ namespace Tustler.UserControls.TaskMemberControls
 
     public static class ChooseTaskCommands
     {
+        public static readonly RoutedUICommand Select = new RoutedUICommand
+            (
+                "Select",
+                "Select",
+                typeof(ChooseTaskCommands),
+                null
+            );
+
+        public static readonly RoutedUICommand Unselect = new RoutedUICommand
+            (
+                "Unselect",
+                "Unselect",
+                typeof(ChooseTaskCommands),
+                null
+            );
+
+        public static readonly RoutedUICommand MoveUp = new RoutedUICommand
+            (
+                "MoveUp",
+                "MoveUp",
+                typeof(ChooseTaskCommands),
+                null
+            );
+
+        public static readonly RoutedUICommand MoveDown = new RoutedUICommand
+            (
+                "MoveDown",
+                "MoveDown",
+                typeof(ChooseTaskCommands),
+                null
+            );
+
         public static readonly RoutedUICommand Continue = new RoutedUICommand
             (
                 "Continue",

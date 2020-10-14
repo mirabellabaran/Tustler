@@ -5,8 +5,12 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:uc="clr-namespace:Tustler.UserControls.TaskMemberControls"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
     <UserControl.CommandBindings>
+        <CommandBinding Command="{x:Static uc:ChooseTaskCommands.Select}" CanExecute="Select_CanExecute" Executed="Select_Executed"/>
+        <CommandBinding Command="{x:Static uc:ChooseTaskCommands.Unselect}" CanExecute="Unselect_CanExecute" Executed="Unselect_Executed" />
+        <CommandBinding Command="{x:Static uc:ChooseTaskCommands.MoveUp}" CanExecute="MoveUp_CanExecute" Executed="MoveUp_Executed" />
+        <CommandBinding Command="{x:Static uc:ChooseTaskCommands.MoveDown}" CanExecute="MoveDown_CanExecute" Executed="MoveDown_Executed" />
         <CommandBinding Command="{x:Static uc:ChooseTaskCommands.Continue}" CanExecute="Continue_CanExecute" Executed="Continue_Executed" />
     </UserControl.CommandBindings>
 
@@ -34,16 +38,42 @@
 
     <StackPanel Orientation="Vertical">
         <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
-            <StackPanel Orientation="Vertical">
-                <Label Foreground="#637074" Background="#BDD4AA" FontSize="14" FontWeight="Bold" Margin="1,1,1,10" Content="Choose a task:" />
-                <ListBox x:Name="lbTaskFunctions" SelectionMode="Multiple" MaxHeight="200" Background="{StaticResource NormalBackground}" HorizontalContentAlignment="Stretch" ItemsSource="{Binding Path=Owner.TaskFunctions}" ItemContainerStyle="{StaticResource labelStyle}">
+            <Grid x:Name="LayoutRoot">
+                <Grid.RowDefinitions>
+                    <RowDefinition />
+                    <RowDefinition />
+                    <RowDefinition />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="100" />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <Label Grid.Row="0" Grid.Column="0" Foreground="#637074" Background="#BDD4AA" FontSize="14" FontWeight="Bold" Margin="1,1,1,10" Content="Available tasks:" />
+                <ListBox x:Name="lbAvailable" Grid.Row="1" Grid.Column="0" SelectionMode="Multiple" MaxHeight="200" Background="{StaticResource NormalBackground}" HorizontalContentAlignment="Stretch" ItemsSource="{Binding Path=Available}" ItemContainerStyle="{StaticResource labelStyle}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Label Background="#637074" Foreground="#BDD4E7" FontWeight="Bold" Margin="1" Content="{Binding Path=TaskName}" />
+                            <Label Background="#637074" Foreground="#BDD4E7" FontWeight="Bold" Margin="1" Content="{Binding Path=FunctionSpecifier.TaskName}" />
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
-            </StackPanel>
+                <StackPanel Orientation="Vertical" Grid.Row="0" Grid.Column="1" Grid.RowSpan="3" VerticalAlignment="Center">
+                    <Button Content="Select" Height="30" Width="80" Margin="2" Command="{x:Static uc:ChooseTaskCommands.Select}" Style="{StaticResource ButtonDarkFlat}" />
+                    <Button Content="Unselect" Height="30" Width="80" Margin="2" Command="{x:Static uc:ChooseTaskCommands.Unselect}" Style="{StaticResource ButtonDarkFlat}" />
+                </StackPanel>
+                <Label Grid.Row="0" Grid.Column="2" Foreground="#637074" Background="#BDD4AA" FontSize="14" FontWeight="Bold" Margin="1,1,1,10" Content="Selected tasks:" />
+                <ListBox x:Name="lbSelected" Grid.Row="1" Grid.Column="2" SelectionMode="Multiple" MaxHeight="200" Background="{StaticResource NormalBackground}" HorizontalContentAlignment="Stretch" ItemsSource="{Binding Path=Selected}" ItemContainerStyle="{StaticResource labelStyle}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Label Background="#637074" Foreground="#BDD4E7" FontWeight="Bold" Margin="1" Content="{Binding Path=FunctionSpecifier.TaskName}" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Center">
+                    <Button Content="MoveUp" Height="30" Width="80" Margin="2" Command="{x:Static uc:ChooseTaskCommands.MoveUp}" Style="{StaticResource ButtonDarkFlat}" />
+                    <Button Content="MoveDown" Height="30" Width="80" Margin="5" Command="{x:Static uc:ChooseTaskCommands.MoveDown}" Style="{StaticResource ButtonDarkFlat}" />
+                </StackPanel>
+            </Grid>
         </Border>
         <Button x:Name="btnContinue" Content="Continue" Height="30" Width="80" Command="{x:Static uc:ChooseTaskCommands.Continue}" Style="{StaticResource ButtonDarkFlat}" />
     </StackPanel>
