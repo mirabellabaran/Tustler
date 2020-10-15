@@ -130,12 +130,10 @@ namespace Tustler.UserControls
             if (logger is null) throw new ArgumentNullException(nameof(logger));
 
             this.awsInterface = awsInterface;
-            //this.taskLogger = logger;
             this.notificationsList = new NotificationsList();
 
             this.TaskFunction = AWSTasks.MinimalFunction;
             this.TaskSpecifier = rootSpecifier;
-            //this.taskLogger.StartLogging(this.TaskSpecifier);
 
             this.taskResponses = new ObservableCollection<IResponseWrapper>();
 

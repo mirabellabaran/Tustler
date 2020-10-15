@@ -1,4 +1,5 @@
-﻿using CloudWeaver.AWS;
+﻿using CloudWeaver;
+using CloudWeaver.AWS;
 using CloudWeaver.Types;
 using System;
 using System.Collections.Generic;
@@ -35,7 +36,7 @@ namespace Tustler
     /// </summary>
     public partial class MainWindow : Window
     {
-        private const string TaskFunctionModulePrefix = "CloudWeaver*.dll";     // the name prefix of assemblies which can be searched for Task Function modules
+        //private const string TaskFunctionModulePrefix = "CloudWeaver*.dll";     // the name prefix of assemblies which can be searched for Task Function modules
         private (TaskFunctionSpecifier specifier, bool hideFromUI)[] taskFunctions;     // all known task functions (with the HideFromUI attribute status)
 
         private readonly AmazonWebServiceInterface awsInterface;
@@ -358,7 +359,8 @@ namespace Tustler
 
                 if (taskFunctions is null)
                 {
-                    taskFunctions = await FindAllTaskFunctionModules().ConfigureAwait(true);
+                    var resolver = await TaskFunctionResolver.Create().ConfigureAwait(false);
+                    taskFunctions = resolver.GetAllTaskSpecifiers();
                 }
                 var topLevelFunctions = taskFunctions.Where(data => data.hideFromUI == false).Select(data => new TaskFunctionElement(data.specifier)).ToArray();
                 var tasksDataModel = new TasksTreeViewDataModel(topLevelFunctions);
@@ -366,49 +368,49 @@ namespace Tustler
             }
         }
 
-        private static async Task<(TaskFunctionSpecifier, bool)[]> FindAllTaskFunctionModules()
-        {
-            static IEnumerable<(TaskFunctionSpecifier, bool)> GetTaskFunctions(Assembly assembly, Type module)
-            {
-                var methods = module.GetMethods(BindingFlags.Public | BindingFlags.Static);
+        //private static async Task<(TaskFunctionSpecifier, bool)[]> FindAllTaskFunctionModules()
+        //{
+        //    static IEnumerable<(TaskFunctionSpecifier, bool)> GetTaskFunctions(Assembly assembly, Type module)
+        //    {
+        //        var methods = module.GetMethods(BindingFlags.Public | BindingFlags.Static);
 
-                return methods
-                    .Select(mi => {
-                        var enableLogging = Attribute.IsDefined(mi, typeof(EnableLogging));
-                        var specifier = new TaskFunctionSpecifier(assembly.GetName().Name, module.FullName, mi.Name, enableLogging);
-                        var hideFromUI = Attribute.IsDefined(mi, typeof(HideFromUI));
-                        return (specifier, hideFromUI);
-                    });
-            }
+        //        return methods
+        //            .Select(mi => {
+        //                var enableLogging = Attribute.IsDefined(mi, typeof(EnableLogging));
+        //                var specifier = new TaskFunctionSpecifier(assembly.GetName().Name, module.FullName, mi.Name, enableLogging);
+        //                var hideFromUI = Attribute.IsDefined(mi, typeof(HideFromUI));
+        //                return (specifier, hideFromUI);
+        //            });
+        //    }
 
-            static void ScanModules(List<(TaskFunctionSpecifier, bool)> taskFunctions)
-            {
-                var loadedAssemblies = new HashSet<string>(AppDomain.CurrentDomain.GetAssemblies().Select(asm => asm.FullName));
-                var assemblyFiles = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, TaskFunctionModulePrefix, SearchOption.TopDirectoryOnly);
+        //    static void ScanModules(List<(TaskFunctionSpecifier, bool)> taskFunctions)
+        //    {
+        //        var loadedAssemblies = new HashSet<string>(AppDomain.CurrentDomain.GetAssemblies().Select(asm => asm.FullName));
+        //        var assemblyFiles = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, TaskFunctionModulePrefix, SearchOption.TopDirectoryOnly);
 
-                foreach (var assemblyFile in assemblyFiles)
-                {
-                    var baseAssemblyName = Path.GetFileNameWithoutExtension(assemblyFile);
-                    if (!loadedAssemblies.Any(fullName => fullName.StartsWith(baseAssemblyName, StringComparison.InvariantCulture)))   // skip already loaded assemblies
-                    {
-                        var assembly = Assembly.Load(baseAssemblyName);
+        //        foreach (var assemblyFile in assemblyFiles)
+        //        {
+        //            var baseAssemblyName = Path.GetFileNameWithoutExtension(assemblyFile);
+        //            if (!loadedAssemblies.Any(fullName => fullName.StartsWith(baseAssemblyName, StringComparison.InvariantCulture)))   // skip already loaded assemblies
+        //            {
+        //                var assembly = Assembly.Load(baseAssemblyName);
 
-                        foreach (var exportedType in assembly.GetExportedTypes())
-                        {
-                            if (Attribute.IsDefined(exportedType, typeof(CloudWeaverTaskFunctionModule)))
-                            {
-                                taskFunctions.AddRange(GetTaskFunctions(assembly, exportedType));
-                            }
-                        }
-                    }
-                }
-            }
+        //                foreach (var exportedType in assembly.GetExportedTypes())
+        //                {
+        //                    if (Attribute.IsDefined(exportedType, typeof(CloudWeaverTaskFunctionModule)))
+        //                    {
+        //                        taskFunctions.AddRange(GetTaskFunctions(assembly, exportedType));
+        //                    }
+        //                }
+        //            }
+        //        }
+        //    }
 
-            var taskFunctions = new List<(TaskFunctionSpecifier, bool)>();
-            await Task.Run(() => ScanModules(taskFunctions)).ConfigureAwait(true);
+        //    var taskFunctions = new List<(TaskFunctionSpecifier, bool)>();
+        //    await Task.Run(() => ScanModules(taskFunctions)).ConfigureAwait(true);
 
-            return taskFunctions.ToArray();
-        }
+        //    return taskFunctions.ToArray();
+        //}
 
         private void MenuItem_Click(object sender, RoutedEventArgs e)
         {
@@ -452,7 +454,8 @@ namespace Tustler
             {
                 if (taskFunctions is null)
                 {
-                    taskFunctions = await FindAllTaskFunctionModules().ConfigureAwait(true);
+                    var resolver = await TaskFunctionResolver.Create().ConfigureAwait(false);
+                    taskFunctions = resolver.GetAllTaskSpecifiers();
                 }
                 var topLevelFunctions = taskFunctions.Where(data => data.hideFromUI == false).Select(data => new TaskFunctionElement(data.specifier)).ToArray();
                 var tasksDataModel = new TasksTreeViewDataModel(topLevelFunctions);

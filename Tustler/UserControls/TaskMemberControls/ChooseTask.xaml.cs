@@ -190,7 +190,7 @@ namespace Tustler.UserControls.TaskMemberControls
             var wrapper = this.DataContext as ResponseWrapper;
             var taskFunctions = wrapper.Owner.TaskFunctions.Select((specifier, index) => new IndexedSpecifier(index, specifier));
 
-            this.Available = taskFunctions;
+            this.Available = taskFunctions.OrderBy(idxSpec => idxSpec.FunctionSpecifier.TaskName);
             this.Selected = Enumerable.Empty<IndexedSpecifier>();
         }
 
@@ -312,7 +312,7 @@ namespace Tustler.UserControls.TaskMemberControls
 
             ExecuteAction((available, selected) =>
             {
-                this.Available = available.Except(currentSelection);
+                this.Available = available.Except(currentSelection).OrderBy(idxSpec => idxSpec.FunctionSpecifier.TaskName);
                 this.Selected = selected.Concat(currentSelection);
             });
         }
@@ -328,7 +328,7 @@ namespace Tustler.UserControls.TaskMemberControls
 
             ExecuteAction((available, selected) =>
             {
-                this.Available = available.Concat(currentSelection);
+                this.Available = available.Concat(currentSelection).OrderBy(idxSpec => idxSpec.FunctionSpecifier.TaskName);
                 this.Selected = selected.Except(currentSelection);
             });
         }

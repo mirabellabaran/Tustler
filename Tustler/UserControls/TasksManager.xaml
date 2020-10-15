@@ -27,6 +27,10 @@
             <uctask:SelectDefaultArguments Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
 
+        <DataTemplate x:Key="DefaultResponseTemplate" DataType="{x:Type helpers:IResponseWrapper}">
+            <uctask:DefaultResponseHandler Command="{x:Static uc:TaskCommands.UIResponse}" />
+        </DataTemplate>
+        
         <!-- Called within the BucketItemsModelTemplate ContentControl (DataGrid.SelectedItem) -->
         <DataTemplate x:Key="BucketItemTemplate" DataType="{x:Type local:BucketItem}">
             <Border Name="border" BorderBrush="BlanchedAlmond" CornerRadius="3" BorderThickness="3" Padding="5" Margin="5">

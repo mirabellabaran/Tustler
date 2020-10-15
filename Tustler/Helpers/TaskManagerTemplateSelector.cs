@@ -107,7 +107,7 @@ namespace Tustler.Helpers
                 _ => wrapper.TaskResponse.Tag switch
                 {
                     TaskResponse.Tags.ChooseTask => element.FindResource("ChooseTaskTemplate") as DataTemplate,
-                    _ => null,
+                    _ => element.FindResource("DefaultResponseTemplate") as DataTemplate,
                 }
             };
 
