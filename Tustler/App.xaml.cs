@@ -1,4 +1,5 @@
-﻿using log4net;
+﻿using CloudWeaver;
+using log4net;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -26,7 +27,7 @@ namespace Tustler
         public IServiceProvider ServiceProvider { get; private set; }
         private static readonly ILog log = LogManager.GetLogger(typeof(App));
 
-        private void Application_Startup(object sender, StartupEventArgs e)
+        private async void Application_Startup(object sender, StartupEventArgs e)
         {
             log.Info("        =============  Started Logging  =============        ");
 
@@ -58,9 +59,12 @@ namespace Tustler
             // set the path to the FFmpeg directory
             Unosquare.FFME.Library.FFmpegDirectory = ApplicationSettings.FFmpegDirectory;
 
+            // create the task function resolver
+            var taskFunctionResolver = await TaskFunctionResolver.Create().ConfigureAwait(false);
+
             // prepare for dependency injection
             var serviceCollection = new ServiceCollection();
-            ConfigureServices(serviceCollection);
+            ConfigureServices(serviceCollection, taskFunctionResolver);
 
             ServiceProvider = serviceCollection.BuildServiceProvider();
 
@@ -73,9 +77,10 @@ namespace Tustler
             mainWindow.Show();
         }
 
-        private void ConfigureServices(IServiceCollection services)
+        private void ConfigureServices(IServiceCollection services, TaskFunctionResolver taskFunctionResolverInstance)
         {
             // dependent services
+            services.AddSingleton(taskFunctionResolverInstance);
             services.AddSingleton<TaskLogger>();
             services.AddSingleton<RuntimeOptions>();
             services.AddSingleton<AmazonWebServiceInterface>();

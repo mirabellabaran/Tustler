@@ -3,6 +3,7 @@
 using CloudWeaver;
 using CloudWeaver.AWS;
 using CloudWeaver.Types;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -44,6 +45,8 @@ namespace Tustler.UserControls
 
         private RunMode runMode;
 
+        private readonly TaskFunctionResolver taskFunctionResolver;
+
         private readonly NotificationsList notificationsList;
         private readonly AmazonWebServiceInterface awsInterface;
 
@@ -62,38 +65,40 @@ namespace Tustler.UserControls
                 if (dependencyPropertyChangedEventArgs.NewValue != null)
                 {
                     var taskSpecifier = dependencyPropertyChangedEventArgs.NewValue as TaskFunctionSpecifier;
-                    ctrl.TaskFunction = taskSpecifier?.TaskName switch
-                    {
-                        "MinimalFunction" => AWSTasks.MinimalFunction,
+                    ctrl.TaskFunction = ctrl.taskFunctionResolver.CreateDelegate(taskSpecifier);  //AWSTasks.MinimalFunction;
 
-                        "S3FetchItems" => AWSTasks.S3FetchItems,
+                    //ctrl.TaskFunction = taskSpecifier?.TaskName switch
+                    //{
+                    //    "MinimalFunction" => AWSTasks.MinimalFunction,
 
-                        "Cleanup" => AWSTasks.Cleanup,
-                        "CleanTranscriptionJobHistory" => AWSTasks.CleanTranscriptionJobHistory,
-                        "SomeSubTask" => AWSTasks.SomeSubTask,
+                    //    "S3FetchItems" => AWSTasks.S3FetchItems,
 
-                        "TranscribeAudio" => AWSTasks.TranscribeAudio,
-                        "UploadMediaFile" => AWSTasks.UploadMediaFile,
-                        "StartTranscription" => AWSTasks.StartTranscription,
-                        "MonitorTranscription" => AWSTasks.MonitorTranscription,
-                        "DownloadTranscript" => AWSTasks.DownloadTranscript,
-                        "SaveTranscript" => AWSTasks.SaveTranscript,
-                        "ExtractTranscribedDefault" => AWSTasks.ExtractTranscribedDefault,
-                        "SaveTranscribedDefault" => AWSTasks.SaveTranscribedDefault,
+                    //    "Cleanup" => AWSTasks.Cleanup,
+                    //    "CleanTranscriptionJobHistory" => AWSTasks.CleanTranscriptionJobHistory,
+                    //    "SomeSubTask" => AWSTasks.SomeSubTask,
 
-                        "CreateSubTitles" => AWSTasks.CreateSubTitles,
+                    //    "TranscribeAudio" => AWSTasks.TranscribeAudio,
+                    //    "UploadMediaFile" => AWSTasks.UploadMediaFile,
+                    //    "StartTranscription" => AWSTasks.StartTranscription,
+                    //    "MonitorTranscription" => AWSTasks.MonitorTranscription,
+                    //    "DownloadTranscript" => AWSTasks.DownloadTranscript,
+                    //    "SaveTranscript" => AWSTasks.SaveTranscript,
+                    //    "ExtractTranscribedDefault" => AWSTasks.ExtractTranscribedDefault,
+                    //    "SaveTranscribedDefault" => AWSTasks.SaveTranscribedDefault,
 
-                        "MultiLanguageTranslateText" => AWSTasks.MultiLanguageTranslateText,
-                        "TranslateText" => AWSTasks.TranslateText,
-                        "SaveTranslation" => AWSTasks.SaveTranslation,
+                    //    "CreateSubTitles" => AWSTasks.CreateSubTitles,
 
-                        "ConvertJsonLogToLogFormat" => AWSTasks.ConvertJsonLogToLogFormat,
-                        "ConvertLogFormatToJsonLog" => AWSTasks.ConvertLogFormatToJsonLog,
+                    //    "MultiLanguageTranslateText" => AWSTasks.MultiLanguageTranslateText,
+                    //    "TranslateText" => AWSTasks.TranslateText,
+                    //    "SaveTranslation" => AWSTasks.SaveTranslation,
 
-                        "SelectTask" => AWSTasks.SelectTask,
+                    //    "ConvertJsonLogToLogFormat" => AWSTasks.ConvertJsonLogToLogFormat,
+                    //    "ConvertLogFormatToJsonLog" => AWSTasks.ConvertLogFormatToJsonLog,
 
-                        _ => throw new ArgumentException($"Unknown task name '{taskSpecifier?.TaskName}'"),
-                    };
+                    //    "SelectTask" => AWSTasks.SelectTask,
+
+                    //    _ => throw new ArgumentException($"Unknown task name '{taskSpecifier?.TaskName}'"),
+                    //};
                 }
             }
         }
@@ -104,12 +109,17 @@ namespace Tustler.UserControls
             set { SetValue(TaskSpecifierProperty, value); }
         }
 
-        public Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> TaskFunction
+        /// <summary>
+        /// The current task function
+        /// </summary>
+        /// <remarks>This is set whenever TaskSpecifier is set</remarks>
+        public Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>>? TaskFunction
         {
             get;
             internal set;
         }
 
+        // IOwnerType
         public IEnumerable<TaskFunctionSpecifier> TaskFunctions
         {
             get
@@ -118,22 +128,25 @@ namespace Tustler.UserControls
             }
         }
 
-        public TasksManager(TaskFunctionSpecifier[] taskFunctions, AmazonWebServiceInterface awsInterface, TaskLogger logger, TaskFunctionSpecifier rootSpecifier)
+        public TasksManager(AmazonWebServiceInterface awsInterface, TaskFunctionSpecifier rootSpecifier)
         {
             InitializeComponent();
 
-
-            this.taskFunctionLookup = new Dictionary<string, TaskFunctionSpecifier>(taskFunctions.Select(tfs => new KeyValuePair<string, TaskFunctionSpecifier>(tfs.TaskFullPath, tfs)));
-            this.taskQueue = new Queue<TaskFunctionSpecifier>();
-
             if (awsInterface is null) throw new ArgumentNullException(nameof(awsInterface));
-            if (logger is null) throw new ArgumentNullException(nameof(logger));
+            if (rootSpecifier is null) throw new ArgumentNullException(nameof(rootSpecifier));
 
             this.awsInterface = awsInterface;
             this.notificationsList = new NotificationsList();
 
-            this.TaskFunction = AWSTasks.MinimalFunction;
+            var app = Application.Current as App;
+            var serviceProvider = app!.ServiceProvider;
+            this.taskFunctionResolver = serviceProvider.GetRequiredService<TaskFunctionResolver>();
+            var logger = serviceProvider.GetRequiredService<TaskLogger>();
+
             this.TaskSpecifier = rootSpecifier;
+
+            this.taskFunctionLookup = taskFunctionResolver.GetTaskFunctionDictionary();
+            this.taskQueue = new Queue<TaskFunctionSpecifier>();
 
             this.taskResponses = new ObservableCollection<IResponseWrapper>();
 
@@ -462,7 +475,8 @@ namespace Tustler.UserControls
                 agent.PrepareFunctionArguments(args);
 
                 notificationsList.Clear();      // cleared for each function invocation
-                var responseStream = TaskFunction(TaskFunctionQueryMode.Invoke, args);
+
+                var responseStream = TaskFunction!(TaskFunctionQueryMode.Invoke, args);     // set whenever TaskSpecifier property is set
 
                 await agent.RunTask(responseStream).ConfigureAwait(false);
 

@@ -36,11 +36,10 @@ namespace Tustler
     /// </summary>
     public partial class MainWindow : Window
     {
-        //private const string TaskFunctionModulePrefix = "CloudWeaver*.dll";     // the name prefix of assemblies which can be searched for Task Function modules
-        private (TaskFunctionSpecifier specifier, bool hideFromUI)[] taskFunctions;     // all known task functions (with the HideFromUI attribute status)
-
         private readonly AmazonWebServiceInterface awsInterface;
         private readonly TaskLogger taskLogger;
+
+        private readonly TaskFunctionResolver taskFunctionResolver;
 
         private bool isCollapsed;  // true if the notifications area is in a collapsed state
 
@@ -59,14 +58,13 @@ namespace Tustler
             }
         }
 
-        public MainWindow(AmazonWebServiceInterface awsInterface, RuntimeOptions options, TaskLogger logger)
+        public MainWindow(AmazonWebServiceInterface awsInterface, RuntimeOptions options, TaskLogger logger, TaskFunctionResolver taskFunctionResolver)
         {
             InitializeComponent();
 
             this.awsInterface = awsInterface;
             this.taskLogger = logger;
-
-            this.taskFunctions = null;
+            this.taskFunctionResolver = taskFunctionResolver;
 
             this.IsMocked = (options is object) ? options.IsMocked : false;
 
@@ -81,7 +79,7 @@ namespace Tustler
 
         #region Event Handlers
 
-        private async void Window_Loaded(object sender, RoutedEventArgs e)
+        private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             // look for status changes in the notifications listbox so that it can scroll new items into view
             lbNotifications.ItemContainerGenerator.ItemsChanged += Notifications_ItemsChanged;
@@ -91,7 +89,7 @@ namespace Tustler
 
             var functionSubTree = CreateTreeItem(new TreeViewItemData { Name = "Individual Functions", Tag = new DefaultTag("functions"), HasChildren = true });
             tvActions.Items.Add(functionSubTree);
-            await CreateSubTree(functionSubTree).ConfigureAwait(true);
+            CreateSubTree(functionSubTree);
             functionSubTree.IsExpanded = true;
 
             tvActions.Items.Add(CreateTreeItem(new TreeViewItemData { Name = "Tasks", Tag = new DefaultTag("tasks"), HasChildren = true }));
@@ -339,17 +337,17 @@ namespace Tustler
             }
         }
 
-        private async void TreeViewItem_Expanded(object sender, RoutedEventArgs e)
+        private void TreeViewItem_Expanded(object sender, RoutedEventArgs e)
         {
             TreeViewItem item = e.OriginalSource as TreeViewItem;
             if ((item.Items.Count == 1) && (item.Items[0] is string))
             {
-                await CreateSubTree(item).ConfigureAwait(true);
+                CreateSubTree(item);
                 tvActions.Focus();  // otherwise it is lost on the async fetch
             }
         }
 
-        private async void MenuItem_SubmenuOpenedAsync(object sender, RoutedEventArgs e)
+        private void MenuItem_SubmenuOpenedAsync(object sender, RoutedEventArgs e)
         {
             // a menu has been clicked (perhaps the Tasks menu)
             MenuItem item = e.OriginalSource as MenuItem;
@@ -357,60 +355,12 @@ namespace Tustler
             {
                 item.Items.Clear();
 
-                if (taskFunctions is null)
-                {
-                    var resolver = await TaskFunctionResolver.Create().ConfigureAwait(false);
-                    taskFunctions = resolver.GetAllTaskSpecifiers();
-                }
+                (TaskFunctionSpecifier specifier, bool hideFromUI)[] taskFunctions = taskFunctionResolver.GetAllTaskSpecifiers();
                 var topLevelFunctions = taskFunctions.Where(data => data.hideFromUI == false).Select(data => new TaskFunctionElement(data.specifier)).ToArray();
                 var tasksDataModel = new TasksTreeViewDataModel(topLevelFunctions);
                 AddItems<MenuItem>(CreateMenuItem, item, tasksDataModel.TreeViewItemDataCollection);
             }
         }
-
-        //private static async Task<(TaskFunctionSpecifier, bool)[]> FindAllTaskFunctionModules()
-        //{
-        //    static IEnumerable<(TaskFunctionSpecifier, bool)> GetTaskFunctions(Assembly assembly, Type module)
-        //    {
-        //        var methods = module.GetMethods(BindingFlags.Public | BindingFlags.Static);
-
-        //        return methods
-        //            .Select(mi => {
-        //                var enableLogging = Attribute.IsDefined(mi, typeof(EnableLogging));
-        //                var specifier = new TaskFunctionSpecifier(assembly.GetName().Name, module.FullName, mi.Name, enableLogging);
-        //                var hideFromUI = Attribute.IsDefined(mi, typeof(HideFromUI));
-        //                return (specifier, hideFromUI);
-        //            });
-        //    }
-
-        //    static void ScanModules(List<(TaskFunctionSpecifier, bool)> taskFunctions)
-        //    {
-        //        var loadedAssemblies = new HashSet<string>(AppDomain.CurrentDomain.GetAssemblies().Select(asm => asm.FullName));
-        //        var assemblyFiles = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, TaskFunctionModulePrefix, SearchOption.TopDirectoryOnly);
-
-        //        foreach (var assemblyFile in assemblyFiles)
-        //        {
-        //            var baseAssemblyName = Path.GetFileNameWithoutExtension(assemblyFile);
-        //            if (!loadedAssemblies.Any(fullName => fullName.StartsWith(baseAssemblyName, StringComparison.InvariantCulture)))   // skip already loaded assemblies
-        //            {
-        //                var assembly = Assembly.Load(baseAssemblyName);
-
-        //                foreach (var exportedType in assembly.GetExportedTypes())
-        //                {
-        //                    if (Attribute.IsDefined(exportedType, typeof(CloudWeaverTaskFunctionModule)))
-        //                    {
-        //                        taskFunctions.AddRange(GetTaskFunctions(assembly, exportedType));
-        //                    }
-        //                }
-        //            }
-        //        }
-        //    }
-
-        //    var taskFunctions = new List<(TaskFunctionSpecifier, bool)>();
-        //    await Task.Run(() => ScanModules(taskFunctions)).ConfigureAwait(true);
-
-        //    return taskFunctions.ToArray();
-        //}
 
         private void MenuItem_Click(object sender, RoutedEventArgs e)
         {
@@ -448,15 +398,11 @@ namespace Tustler
             return item;
         }
 
-        private async Task CreateSubTree(TreeViewItem parentItem)
+        private void CreateSubTree(TreeViewItem parentItem)
         {
-            async Task<ObservableCollection<TreeViewItemData>> GetTasks()
+            ObservableCollection<TreeViewItemData> GetTasks()
             {
-                if (taskFunctions is null)
-                {
-                    var resolver = await TaskFunctionResolver.Create().ConfigureAwait(false);
-                    taskFunctions = resolver.GetAllTaskSpecifiers();
-                }
+                (TaskFunctionSpecifier specifier, bool hideFromUI)[] taskFunctions = taskFunctionResolver.GetAllTaskSpecifiers();
                 var topLevelFunctions = taskFunctions.Where(data => data.hideFromUI == false).Select(data => new TaskFunctionElement(data.specifier)).ToArray();
                 var tasksDataModel = new TasksTreeViewDataModel(topLevelFunctions);
                 return tasksDataModel.TreeViewItemDataCollection;
@@ -467,7 +413,7 @@ namespace Tustler
             {
                 "settings" => new SettingsTreeViewDataModel().TreeViewItemDataCollection,
                 "functions" => new FunctionsTreeViewDataModel().TreeViewItemDataCollection,
-                "tasks" => await GetTasks().ConfigureAwait(true),
+                "tasks" => GetTasks(),
                 _ => throw new ArgumentException("TreeView Expansion: Unexpected item tag")
             };
 
@@ -557,9 +503,8 @@ namespace Tustler
                         panControlsContainer.Children.Add(new TranscribeFunctions(awsInterface));
                         break;
                     case "task":
-                        var allTaskFunctions = taskFunctions.Select(data => data.specifier).ToArray();
                         var taskFunctionElement = (initial as TaskFunctionElement);
-                        var uc = new TasksManager(allTaskFunctions, awsInterface, taskLogger, taskFunctionElement.TaskFunctionSpecifier);
+                        var uc = new TasksManager(awsInterface, taskFunctionElement.TaskFunctionSpecifier);
                         panControlsContainer.Children.Add(uc);
                         break;
                 }
