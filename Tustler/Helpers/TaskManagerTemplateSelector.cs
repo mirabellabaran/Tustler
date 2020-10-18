@@ -44,7 +44,7 @@ namespace Tustler.Helpers
                     "RequestOpenJsonFilePath" => element.FindResource("OpenJsonFilePathRequestTemplate") as DataTemplate,
                     "RequestSaveJsonFilePath" => element.FindResource("SaveJsonFilePathRequestTemplate") as DataTemplate,
 
-                    _ => null
+                    _ => element.FindResource("DefaultResponseTemplate") as DataTemplate,
                 };
             }
 
@@ -66,7 +66,7 @@ namespace Tustler.Helpers
 
                         "SetTranslationSegments" => element.FindResource("TranslationSegmentsTemplate") as DataTemplate,
 
-                        _ => throw new ArgumentException("Unknown argument for SetArgument")
+                        _ => element.FindResource("DefaultResponseTemplate") as DataTemplate,
                     },
                     _ => null
                 };
@@ -81,7 +81,7 @@ namespace Tustler.Helpers
                         "DisplayTranscriptionJobsModel" => element.FindResource("TranscriptionJobsModelTemplate") as DataTemplate,
                         "DisplayTranscriptionJob" => element.FindResource("TranscriptionJobTemplate") as DataTemplate,
                         "DisplayBucketItemsModel" => element.FindResource("BucketItemsModelTemplate") as DataTemplate,
-                        _ => throw new ArgumentException("Unknown argument for ShowArgument")
+                        _ => element.FindResource("DefaultResponseTemplate") as DataTemplate,
                     },
                     _ => null
                 };

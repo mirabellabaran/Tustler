@@ -347,6 +347,17 @@ type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctio
         addTaskSequenceEvent taskSequence ordering
         nextTask this
 
+    /// Insert a task into the IConsumableTaskSequence at the top of the stack
+    member this.InsertTask taskItem =
+        match executionStack.TryPeek() with
+        | true, Tasks taskSequence ->
+            executionStack.Pop() |> ignore
+            // MG for now add to front
+            let taskItems = taskItem :: (Seq.toList taskSequence)
+            addTaskSequenceEvent taskItems (taskSequence.Ordering)
+            nextTask this
+        | _ -> ()
+
     /// A new UI selection has been made
     member this.NewSelection response =
         events.Add(TaskEvent.ClearArguments)

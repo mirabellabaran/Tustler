@@ -814,6 +814,21 @@ namespace Tustler.UserControls
                 }
             }
 
+            async Task RunUIResponseInsertTaskAsync(UITaskArguments parameterInfo)
+            {
+                var selectedTaskPath = JsonSerializer.Deserialize<string>(new ReadOnlySpan<byte>(parameterInfo.SerializedArgument));
+
+                var taskSpecifier = this.taskFunctionLookup[selectedTaskPath];
+                var task = new TaskItem(taskSpecifier.ModuleName, taskSpecifier.TaskName, string.Empty);
+
+                agent.InsertTask(task);
+
+                await Dispatcher.InvokeAsync(async () =>
+                {
+                    await CheckQueue().ConfigureAwait(false);
+                });
+            }
+
             /// The argument needs transforming before setting an argument on the agent
             async Task RunUIResponseTransformArgumentAsync(UITaskArguments parameterInfo)
             {
@@ -910,6 +925,9 @@ namespace Tustler.UserControls
                     break;
                 case UITaskMode.RestartTask:
                     await RunUIResponseRestartTaskAsync(parameterInfo).ConfigureAwait(false);
+                    break;
+                case UITaskMode.InsertTask:
+                    await RunUIResponseInsertTaskAsync(parameterInfo).ConfigureAwait(false);
                     break;
                 case UITaskMode.SetArgument:
                     await RunUIResponseSetArgumentAsync(parameterInfo).ConfigureAwait(false);

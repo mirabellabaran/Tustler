@@ -9,7 +9,11 @@ open System.IO
 
 type ResolverCachedItem(methodInfo: MethodInfo, taskFunctionSpecifier: TaskFunctionSpecifier) =
 
+    let mutable cachedOutputs : Set<IRequestIntraModule> option = None
+
     let mutable cachedDelegate : Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> option = None
+
+    member this.CachedOutputs with get() = cachedOutputs and set(value) = cachedOutputs <- value
 
     member this.CachedDelegate with get() = cachedDelegate and set(value) = cachedDelegate <- value
 
@@ -111,3 +115,28 @@ type TaskFunctionResolver private (pairs: seq<KeyValuePair<string, ResolverCache
                 KeyValuePair.Create(key, specifier)
             )
         new Dictionary<string, TaskFunctionSpecifier>(pairs)
+
+    member this.FindTaskFunctionsWithOutput(output: IRequestIntraModule) =
+
+        taskLookup.Values
+        |> Seq.map (fun ri ->
+            if ri.CachedOutputs.IsNone then
+                let outputs =
+                    let specifier = ri.TaskFunctionSpecifier
+                    let func = this.CreateDelegate(specifier)
+                    func.Invoke(TaskFunctionQueryMode.Outputs, null)
+                    |> Seq.map (fun response ->
+                        match response with
+                        | TaskResponse.RequestArgument arg -> Some(arg)
+                        | _ -> None
+                    )
+                    |> Seq.choose id
+                    |> Set.ofSeq
+                ri.CachedOutputs <- Some(outputs)
+
+            if Set.contains output ri.CachedOutputs.Value then
+                Some(ri.TaskFunctionSpecifier.TaskFullPath)
+            else
+                None
+        )
+        |> Seq.choose id

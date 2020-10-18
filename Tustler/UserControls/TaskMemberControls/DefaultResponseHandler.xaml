@@ -6,9 +6,55 @@
              xmlns:uc="clr-namespace:Tustler.UserControls.TaskMemberControls"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800" Loaded="UserControl_Loaded">
-    <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
-        <UniformGrid x:Name="LayoutRoot">
-            <TextBlock x:Name="tbInfo" Style="{StaticResource TextBlockDark}" />
-        </UniformGrid>
+
+    <UserControl.CommandBindings>
+        <CommandBinding Command="{x:Static uc:DefaultResponseHandlerCommands.Select}" CanExecute="Select_CanExecute" Executed="Select_Executed"/>
+    </UserControl.CommandBindings>
+
+    <UserControl.Resources>
+        <Style x:Key="linkButtonStyle" TargetType="Button">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <TextBlock TextDecorations="Underline">
+                            <ContentPresenter />
+                        </TextBlock>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="Green" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="true">
+                    <Setter Property="Foreground" Value="LightGreen" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+    
+    <Border BorderBrush="DarkGray" BorderThickness="1" Padding="5" Margin="5">
+        <DockPanel x:Name="LayoutRoot" LastChildFill="True">
+            <TextBlock x:Name="tbInfo" DockPanel.Dock="Top" Margin="10" HorizontalAlignment="Center" Text="{Binding Path=Message}" Style="{StaticResource TaskInfoTextStyle}" />
+            <Border BorderBrush="DarkGray" BorderThickness="1" Width="400" Padding="5" Margin="5">
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="Suggestions:" Padding="3" ToolTip="Some task functions that generate the requested output" Style="{StaticResource TaskInfoTextStyle}" />
+                    <ScrollViewer MaxHeight="50" Margin="10" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Path=SuggestedTaskFunctions}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Vertical" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding}" Style="{StaticResource linkButtonStyle}" Command="{x:Static uc:DefaultResponseHandlerCommands.Select}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </StackPanel>
+            </Border>
+        </DockPanel>
     </Border>
 </UserControl>
