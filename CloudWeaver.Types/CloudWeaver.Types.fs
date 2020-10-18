@@ -165,6 +165,7 @@ type IConsumableTaskSequence =
     abstract member Reset : unit -> unit
     abstract member Ordering : ItemOrdering with get
     abstract member ConsumeTask : unit -> unit          // consume the current item
+    abstract member InsertBeforeCurrent : TaskItem -> IConsumableTaskSequence
 
 /// Represents a sequence of tasks, including the current task. The sequence must be consumed in order to set the current task.
 type TaskSequence(uid: Guid, tasks: IEnumerable<TaskItem>, ordering: ItemOrdering) =
@@ -209,6 +210,31 @@ type TaskSequence(uid: Guid, tasks: IEnumerable<TaskItem>, ordering: ItemOrderin
 
     override this.ToString() = sprintf "TaskSequence of TaskItem: total=%d; remaining=%d" (_array.Length) (_stack.Count)
 
+    /// Return a new task sequence which has a an additional task item inserted before the current item, whilst conserving the number of consumed tasks
+    member this.InsertBeforeCurrent taskItem =
+
+        let current = this.Current
+
+        if current.IsNone then
+            invalidOp "There is no current item (sequence has not been consumed)"
+        else
+            let consumed = this.Total - this.Remaining - 1  // exclude current item
+
+            let items =
+                let seg1 =
+                    _array
+                    |> Seq.take consumed
+                    |> Seq.toList
+                let seg2 = taskItem :: (current.Value :: (List.ofSeq _stack))
+                List.append seg1 seg2
+
+            let newSequence = TaskSequence(this.Identifier, items, this.Ordering) :> IConsumableTaskSequence
+
+            // consume all of the consumed tasks excluding the current task (i.e. all tasks in seg1)
+            for i = 1 to consumed do newSequence.ConsumeTask()
+
+            newSequence
+
     interface IConsumableTaskSequence with
 
         member this.Identifier with get() = this.Identifier
@@ -221,9 +247,11 @@ type TaskSequence(uid: Guid, tasks: IEnumerable<TaskItem>, ordering: ItemOrderin
 
         member this.Reset(): unit = this.Reset()
 
+        member this.Ordering: ItemOrdering = this.Ordering
+
         member this.ConsumeTask(): unit = _stack.Pop() |> ignore
 
-        member this.Ordering: ItemOrdering = this.Ordering
+        member this.InsertBeforeCurrent(taskItem: TaskItem): IConsumableTaskSequence = this.InsertBeforeCurrent taskItem
 
     interface IEnumerable<TaskItem> with
 

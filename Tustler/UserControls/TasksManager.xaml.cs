@@ -372,7 +372,7 @@ namespace Tustler.UserControls
             agent.SetSaveFlags(saveFlags);
 
             // set the current task (this is normally set by the agent)
-            var task = new TaskItem(this.TaskSpecifier.ModuleName, this.TaskSpecifier.TaskName, string.Empty);
+            var task = CreateTaskFromTaskFunctionSpecifier(this.TaskSpecifier);
             agent.PushTask(task);
 
             return runImmediately;
@@ -575,6 +575,11 @@ namespace Tustler.UserControls
             {
                 ShowGlobalError(errorInfo);
             });
+        }
+
+        private static TaskItem CreateTaskFromTaskFunctionSpecifier(TaskFunctionSpecifier taskFunctionSpecifier)
+        {
+            return new TaskItem(taskFunctionSpecifier.ModuleName, taskFunctionSpecifier.TaskName, string.Empty);
         }
 
         private void StartMiniTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -792,7 +797,7 @@ namespace Tustler.UserControls
                     }
 
                     // reset the current task (pushes the current task on the queue)
-                    var task = new TaskItem(this.TaskSpecifier.ModuleName, this.TaskSpecifier.TaskName, string.Empty);
+                    var task = CreateTaskFromTaskFunctionSpecifier(this.TaskSpecifier);
                     agent.PushTask(task);
                 }
 
@@ -814,14 +819,15 @@ namespace Tustler.UserControls
                 }
             }
 
+            /// The user has selected a task function suggested by the default response handler
             async Task RunUIResponseInsertTaskAsync(UITaskArguments parameterInfo)
             {
                 var selectedTaskPath = JsonSerializer.Deserialize<string>(new ReadOnlySpan<byte>(parameterInfo.SerializedArgument));
 
                 var taskSpecifier = this.taskFunctionLookup[selectedTaskPath];
-                var task = new TaskItem(taskSpecifier.ModuleName, taskSpecifier.TaskName, string.Empty);
+                var task = CreateTaskFromTaskFunctionSpecifier(taskSpecifier);
 
-                agent.InsertTask(task);
+                agent.InsertTaskBeforeCurrent(task);
 
                 await Dispatcher.InvokeAsync(async () =>
                 {

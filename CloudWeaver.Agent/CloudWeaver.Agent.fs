@@ -348,13 +348,13 @@ type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctio
         nextTask this
 
     /// Insert a task into the IConsumableTaskSequence at the top of the stack
-    member this.InsertTask taskItem =
+    member this.InsertTaskBeforeCurrent taskItem =
         match executionStack.TryPeek() with
         | true, Tasks taskSequence ->
             executionStack.Pop() |> ignore
-            // MG for now add to front
-            let taskItems = taskItem :: (Seq.toList taskSequence)
-            addTaskSequenceEvent taskItems (taskSequence.Ordering)
+            let newSequence = taskSequence.InsertBeforeCurrent taskItem
+            events.Add(TaskEvent.ForEachTask(newSequence))
+            executionStack.Push(Tasks newSequence)
             nextTask this
         | _ -> ()
 
