@@ -53,7 +53,7 @@
                 <ListBox x:Name="lbAvailable" Grid.Row="1" Grid.Column="0" SelectionMode="Multiple" MaxHeight="200" Background="{StaticResource NormalBackground}" HorizontalContentAlignment="Stretch" ItemsSource="{Binding Path=Available}" ItemContainerStyle="{StaticResource labelStyle}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Label Background="#637074" Foreground="#BDD4E7" FontWeight="Bold" Margin="1" Content="{Binding Path=FunctionSpecifier.TaskName}" />
+                            <Label Background="#637074" Foreground="#BDD4E7" FontWeight="Bold" Margin="1" Content="{Binding Path=FunctionSpecifier.TaskName}" MouseDoubleClick="Available_MouseDoubleClick" />
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
@@ -65,7 +65,7 @@
                 <ListBox x:Name="lbSelected" Grid.Row="1" Grid.Column="2" SelectionMode="Multiple" MaxHeight="200" Background="{StaticResource NormalBackground}" HorizontalContentAlignment="Stretch" ItemsSource="{Binding Path=Selected}" ItemContainerStyle="{StaticResource labelStyle}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Label Background="#637074" Foreground="#BDD4E7" FontWeight="Bold" Margin="1" Content="{Binding Path=FunctionSpecifier.TaskName}" />
+                            <Label Background="#637074" Foreground="#BDD4E7" FontWeight="Bold" Margin="1" Content="{Binding Path=FunctionSpecifier.TaskName}" MouseDoubleClick="Selected_MouseDoubleClick" />
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>

@@ -310,11 +310,7 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             var currentSelection = lbAvailable.SelectedItems.Cast<IndexedSpecifier>().ToImmutableHashSet();
 
-            ExecuteAction((available, selected) =>
-            {
-                this.Available = available.Except(currentSelection).OrderBy(idxSpec => idxSpec.FunctionSpecifier.TaskName);
-                this.Selected = selected.Concat(currentSelection);
-            });
+            SelectItems(currentSelection);
         }
 
         private void Unselect_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -326,11 +322,7 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             var currentSelection = lbSelected.SelectedItems.Cast<IndexedSpecifier>().ToImmutableHashSet();
 
-            ExecuteAction((available, selected) =>
-            {
-                this.Available = available.Concat(currentSelection).OrderBy(idxSpec => idxSpec.FunctionSpecifier.TaskName);
-                this.Selected = selected.Except(currentSelection);
-            });
+            UnselectItems(currentSelection);
         }
 
         private void MoveUp_CanExecute(object sender, CanExecuteRoutedEventArgs e)
@@ -415,6 +407,52 @@ namespace Tustler.UserControls.TaskMemberControls
             CommandParameter = new UITaskArguments(UITaskMode.SelectTask, "StandardShareIntraModule", "SetTaskItem", data);
 
             ExecuteCommand();
+        }
+
+        private void Available_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            GetBoundValue(e.Source, SelectItems);
+        }
+
+        private void Selected_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            GetBoundValue(e.Source, UnselectItems);
+        }
+
+        private void GetBoundValue(object clickedItem, Action<ImmutableHashSet<IndexedSpecifier>> action)
+        {
+            if (clickedItem is Label lbl)
+            {
+                if (lbl.TemplatedParent is ContentPresenter cp)
+                {
+                    if (cp.TemplatedParent is ListBoxItem lbi)
+                    {
+                        if (lbi.DataContext is IndexedSpecifier idxSpec)
+                        {
+                            var clickedIndexSpecifier = ImmutableHashSet.Create(idxSpec);
+                            action(clickedIndexSpecifier);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void SelectItems(ImmutableHashSet<IndexedSpecifier> currentSelection)
+        {
+            ExecuteAction((available, selected) =>
+            {
+                this.Available = available.Except(currentSelection).OrderBy(idxSpec => idxSpec.FunctionSpecifier.TaskName);
+                this.Selected = selected.Concat(currentSelection);
+            });
+        }
+
+        private void UnselectItems(ImmutableHashSet<IndexedSpecifier> currentSelection)
+        {
+            ExecuteAction((available, selected) =>
+            {
+                this.Available = available.Concat(currentSelection).OrderBy(idxSpec => idxSpec.FunctionSpecifier.TaskName);
+                this.Selected = selected.Except(currentSelection);
+            });
         }
     }
 
