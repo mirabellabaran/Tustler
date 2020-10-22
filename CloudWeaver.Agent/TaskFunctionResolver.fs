@@ -44,21 +44,25 @@ type TaskFunctionResolver private (pairs: seq<KeyValuePair<string, ResolverCache
                 )
 
             let loadedAssemblies =
-                let assemblyNames = AppDomain.CurrentDomain.GetAssemblies() |> Seq.map (fun asm -> asm.FullName)
-                new HashSet<string>(assemblyNames)
+                AppDomain.CurrentDomain.GetAssemblies()
+                |> Seq.fold (fun accum asm ->
+                    Map.add asm.FullName asm accum
+                ) Map.empty
 
+            // task functions must be found in one of these assembly files
             let assemblyFiles = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, TaskFunctionModulePrefix, SearchOption.TopDirectoryOnly)
 
+            // search each assembly for the attribute that marks a module containing task functions
             assemblyFiles
             |> Seq.map (fun assemblyFile -> Path.GetFileNameWithoutExtension(assemblyFile))
-            |> Seq.filter (fun baseAssemblyName ->  // skip already loaded assemblies
-                let isLoaded = loadedAssemblies |> Seq.exists(fun fullName -> fullName.StartsWith(baseAssemblyName, StringComparison.InvariantCulture))
-
-                not isLoaded
+            |> Seq.map (fun baseAssemblyName ->  // load assembly if not already loaded
+                let key = loadedAssemblies |> Map.tryFindKey (fun fullName _ -> fullName.StartsWith(baseAssemblyName, StringComparison.InvariantCulture))
+                if key.IsSome then
+                    loadedAssemblies.[key.Value]
+                else
+                    Assembly.Load(baseAssemblyName)
             )
-            |> Seq.map (fun (baseAssemblyName: string) ->
-                let assembly = Assembly.Load(baseAssemblyName)
-
+            |> Seq.map (fun assembly ->
                 assembly.GetExportedTypes()
                 |> Seq.map (fun exportedType ->
                     if Attribute.IsDefined(exportedType, typeof<CloudWeaverTaskFunctionModule>) then
@@ -78,6 +82,40 @@ type TaskFunctionResolver private (pairs: seq<KeyValuePair<string, ResolverCache
     static member Create() =
 
         async { return instance.Force() } |> Async.StartImmediateAsTask
+
+    member this.AddFunction(methodinfo: MethodInfo) =
+
+        let functionModule = methodinfo.DeclaringType
+        let assembly = functionModule.Assembly
+        let taskFunctionSpecifier = new TaskFunctionSpecifier(assembly.FullName, functionModule.FullName, methodinfo.Name, false)
+
+        let ri = new ResolverCachedItem(methodinfo, taskFunctionSpecifier)
+        taskLookup.Add(taskFunctionSpecifier.TaskFullPath, ri)
+        
+    member this.FindFunction(methodinfo: MethodInfo) =
+
+        taskLookup.Values
+        |> Seq.tryFind (fun ri ->
+            ri.MethodInfo = methodinfo
+        )
+
+    //member this.AddFunction(taskFunctionSpecifier: TaskFunctionSpecifier) =
+
+    //    let assembly = Assembly.Load(taskFunctionSpecifier.AssemblyName)
+    //    let mi =
+    //        assembly.GetExportedTypes()
+    //        |> Seq.tryFind (fun exportedType -> exportedType.FullName = taskFunctionSpecifier.ModuleName)
+    //        |> Option.map (fun exportedType ->
+    //            exportedType.GetMethods(BindingFlags.Public ||| BindingFlags.Static)
+    //            |> Seq.tryFind (fun mi -> mi.Name = taskFunctionSpecifier.TaskName)
+    //        )
+    //        |> Option.flatten
+
+    //    if mi.IsSome then
+    //        let ri = new ResolverCachedItem(mi.Value, taskFunctionSpecifier)
+    //        taskLookup.Add(taskFunctionSpecifier.TaskFullPath, ri)
+    //    else
+    //        invalidArg "taskFunctionSpecifier" "The specified public static method was not found"
 
     member this.CreateDelegate(taskFunctionSpecifier: TaskFunctionSpecifier) =
         

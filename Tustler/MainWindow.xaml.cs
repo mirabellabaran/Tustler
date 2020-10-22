@@ -37,7 +37,6 @@ namespace Tustler
     public partial class MainWindow : Window
     {
         private readonly AmazonWebServiceInterface awsInterface;
-        private readonly TaskLogger taskLogger;
 
         private readonly TaskFunctionResolver taskFunctionResolver;
 
@@ -58,12 +57,11 @@ namespace Tustler
             }
         }
 
-        public MainWindow(AmazonWebServiceInterface awsInterface, RuntimeOptions options, TaskLogger logger, TaskFunctionResolver taskFunctionResolver)
+        public MainWindow(AmazonWebServiceInterface awsInterface, RuntimeOptions options, TaskFunctionResolver taskFunctionResolver)
         {
             InitializeComponent();
 
             this.awsInterface = awsInterface;
-            this.taskLogger = logger;
             this.taskFunctionResolver = taskFunctionResolver;
 
             this.IsMocked = (options is object) ? options.IsMocked : false;

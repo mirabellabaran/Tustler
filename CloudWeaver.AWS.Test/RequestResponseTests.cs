@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using TustlerAWSLib;
 using TustlerInterfaces;
 using TustlerModels;
@@ -14,9 +15,9 @@ namespace CloudWeaver.AWS.Test
     public class RequestResponseTests
     {
         [TestMethod]
-        public void TestRequestResponse()
+        public async Task TestRequestResponse()
         {
-            var agent = InitializeTest();
+            var agent = await InitializeTestAsync();
 
             var serializerOptions = Converters.CreateSerializerOptions();
             Assert.IsTrue(serializerOptions.Converters.Count == 6);
@@ -99,19 +100,17 @@ namespace CloudWeaver.AWS.Test
             agent.AddArgument(GetModuleName(request), GetPropertyName(request), data);
         }
 
-        private static Agent InitializeTest()
+        private static async Task<Agent> InitializeTestAsync()
         {
-            var notificationsList = new NotificationsList();
             var awsInterface = new AmazonWebServiceInterface(new RuntimeOptions() { IsMocked = true });
 
             KnownArgumentsCollection knownArguments = new KnownArgumentsCollection();
-            knownArguments.AddModule(new StandardKnownArguments(notificationsList));
             knownArguments.AddModule(new AWSKnownArguments(awsInterface));
 
-            var specifier = new TaskFunctionSpecifier(null, null, null, false);
             var taskLogger = new TaskLogger();
 
-            var agent = new Agent(knownArguments, specifier, taskLogger, retainResponses: true);
+            var taskFunctionResolver = await TaskFunctionResolver.Create();
+            var agent = new Agent(knownArguments, taskFunctionResolver, taskLogger, retainResponses: true);
 
             return agent;
         }

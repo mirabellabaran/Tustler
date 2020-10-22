@@ -13,15 +13,19 @@ type ExecutionStackFrameType =
     | Data of IConsumable
     | Tasks of IConsumableTaskSequence
 
-type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctionSpecifier, taskLogger: TaskLogger, retainResponses: bool) =
+type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver: TaskFunctionResolver, taskLogger: TaskLogger, retainResponses: bool) =
 
+    let mutable isEnabled = true
+    let mutable rootTaskSpecifier = None
+    let mutable currentTaskSpecifier = None
     let mutable loggedCount = 0
     let mutable uiResponsePending = false
     let mutable errorState = false
 
     let standardVariables = StandardVariables()
 
-    let callTaskEvent = new Event<EventHandler<_>, _>()
+    //let callTaskEvent = new Event<EventHandler<_>, _>()
+    let taskCompleteEvent = new Event<EventHandler<_>, _>()     // called when the root task and any associated tasks have completed
     let newUIResponseEvent = new Event<EventHandler<_>, _>()
     let saveEventsEvent = new Event<EventHandler<_>, _>()               // save some or all events as a JSON document
     let convertToJsonEvent = new Event<EventHandler<_>, _>()    // convert events in binary log format to JSON document format
@@ -29,9 +33,15 @@ type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctio
 
     let errorEvent = new Event<EventHandler<_>, _>()
 
+    // Note that each call to the agent must run to completion for the system to work correctly (ie the agent must run just one task function at a time)
+    // Therefore enqueue the next task specifier and run the task later
+    let taskQueue = new Queue<TaskFunctionSpecifier>()
+    let taskFunctionLookup = taskFunctionResolver.GetTaskFunctionDictionary()
+    let notificationsList = new NotificationsList()
+
     do
+        knownArguments.AddModule(new StandardKnownArguments(notificationsList));
         knownArguments.AddModule(standardVariables)
-        taskLogger.StartLogging (rootTask) |> ignore
 
     // the event stack: ground truth for the events generated in a given session (from start of task to TaskResponse.TaskComplete)
     let events = new List<TaskEvent>()
@@ -62,7 +72,8 @@ type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctio
             // update task item variable
             standardVariables.SetValue(StandardRequest.RequestTaskItem, nextTask)
         
-            callTaskEvent.Trigger(self, nextTask)
+            //callTaskEvent.Trigger(self, nextTask)
+            taskQueue.Enqueue(taskFunctionLookup.[nextTask.FullPath])   // will throw if task path is unknown
 
     let rec nextTask (self:Agent) =
         if not errorState then
@@ -141,10 +152,8 @@ type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctio
         let callLastTask () =
             let currentTask = getCurrentTask ()
             standardVariables.SetValue(StandardRequest.RequestTaskItem, currentTask)   // update task item variable
-            callTaskEvent.Trigger(self, currentTask)
-            //else
-            //    let response = TaskResponse.TaskInfo "Log Replay: No Task event set prior to current SetArgument or InvokingFunction event"
-            //    newUIResponseEvent.Trigger(self, response)
+            //callTaskEvent.Trigger(self, currentTask)
+            taskQueue.Enqueue(taskFunctionLookup.[currentTask.FullPath])            // will throw if task path is unknown
             
         events.Clear()
         executionStack.Clear()
@@ -164,7 +173,8 @@ type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctio
                 // top of stack for functions with delays such as MonitorTranscription
                 callLastTask ()
             | TaskEvent.Task taskInfo ->
-                callTaskEvent.Trigger(self, taskInfo)
+                //callTaskEvent.Trigger(self, taskInfo)
+                taskQueue.Enqueue(taskFunctionLookup.[taskInfo.FullPath])       // will throw if task path is unknown
             | TaskEvent.FunctionCompleted ->
                 if executionStack.Count > 0 then
                     nextTask self
@@ -200,8 +210,12 @@ type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctio
         executionStack.Push(Data data)
         executionStack.Push(Tasks subTasks)
 
+    let enqueueCurrentTask () =
+        let currentTask = getCurrentTask ()
+        taskQueue.Enqueue(taskFunctionLookup.[currentTask.FullPath])        // will throw if task path is unknown
+
     let processResponse self response =
-        if retainResponses then
+        if taskResponses.IsSome then
             taskResponses.Value.Add(response)
 
         match response with
@@ -210,13 +224,15 @@ type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctio
         // resolve requests for common arguments immediately (other requests get passed to the UI)
         | TaskResponse.RequestArgument arg when knownArguments.IsKnownArgument(arg) ->
             events.Add(knownArguments.GetKnownArgument(arg))
-            callTaskEvent.Trigger(self, getCurrentTask ())
+            //callTaskEvent.Trigger(self, getCurrentTask ())
+            enqueueCurrentTask ()
         | TaskResponse.TaskSequence taskSequence ->
             addTaskSequenceEvent taskSequence ItemOrdering.Sequential
             newUIResponseEvent.Trigger(self, response)
         | TaskResponse.TaskContinue delayMilliseconds ->
             Async.AwaitTask (Task.Delay(delayMilliseconds)) |> Async.RunSynchronously
-            callTaskEvent.Trigger(self, getCurrentTask ())
+            //callTaskEvent.Trigger(self, getCurrentTask ())
+            enqueueCurrentTask ()
         | TaskResponse.TaskComplete _ ->
             events.Add(TaskEvent.FunctionCompleted)
             newUIResponseEvent.Trigger(self, response)
@@ -240,10 +256,12 @@ type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctio
             saveEventsEvent.Trigger(self, eventsCopy)
         | TaskResponse.TaskConvertToJson data ->
             convertToJsonEvent.Trigger(self, data)
-            callTaskEvent.Trigger(self, getCurrentTask ())
+            //callTaskEvent.Trigger(self, getCurrentTask ())
+            enqueueCurrentTask ()
         | TaskResponse.TaskConvertToBinary document ->
             convertToBinaryEvent.Trigger(self, document)
-            callTaskEvent.Trigger(self, getCurrentTask ())
+            //callTaskEvent.Trigger(self, getCurrentTask ())
+            enqueueCurrentTask ()
         | TaskResponse.Notification notification ->
             match notification with
             | :? ApplicationErrorInfo as error ->
@@ -270,9 +288,14 @@ type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctio
             let data = EventLoggingUtilities.BlockArrayToByteArray(unloggedSerializedData)
             taskLogger.AddToLog(data);
 
+    let checkQueue () =
+        match taskQueue.TryDequeue() with
+        | true, taskFunctionSpecifier -> Some(taskFunctionSpecifier)
+        | _ -> None
+
     let checkComplete () =
         if executionStack.Count = 0 then    // && not uiResponsePending
-            taskLogger.StopLogging ()
+            taskLogger.StopLogging ()                
 
     let processor self responses =
         async {
@@ -288,36 +311,124 @@ type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctio
                     errorEvent.Trigger(self, errorInfo)
         }
 
-    let runTask self responses =
-        let writer = processor self responses
-        Async.StartAsTask writer
+    //let runTask self responses =
+    //    let writer = processor self responses
+    //    Async.StartAsTask writer
 
-    member this.PrepareFunctionArguments (args: InfiniteList<MaybeResponse>) =
-        // replay the observed events, adding the arguments that have been set
-        events
-        |> Seq.iter (fun evt ->
-            match evt with
-            | TaskEvent.SetArgument response -> args.Add(MaybeResponse.Just(response))
-            | TaskEvent.ClearArguments -> args.Clear()
-            | _ -> ()
-        )
+    let rec run self (taskSpecifier) =
+        if isEnabled then
+            if errorState then
+                newUIResponseEvent.Trigger(self, TaskResponse.TaskInfo "The agent encountered an error. Start a new task to continue.")
+            else
+                currentTaskSpecifier <- Some(taskSpecifier)
+                uiResponsePending <- false
 
-    /// Process the responses from the current task function
-    member this.RunTask (responses: seq<TaskResponse>) =
-        if errorState then
-            let reportState = async {
-                newUIResponseEvent.Trigger(this, TaskResponse.TaskInfo "The agent encountered an error. Start a new task to continue.")
-            }
-            Async.StartImmediateAsTask reportState
-        else
-            events.Add(TaskEvent.InvokingFunction)
-            uiResponsePending <- false
+                let args = new InfiniteList<MaybeResponse>(MaybeResponse.Nothing)
 
-            // collect responses from just the current call to the task function
-            if retainResponses then taskResponses.Value.Clear()
+                // replay the observed events, adding the arguments that have been set
+                events
+                |> Seq.iter (fun evt ->
+                    match evt with
+                    | TaskEvent.SetArgument response -> args.Add(MaybeResponse.Just(response))
+                    | TaskEvent.ClearArguments -> args.Clear()
+                    | _ -> ()
+                )
 
-            // The TaskItem parameter is to allow the current task to be queued for recall when specified by the task function
-            runTask this responses
+                notificationsList.Clear();      // cleared for each function invocation
+
+                events.Add(TaskEvent.InvokingFunction)
+
+                let taskFunction = taskFunctionResolver.CreateDelegate(taskSpecifier)
+                let responseStream = taskFunction.Invoke(TaskFunctionQueryMode.Invoke, args)
+
+                //// collect responses from just the current call to the task function
+                //if retainResponses then taskResponses.Value.Clear()
+
+                processor self responseStream |> Async.StartAsTask |> Async.AwaitTask |> Async.RunSynchronously
+
+                // once the previous call has been processed start the next task (if any)
+                let next = checkQueue ()
+                if next.IsSome then
+                    run self next.Value    
+                else
+                    taskCompleteEvent.Trigger(self, EventArgs())
+
+    let pushTask self (taskFunctionSpecifier: TaskFunctionSpecifier) =
+        let taskItem = new TaskItem(taskFunctionSpecifier.ModuleName, taskFunctionSpecifier.TaskName, System.String.Empty);
+        let singleTaskSequence = TaskSequence(Guid.NewGuid(), [| taskItem |], ItemOrdering.Sequential)
+        events.Add(TaskEvent.ForEachTask(singleTaskSequence))
+        executionStack.Push(Tasks singleTaskSequence)
+        nextTask self
+
+    //member this.PrepareFunctionArguments (args: InfiniteList<MaybeResponse>) =
+    //    // replay the observed events, adding the arguments that have been set
+    //    events
+    //    |> Seq.iter (fun evt ->
+    //        match evt with
+    //        | TaskEvent.SetArgument response -> args.Add(MaybeResponse.Just(response))
+    //        | TaskEvent.ClearArguments -> args.Clear()
+    //        | _ -> ()
+    //    )
+
+    ///// Process the responses from the current task function
+    //member this.RunTask (responses: seq<TaskResponse>) =
+    //    if errorState then
+    //        let reportState = async {
+    //            newUIResponseEvent.Trigger(this, TaskResponse.TaskInfo "The agent encountered an error. Start a new task to continue.")
+    //        }
+    //        Async.StartImmediateAsTask reportState
+    //    else
+    //        events.Add(TaskEvent.InvokingFunction)
+    //        uiResponsePending <- false
+
+    //        // collect responses from just the current call to the task function
+    //        if retainResponses then taskResponses.Value.Clear()
+
+    //        // The TaskItem parameter is to allow the current task to be queued for recall when specified by the task function
+    //        runTask this responses
+
+    /// Start and stop task function execution
+    member this.Enabled with get() = isEnabled and set(value) = isEnabled <- value
+
+    /// Return true if there is a task in the task queue
+    member this.TaskAvailable with get() = taskQueue.Count > 0
+
+    /// If the retainResponses flag has been set then clear the response list
+    member this.ClearResponses () = if taskResponses.IsSome then taskResponses.Value.Clear()
+
+    ///// Run the specified root task function (and any other task functions that serve this root task)
+    //member this.RunTask taskSpecifier =
+    //    async {
+    //        rootTaskSpecifier <- Some(taskSpecifier)
+    //        taskLogger.StartLogging (taskSpecifier) |> ignore
+    //        run this taskSpecifier
+    //    }
+    //    |> Async.StartAsTask
+
+    /// Continue running the current task
+    member this.RunCurrent () =
+        async {
+            if currentTaskSpecifier.IsSome then
+                run this currentTaskSpecifier.Value
+        }
+        |> Async.StartAsTask
+
+    /// Run the next task in the task queue (if any)
+    member this.RunNext () =
+        async {
+            let next = checkQueue ()
+            if next.IsSome then
+                run this next.Value                    
+        }
+        |> Async.StartAsTask
+
+    /// add the specified function to the task function resolver
+    member this.AddFunction(methodinfo: System.Reflection.MethodInfo) =
+        taskFunctionResolver.AddFunction(methodinfo)
+        let ri = taskFunctionResolver.FindFunction(methodinfo)
+        if ri.IsSome then
+            let specifier = ri.Value.TaskFunctionSpecifier
+            taskFunctionLookup.Add(specifier.TaskFullPath, specifier)
 
     /// Write any unlogged events and close the log file (typically called when stopping the task)
     member this.CloseLog () =
@@ -330,17 +441,31 @@ type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctio
     /// Returns true if the root task has the EnableLogging attribute set
     member this.IsLoggingEnabled with get() = taskLogger.IsLoggingEnabled
 
-    /// Returns the task specifier provided in the Agent constructor
-    member this.RootTask with get() = rootTask
+    /// Returns the task argument specified in RunTask (taskSpecifier)
+    member this.RootTask with get() = if rootTaskSpecifier.IsSome then rootTaskSpecifier.Value else null
+
+    member this.TaskFunctions with get() : IEnumerable<TaskFunctionSpecifier> = Seq.cast<TaskFunctionSpecifier> taskFunctionLookup.Values
+
+    ///// Returns the next task specifier in the queue or null
+    //member this.NextTask () =
+    //    match taskQueue.TryDequeue() with
+    //    | true, taskFunctionSpecifier -> taskFunctionSpecifier
+    //    | _ -> null
+
+    /// Return the path of all queued task functions (used for testing only)
+    member this.QueuedTasks () : IEnumerable<string> = taskQueue |> Seq.map (fun spec -> spec.TaskFullPath)
 
     /// Get the current task from the exection stack
     member this.CurrentTask () = getCurrentTask ()
 
-    member this.PushTask taskItem =
-        let singleTaskSequence = TaskSequence(Guid.NewGuid(), [| taskItem |], ItemOrdering.Sequential)
-        events.Add(TaskEvent.ForEachTask(singleTaskSequence))
-        executionStack.Push(Tasks singleTaskSequence)
-        nextTask this
+    /// Add a root task to the execution stack. A root task may be logged (if enabled) and may generate additional sub tasks.
+    member this.PushRootTask (taskFunctionSpecifier: TaskFunctionSpecifier) =
+        rootTaskSpecifier <- Some(taskFunctionSpecifier)
+        taskLogger.StartLogging (taskFunctionSpecifier) |> ignore
+        pushTask this taskFunctionSpecifier
+
+    /// Add a single-task task sequence to the execution stack
+    member this.PushTask (taskFunctionSpecifier: TaskFunctionSpecifier) = pushTask this taskFunctionSpecifier
 
     /// Add a sequence of (independant or dependant) tasks to the execution stack
     member this.PushTasks taskSequence ordering =
@@ -348,7 +473,10 @@ type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctio
         nextTask this
 
     /// Insert a task into the IConsumableTaskSequence at the top of the stack
-    member this.InsertTaskBeforeCurrent taskItem =
+    member this.InsertTaskBeforeCurrent taskPath =
+        let taskSpecifier = taskFunctionLookup.[taskPath]   // MG could throw
+        let taskItem = TaskItem(taskSpecifier.ModuleName, taskSpecifier.TaskName, System.String.Empty)
+
         match executionStack.TryPeek() with
         | true, Tasks taskSequence ->
             executionStack.Pop() |> ignore
@@ -364,8 +492,8 @@ type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctio
         events.Add(TaskEvent.SelectArgument)
         events.Add(TaskEvent.SetArgument(response))
 
-    member this.IsAwaitingResponse with get () =
-        uiResponsePending
+    //member this.IsAwaitingResponse with get () =
+    //    uiResponsePending
 
     member this.AddArgument(response) =
         events.Add(TaskEvent.SetArgument(response))
@@ -400,8 +528,11 @@ type public Agent(knownArguments:KnownArgumentsCollection, rootTask: TaskFunctio
 
     member this.LastCallResponseList () = if retainResponses then taskResponses.Value else new List<TaskResponse>()
 
+    //[<CLIEvent>]
+    //member this.CallTask:IEvent<EventHandler<TaskItem>, TaskItem> = callTaskEvent.Publish
+
     [<CLIEvent>]
-    member this.CallTask:IEvent<EventHandler<TaskItem>, TaskItem> = callTaskEvent.Publish
+    member this.TaskComplete:IEvent<EventHandler<EventArgs>, EventArgs> = taskCompleteEvent.Publish
 
     [<CLIEvent>]
     member this.NewUIResponse:IEvent<EventHandler<TaskResponse>, TaskResponse> = newUIResponseEvent.Publish

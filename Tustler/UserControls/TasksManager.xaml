@@ -297,7 +297,7 @@
                     <UniformGrid Margin="5" Columns="1">
                         <UniformGrid.Resources>
                             <Style x:Key="transcriptionJobLabelStyle" TargetType="Label" BasedOn="{StaticResource TaskInfoLabelStyle}">
-                                <Setter Property="Width" Value="100" />
+                                <Setter Property="Width" Value="150" />
                             </Style>
                         </UniformGrid.Resources>
 

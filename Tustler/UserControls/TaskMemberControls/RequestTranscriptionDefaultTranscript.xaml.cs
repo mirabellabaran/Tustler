@@ -177,9 +177,8 @@ namespace Tustler.UserControls.TaskMemberControls
             if (!string.IsNullOrWhiteSpace(tbTranscript.Text))
             {
                 var data = SerializableTypeGenerator.CreateTranscriptionDefaultTranscript(tbTranscript.Text);
-                //var data = JsonSerializer.SerializeToUtf8Bytes(tbTranscript.Text);
 
-                CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "", "", data);
+                CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetTranscriptionDefaultTranscript", data);
 
                 ExecuteCommand();
             }

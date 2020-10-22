@@ -206,7 +206,7 @@ namespace Tustler.UserControls.TaskMemberControls
                 .Select(term => term.Name);
             var data = SerializableTypeGenerator.CreateTranslationTerminologyNames(terminologyNames);
 
-            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "", "", data);
+            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetTranslationTerminologyNames", data);
 
             ExecuteCommand();
         }
