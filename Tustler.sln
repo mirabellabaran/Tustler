@@ -33,7 +33,9 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "CloudWeaver.AWS", "CloudWea
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CloudWeaver.AWS.Test", "CloudWeaver.AWS.Test\CloudWeaver.AWS.Test.csproj", "{78742DA0-2B66-4911-8BEA-A9A55B9EEF85}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TustlerUIShared", "TustlerUIShared\TustlerUIShared.csproj", "{01D433D6-B686-449E-A95F-1AAB12DB50F0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TustlerUIShared", "TustlerUIShared\TustlerUIShared.csproj", "{01D433D6-B686-449E-A95F-1AAB12DB50F0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TustlerFFMPEG", "TustlerFFMPEG\TustlerFFMPEG.csproj", "{6B0C0CF2-5559-46A0-B919-461BCCF910AE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -89,6 +91,10 @@ Global
 		{01D433D6-B686-449E-A95F-1AAB12DB50F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{01D433D6-B686-449E-A95F-1AAB12DB50F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{01D433D6-B686-449E-A95F-1AAB12DB50F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6B0C0CF2-5559-46A0-B919-461BCCF910AE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B0C0CF2-5559-46A0-B919-461BCCF910AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B0C0CF2-5559-46A0-B919-461BCCF910AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B0C0CF2-5559-46A0-B919-461BCCF910AE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
