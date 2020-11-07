@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Amazon.Translate;
+using CloudWeaver.Foundation.Types;
 using System;
 using System.Collections.Generic;
 using System.IO;

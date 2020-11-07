@@ -1,60 +1,28 @@
-﻿using System;
+﻿using CloudWeaver.Foundation.Types;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace TustlerInterfaces
 {
-    //public class AWSException<T> where T:Exception
-    //{
-    //    T ex;
-
-    //    public AWSException(T ex)
-    //    {
-    //        this.ex = ex;
-    //    }
-
-    //    public T Exception
-    //    {
-    //        get
-    //        {
-    //            return ex;
-    //        }
-    //    }
-    //}
-
-    public class AWSResult<T>
+    public class AWSResult<T> : ICloudWeaverResult<T, ICloudWeaverException>
     {
-        T result;
-        AWSException ex;
-
         public AWSResult(T result, AWSException ex)
         {
-            this.result = result;
-            this.ex = ex;
+            this.Result = result;
+            this.Exception = ex;
         }
 
         public bool IsError
         {
             get
             {
-                return this.ex != null;
+                return this.Exception is object;
             }
         }
 
-        public T Result
-        {
-            get
-            {
-                return this.result;
-            }
-        }
+        public T Result { get; }
 
-        public AWSException Exception
-        {
-            get
-            {
-                return this.ex;
-            }
-        }
+        public ICloudWeaverException Exception { get; }
     }
 }

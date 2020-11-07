@@ -4,8 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:TustlerModels;assembly=TustlerModels"
-             xmlns:fsharp="clr-namespace:CloudWeaver.Types;assembly=CloudWeaver.Types"
-             xmlns:services="clr-namespace:TustlerServicesLib;assembly=TustlerServicesLib"
+            xmlns:foundation="clr-namespace:CloudWeaver.Foundation.Types;assembly=CloudWeaver.Foundation.Types"
              xmlns:helpers="clr-namespace:Tustler.Helpers"
              xmlns:uc="clr-namespace:Tustler.UserControls"
              xmlns:uctask="clr-namespace:Tustler.UserControls.TaskMemberControls"
@@ -72,7 +71,7 @@
             </Border>
         </DataTemplate>
 
-        <DataTemplate DataType="{x:Type services:ApplicationMessageInfo}">
+        <DataTemplate DataType="{x:Type foundation:ApplicationMessageInfo}">
             <StackPanel Orientation="Horizontal">
                 <StackPanel.Resources>
                     <Style x:Key="textBlockHeaderStyles" TargetType="TextBlock" >
@@ -96,7 +95,7 @@
             </StackPanel>
         </DataTemplate>
 
-        <DataTemplate DataType="{x:Type services:ApplicationErrorInfo}">
+        <DataTemplate DataType="{x:Type foundation:ApplicationErrorInfo}">
             <StackPanel Orientation="Horizontal" Height="40" HorizontalAlignment="Stretch">
                 <StackPanel.Resources>
                     <Style x:Key="textBlockHeaderStyles" TargetType="TextBlock" >

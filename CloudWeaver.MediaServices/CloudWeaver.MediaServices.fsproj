@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="CloudWeaver.MediaServices.fs" />
+    <Compile Include="CloudWeaver.MediaServices.Tasks.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CloudWeaver.Foundation.Types\CloudWeaver.Foundation.Types.csproj" />
+    <ProjectReference Include="..\CloudWeaver.Types\CloudWeaver.Types.fsproj" />
+    <ProjectReference Include="..\TustlerFFMPEG\TustlerFFMPEG.csproj" />
+  </ItemGroup>
+
+</Project>

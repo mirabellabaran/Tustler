@@ -1,21 +1,15 @@
 ﻿using CloudWeaver;
+using CloudWeaver.Foundation.Types;
 using log4net;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using Tustler.Helpers;
-using Tustler.Models;
 using TustlerAWSLib;
+using TustlerFFMPEG;
 using TustlerInterfaces;
 using TustlerServicesLib;
-using TustlerWinPlatformLib;
 
 namespace Tustler
 {
@@ -62,27 +56,30 @@ namespace Tustler
             // create the task function resolver
             var taskFunctionResolver = await TaskFunctionResolver.Create().ConfigureAwait(false);
 
+            // set runtime options
+            var runtimeOptions = new RuntimeOptions
+            {
+                NotificationsARN = ApplicationSettings.NotificationsARN,
+                NotificationsQueueURL = ApplicationSettings.NotificationsQueue
+            };
+
             // prepare for dependency injection
             var serviceCollection = new ServiceCollection();
-            ConfigureServices(serviceCollection, taskFunctionResolver);
+            ConfigureServices(serviceCollection, runtimeOptions, taskFunctionResolver);
 
             ServiceProvider = serviceCollection.BuildServiceProvider();
-
-            // set runtime options
-            var options = ServiceProvider.GetService<RuntimeOptions>();
-            options.NotificationsARN = ApplicationSettings.NotificationsARN;
-            options.NotificationsQueueURL = ApplicationSettings.NotificationsQueue;
 
             var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
             mainWindow.Show();
         }
 
-        private void ConfigureServices(IServiceCollection services, TaskFunctionResolver taskFunctionResolverInstance)
+        private void ConfigureServices(IServiceCollection services, RuntimeOptions runtimeOptionsInstance, TaskFunctionResolver taskFunctionResolverInstance)
         {
             // dependent services
             services.AddSingleton(taskFunctionResolverInstance);
             services.AddSingleton<TaskLogger>();
-            services.AddSingleton<RuntimeOptions>();
+            services.AddSingleton(runtimeOptionsInstance);
+            services.AddSingleton(new FFMPEGServiceInterface(runtimeOptionsInstance));
             services.AddSingleton<AmazonWebServiceInterface>();
             services.AddSingleton<MainWindow>();
         }

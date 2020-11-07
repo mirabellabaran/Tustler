@@ -7,7 +7,7 @@ open CloudWeaver.AWS
 open System.Collections.Generic
 open System
 open TustlerModels
-open TustlerServicesLib
+open CloudWeaver.Foundation.Types
 
 type SerializableTypeGenerator() =
 

@@ -10,6 +10,7 @@ using TustlerModels;
 using TustlerServicesLib;
 using System.Text;
 using System.Text.Json;
+using CloudWeaver.Foundation.Types;
 
 namespace CloudWeaver.AWS.Test
 {

@@ -4,6 +4,7 @@ open System.Runtime.InteropServices
 open TustlerServicesLib
 open TustlerModels
 open AWSInterface
+open CloudWeaver.Foundation.Types
 
 /// Tasks within a task (for S3FetchItems task)
 module public MiniTasks =

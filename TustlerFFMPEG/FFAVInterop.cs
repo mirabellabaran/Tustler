@@ -1,252 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using TustlerFFMPEG.Types.CodecInfo;
+using TustlerFFMPEG.Types.MediaInfo;
 
 namespace TustlerFFMPEG
 {
-    namespace Types
-    {
-        public enum MediaType
-        {
-            Unknown,
-            Video,
-            Audio,
-            Data,
-            Subtitle,
-            Attachment,
-        }
-
-        namespace CodecInfo
-        {
-            public enum CodecInfoType
-            {
-                Encoder,
-                Decoder
-            }
-
-            public class VideoCodecInfo
-            {
-                [JsonPropertyName("rates")]
-                public String Rates { get; set; }
-
-                [JsonPropertyName("formats")]
-                public String Formats { get; set; }
-            }
-
-            public class AudioCodecInfo
-            {
-                [JsonPropertyName("rates")]
-                public String Rates { get; set; }
-
-                [JsonPropertyName("formats")]
-                public String Formats { get; set; }
-
-                [JsonPropertyName("channel_layouts")]
-                public String ChannelLayouts { get; set; }
-            }
-
-            public class CodecInfo
-            {
-                [JsonPropertyName("codec_type")]
-                public CodecInfoType CodecType { get; set; }
-
-                [JsonPropertyName("id")]
-                public String Id { get; set; }
-
-                [JsonPropertyName("name")]
-                public String Name { get; set; }
-
-                [JsonPropertyName("description")]
-                public String Description { get; set; }
-
-                [JsonPropertyName("medium")]
-                public MediaType Medium { get; set; }
-
-                [JsonPropertyName("capabilities")]
-                public String Capabilities { get; set; }
-
-                [JsonPropertyName("profiles")]
-                public String Profiles { get; set; }
-
-                [JsonPropertyName("audio")]
-                public AudioCodecInfo Audio { get; set; }
-
-                [JsonPropertyName("video")]
-                public VideoCodecInfo Video { get; set; }
-            }
-
-            public class CodecPair
-            {
-                [JsonPropertyName("encoder")]
-                public CodecInfo Encoder { get; set; }
-
-                [JsonPropertyName("decoder")]
-                public CodecInfo Decoder { get; set; }
-            }
-
-        }
-
-        namespace MediaInfo
-        {
-            public class Rational
-            {
-                [JsonPropertyName("numerator")]
-                public int Numerator { get; set; }
-
-                [JsonPropertyName("denominator")]
-                public int Denominator { get; set; }
-            }
-
-            public class VideoStreamInfo
-            {
-                [JsonPropertyName("bit_rate")]
-                public int BitRate { get; set; }
-
-                [JsonPropertyName("max_bit_rate")]
-                public int MaxBitRate { get; set; }
-
-                [JsonPropertyName("delay")]
-                public int Delay { get; set; }
-
-                [JsonPropertyName("width")]
-                public int Width { get; set; }
-
-                [JsonPropertyName("height")]
-                public int Height { get; set; }
-
-                [JsonPropertyName("format")]
-                public String Format { get; set; }
-
-                [JsonPropertyName("has_b_frames")]
-                public bool HasBFrames { get; set; }
-
-                [JsonPropertyName("aspect_ratio")]
-                public Rational AspectRatio { get; set; }
-
-                [JsonPropertyName("color_space")]
-                public String ColorSpace { get; set; }
-
-                [JsonPropertyName("color_range")]
-                public String ColorRange { get; set; }
-
-                [JsonPropertyName("color_primaries")]
-                public String ColorPrimaries { get; set; }
-
-                [JsonPropertyName("color_transfer_characteristic")]
-                public String ColorTransferCharacteristic { get; set; }
-
-                [JsonPropertyName("chroma_location")]
-                public String ChromaLocation { get; set; }
-
-                [JsonPropertyName("references")]
-                public int References { get; set; }
-
-                [JsonPropertyName("intra_dc_precision")]
-                public byte IntraDCPrecision { get; set; }
-            }
-
-            public class AudioStreamInfo
-            {
-                [JsonPropertyName("bit_rate")]
-                public int BitRate { get; set; }
-
-                [JsonPropertyName("max_bit_rate")]
-                public int MaxBitRate { get; set; }
-
-                [JsonPropertyName("delay")]
-                public int Delay { get; set; }
-
-                [JsonPropertyName("rate")]
-                public int Rate { get; set; }
-
-                [JsonPropertyName("channels")]
-                public short Channels { get; set; }
-
-                [JsonPropertyName("format")]
-                public String Format { get; set; }
-
-                [JsonPropertyName("frames")]
-                public int Frames { get; set; }
-
-                [JsonPropertyName("align")]
-                public int Align { get; set; }
-
-                [JsonPropertyName("channel_layout")]
-                public String ChannelLayout { get; set; }
-
-                [JsonPropertyName("frame_start")]
-                public Nullable<int> FrameStart { get; set; }
-            }
-
-            public class StreamInfo
-            {
-                [JsonPropertyName("index")]
-                public int Index { get; set; }
-
-                [JsonPropertyName("codec_medium")]
-                public MediaType CodecMedium { get; set; }
-
-                [JsonPropertyName("codec_id")]
-                public String CodecId { get; set; }
-
-                [JsonPropertyName("time_base")]
-                public Rational TimeBase { get; set; }
-
-                [JsonPropertyName("start_time")]
-                public long StartTime { get; set; }
-
-                [JsonPropertyName("duration")]
-                public long Duration { get; set; }
-
-                [JsonPropertyName("duration_seconds")]
-                public double DurationInSeconds { get; set; }
-
-                [JsonPropertyName("frames")]
-                public long Frames { get; set; }
-
-                [JsonPropertyName("disposition")]
-                public String Disposition { get; set; }
-
-                [JsonPropertyName("discard")]
-                public String Discard { get; set; }
-
-                [JsonPropertyName("rate")]
-                public Rational Rate { get; set; }
-
-                [JsonPropertyName("audio")]
-                public AudioStreamInfo Audio { get; set; }
-
-                [JsonPropertyName("video")]
-                public VideoStreamInfo Video { get; set; }
-            }
-
-            public class MediaInfo
-            {
-                [JsonPropertyName("metadata")]
-                public Dictionary<string, string> Metadata { get; set; }
-
-                [JsonPropertyName("best_video_idx")]
-                public Nullable<int> BestVideoIndex { get; set; }
-
-                [JsonPropertyName("best_audio_idx")]
-                public Nullable<int> BestAudioIndex { get; set; }
-
-                [JsonPropertyName("best_subtitle_idx")]
-                public Nullable<int> BestSubtitleIndex { get; set; }
-
-                [JsonPropertyName("duration")]
-                public Double Duration { get; set; }
-
-                [JsonPropertyName("streams")]
-                public List<StreamInfo> Streams { get; set; }
-            }
-        }
-    }
-
-    public class FFAVInterop
+    public class FFAVInterop : IAVServiceInterface
     {
         // Note that UIntPtr maps to usize in Rust (UIntPtr is word sized)
 
@@ -259,40 +23,46 @@ namespace TustlerFFMPEG
         [DllImport("ffavwrapper.dll")]
         private static extern Int32 get_codec_info(string codecName, byte[] buffer, UIntPtr bufferLen);
 
-        public static void GetCodecInfo()
+        public AVInteropResult<CodecPair> GetCodecInfo(string codecName)
         {
-            var json = GetJson((byte[] data) => get_codec_info("h264", data, (UIntPtr)data.Length));
+            var json = GetJson(nameof(GetCodecInfo), (byte[] data) => get_codec_info("h264", data, (UIntPtr)data.Length));
 
-            if (json.Length > 0)
+            if (json.IsError)
+            {
+                return new AVInteropResult<CodecPair>(null, json.Exception);
+            }
+            else
             {
                 var options = new JsonSerializerOptions();
                 options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
-                var codecInfo = JsonSerializer.Deserialize<Types.CodecInfo.CodecPair>(json, options);
-                Console.WriteLine("Codec Info:\n\t{0}\n\t{1}", codecInfo.Decoder.Name, codecInfo.Decoder.Description);
+                var codecInfo = JsonSerializer.Deserialize<Types.CodecInfo.CodecPair>(json.Result, options);
+
+                return new AVInteropResult<CodecPair>(codecInfo, null);
             }
         }
 
-        public static void GetMediaInfo()
+        public AVInteropResult<MediaInfo> GetMediaInfo(string inputFilePath)
         {
-            var input = @"C:\Users\Zev\Projects\rust\ffavrunme\temp\temp.avi";
+            //var input = @"C:\Users\Zev\Projects\rust\ffavrunme\temp\temp.avi";
             //var input = @"C:\Users\Zev\Videos\The Shawshank Redemption (1994)\The.Shawshank.Redemption.1994.CD1.AC3.iNTERNAL.DVDRip.XviD-xCZ.avi";
 
-            var json = GetJson((byte[] data) => get_media_info(input, data, (UIntPtr)data.Length));
+            var json = GetJson(nameof(GetMediaInfo), (byte[] data) => get_media_info(inputFilePath, data, (UIntPtr)data.Length));
 
-            if (json.Length > 0)
+            if (json.IsError)
+            {
+                return new AVInteropResult<MediaInfo>(null, json.Exception);
+            }
+            else
             {
                 var options = new JsonSerializerOptions();
                 options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
-                var mediaInfo = JsonSerializer.Deserialize<Types.MediaInfo.MediaInfo>(json, options);
-                Console.WriteLine("Media Info:\n\tStreams: {0}\n", mediaInfo.Streams.Count);
-                foreach (var item in mediaInfo.Metadata)
-                {
-                    Console.WriteLine("\t{0}: {1}", item.Key, item.Value);
-                }
-            }
-        }
+                var mediaInfo = JsonSerializer.Deserialize<Types.MediaInfo.MediaInfo>(json.Result, options);
 
-        public static void Transcode()
+                return new AVInteropResult<MediaInfo>(mediaInfo, null);
+            }
+        }   
+
+        public AVInteropResult<bool> Transcode(string inputFilePath, string outputFilePath)
         {
             var input = @"C:\Users\Zev\Projects\rust\ffavrunme\temp\temp.avi";
             var output = @"C:\Users\Zev\Projects\rust\ffavrunme\temp\out.wmv";
@@ -301,38 +71,39 @@ namespace TustlerFFMPEG
 
             if (result < 0)
             {
-                HandleError(result);
+                var ex = HandleError(result, nameof(Transcode));
+                return new AVInteropResult<bool>(false, ex);
             }
             else
             {
-                Console.WriteLine("Transcode:\tsuccessful");
+                return new AVInteropResult<bool>(true, null);
             }
         }
 
-        public static void HandleError(int errorCode)
+        private static AVInteropException HandleError(int errorCode, string context)
         {
             var message = errorCode switch
             {
-                -2 => "FFMPEGInitializationError",
-                -3 => "CodecNotFound",
-                -4 => "TooManyBytesWritten",
-                -5 => "BufferTooSmall",
-                -6 => "WriteError",
-                -7 => "SerializationError",
-                -8 => "ArgumentConversionToStringFailed",
-                -9 => "PathArgumentMustExist",
-                -10 => "OutputFolderMustExist",
-                -11 => "OpenInputPathFailed",
-                -12 => "OpenOutputPathFailed",
-                -13 => "ArgumentConversionToArrayFailed",
-                -14 => "UnknownIOError",
-                _ => "UnknownErrorCode"
+                -2 => "FFMPEG initialization error",
+                -3 => "Codec not found",
+                -4 => "Too many bytes written",
+                -5 => "Buffer too small",
+                -6 => "Write error",
+                -7 => "Serialization error",
+                -8 => "Argument conversion to string failed",
+                -9 => "Path argument must exist",
+                -10 => "Output folder must exist",
+                -11 => "Open input path failed",
+                -12 => "Open output path failed",
+                -13 => "Argument conversion to array failed",
+                -14 => "Unknown IO error",
+                _ => "Unknown error code"
             };
 
-            Console.WriteLine("Error:\t{0}", message);
+            return new AVInteropException(context, errorCode, message);
         }
 
-        public static ReadOnlySpan<byte> GetJson(Func<byte[], int> func)
+        private static AVInteropResult<string> GetJson(string context, Func<byte[], int> func)
         {
             var data = new byte[5000];
             var result = func(data);
@@ -340,17 +111,34 @@ namespace TustlerFFMPEG
             Console.WriteLine("Length: {0}", result);
             if (result < 0)
             {
-                HandleError(result);
-                return ReadOnlySpan<byte>.Empty;
+                var ex = HandleError(result, context);
+                return new AVInteropResult<string>(null, ex);
             }
             else
             {
                 var jsonData = new ReadOnlySpan<byte>(data, 0, result);
                 var json = UTF8Encoding.UTF8.GetString(jsonData);
-                Console.WriteLine("Data: {0}", json);
 
-                return jsonData;
+                return new AVInteropResult<string>(json, null);
             }
+        }
+    }
+
+    public class MockFFAVInterop : IAVServiceInterface
+    {
+        public AVInteropResult<CodecPair> GetCodecInfo(string codecName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public AVInteropResult<MediaInfo> GetMediaInfo(string inputFilePath)
+        {
+            throw new NotImplementedException();
+        }
+
+        public AVInteropResult<bool> Transcode(string inputFilePath, string outputFilePath)
+        {
+            throw new NotImplementedException();
         }
     }
 }

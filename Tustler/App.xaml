@@ -4,7 +4,7 @@
              xmlns:local="clr-namespace:Tustler.Models"
              xmlns:model="clr-namespace:TustlerModels;assembly=TustlerModels"
              xmlns:helpers="clr-namespace:Tustler.Helpers"
-             xmlns:services="clr-namespace:TustlerServicesLib;assembly=TustlerServicesLib"
+             xmlns:services="clr-namespace:CloudWeaver.Foundation.Types;assembly=CloudWeaver.Foundation.Types"
              xmlns:Themes="clr-namespace:Microsoft.Windows.Themes;assembly=PresentationFramework.AeroLite"
              Startup="Application_Startup">
     <Application.Resources>

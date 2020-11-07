@@ -37,7 +37,7 @@ type StandardFlag(stdFlag: StandardFlagItem) =
             let str1 = (this :> ISaveFlag).Identifier
             let str2 = (obj :?> ISaveFlag).Identifier
             System.String.Compare(str1, str2)
-        member this.Identifier with get() = CommonUtilities.toString stdFlag
+        member this.Identifier with get() = BaseUtilities.toString stdFlag
 
 type StandardFlagSet(flags: StandardFlagItem[]) =
     let mutable _set =

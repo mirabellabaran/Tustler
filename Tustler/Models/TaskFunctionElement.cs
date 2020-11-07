@@ -1,8 +1,4 @@
-﻿using CloudWeaver.Types;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using TustlerServicesLib;
+﻿using CloudWeaver.Foundation.Types;
 
 namespace Tustler.Models
 {

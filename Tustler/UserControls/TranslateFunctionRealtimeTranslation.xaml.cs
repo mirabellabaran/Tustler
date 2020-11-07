@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using CloudWeaver.Foundation.Types;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
@@ -9,7 +10,6 @@ using System.Windows.Input;
 using TustlerAWSLib;
 using TustlerModels;
 using TustlerModels.Services;
-using TustlerServicesLib;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
 
 namespace Tustler.UserControls

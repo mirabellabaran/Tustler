@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace TustlerServicesLib
+namespace CloudWeaver.Foundation.Types
 {
     /// <summary>
     /// Specifies the name and path (assembly and module) to a task function

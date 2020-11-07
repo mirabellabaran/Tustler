@@ -1,32 +1,20 @@
 ﻿using CloudWeaver;
-using CloudWeaver.AWS;
-using CloudWeaver.Types;
+using CloudWeaver.Foundation.Types;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using Tustler.Helpers;
 using Tustler.Models;
 using Tustler.UserControls;
 using TustlerAWSLib;
+using TustlerFFMPEG;
 using TustlerInterfaces;
-using TustlerServicesLib;
-using AppSettings = TustlerServicesLib.ApplicationSettings;
 using AppSettingsControl = Tustler.UserControls.ApplicationSettings;
 
 namespace Tustler
@@ -37,6 +25,7 @@ namespace Tustler
     public partial class MainWindow : Window
     {
         private readonly AmazonWebServiceInterface awsInterface;
+        private readonly FFMPEGServiceInterface avInterface;
 
         private readonly TaskFunctionResolver taskFunctionResolver;
 
@@ -57,11 +46,13 @@ namespace Tustler
             }
         }
 
-        public MainWindow(AmazonWebServiceInterface awsInterface, RuntimeOptions options, TaskFunctionResolver taskFunctionResolver)
+        public MainWindow(AmazonWebServiceInterface awsInterface, FFMPEGServiceInterface avInterface, RuntimeOptions options, TaskFunctionResolver taskFunctionResolver)
         {
             InitializeComponent();
 
             this.awsInterface = awsInterface;
+            this.avInterface = avInterface;
+
             this.taskFunctionResolver = taskFunctionResolver;
 
             this.IsMocked = (options is object) ? options.IsMocked : false;
@@ -300,9 +291,14 @@ namespace Tustler
         private void ToggleMockingMode(bool isMocked)
         {
             var app = App.Current as App;
+            var runtimeOptions = app.ServiceProvider.GetService(typeof(RuntimeOptions)) as RuntimeOptions;
+            runtimeOptions.IsMocked = isMocked;
+
             var awsInterface = app.ServiceProvider.GetService(typeof(AmazonWebServiceInterface)) as AmazonWebServiceInterface;
-            awsInterface.RuntimeOptions.IsMocked = isMocked;
             awsInterface.Reinitialize();
+
+            var avInterface = app.ServiceProvider.GetService(typeof(FFMPEGServiceInterface)) as FFMPEGServiceInterface;
+            avInterface.Reinitialize();
 
             this.IsMocked = isMocked;
         }

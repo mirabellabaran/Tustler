@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using CloudWeaver.Foundation.Types;
+using Microsoft.Win32;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -8,7 +9,6 @@ using System.Windows.Input;
 using TustlerAWSLib;
 using TustlerModels;
 using TustlerModels.Services;
-using TustlerServicesLib;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
 
 namespace Tustler.UserControls

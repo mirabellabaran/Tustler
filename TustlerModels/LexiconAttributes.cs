@@ -1,9 +1,9 @@
-﻿using System;
+﻿using CloudWeaver.Foundation.Types;
+using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using TustlerAWSLib;
 using TustlerInterfaces;
-using TustlerServicesLib;
 
 namespace TustlerModels
 {

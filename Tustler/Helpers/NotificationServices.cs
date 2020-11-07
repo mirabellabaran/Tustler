@@ -1,12 +1,11 @@
 ﻿#nullable enable
+using CloudWeaver.Foundation.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Threading;
 using TustlerAWSLib;
 using TustlerInterfaces;
 using TustlerServicesLib;
@@ -76,7 +75,7 @@ namespace Tustler.Helpers
             var result = await PublishMessage(awsInterface).ConfigureAwait(true);
             if (result.IsError)
             {
-                notifications.HandleError("TestNotifications", "An error occurred when publishing a message.", result.Exception);
+                notifications.HandleError("TestNotifications", "An error occurred when publishing a message.", result.Exception.InnerException);
                 return false;
             }
             else
@@ -100,7 +99,7 @@ namespace Tustler.Helpers
             var result = await awsInterface.SQS.ReceiveMessage(queueUrl).ConfigureAwait(true);
             if (result.IsError)
             {
-                notifications.HandleError("WaitOnNotification", "An error occurred when waiting on a notification.", result.Exception);
+                notifications.HandleError("WaitOnNotification", "An error occurred when waiting on a notification.", result.Exception.InnerException);
                 message = null;
             }
             else

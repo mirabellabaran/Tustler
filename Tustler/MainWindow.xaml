@@ -4,8 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Tustler"
-        xmlns:models="clr-namespace:Tustler.Models"
-        xmlns:services="clr-namespace:TustlerServicesLib;assembly=TustlerServicesLib"
+        xmlns:foundation="clr-namespace:CloudWeaver.Foundation.Types;assembly=CloudWeaver.Foundation.Types"
         xmlns:helpers="clr-namespace:Tustler.Helpers"
         mc:Ignorable="d"
         x:Name="Main"
@@ -34,7 +33,7 @@
             M1.553 6.776a.5.5 0 01.67-.223L8 9.44l5.776-2.888a.5.5 0 11.448.894l-6 3a.5.5 0 01-.448 0l-6-3a.5.5 0 01-.223-.67z
         </StreamGeometry>
 
-        <DataTemplate DataType="{x:Type services:ApplicationMessageInfo}">
+        <DataTemplate DataType="{x:Type foundation:ApplicationMessageInfo}">
             <Border BorderBrush="DarkGray" BorderThickness="2" Padding="5" Margin="2">
                 <Border.Resources>
                     <Style x:Key="textBlockHeaderStyles" TargetType="TextBlock" >
@@ -59,7 +58,7 @@
             </Border>
         </DataTemplate>
 
-        <DataTemplate DataType="{x:Type services:ApplicationErrorInfo}">
+        <DataTemplate DataType="{x:Type foundation:ApplicationErrorInfo}">
             <StackPanel Orientation="Horizontal" Height="40" HorizontalAlignment="Stretch">
                 <StackPanel.Resources>
                     <Style x:Key="textBlockHeaderStyles" TargetType="TextBlock" >

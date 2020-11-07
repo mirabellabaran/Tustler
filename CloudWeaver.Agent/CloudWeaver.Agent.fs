@@ -8,6 +8,7 @@ open CloudWeaver.Types
 open System.IO
 open System.Text.Json
 open System.Text
+open CloudWeaver.Foundation.Types
 
 type ExecutionStackFrameType =
     | Data of IConsumable
@@ -334,12 +335,14 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
                     | _ -> ()
                 )
 
+                let argMap: Map<IRequestIntraModule, IShareIntraModule> = ArgumentResolver.integrateUIRequestArguments args
+
                 notificationsList.Clear();      // cleared for each function invocation
 
                 events.Add(TaskEvent.InvokingFunction)
 
                 let taskFunction = taskFunctionResolver.CreateDelegate(taskSpecifier)
-                let responseStream = taskFunction.Invoke(TaskFunctionQueryMode.Invoke, args)
+                let responseStream = taskFunction.Invoke(TaskFunctionQueryMode.Invoke, argMap)
 
                 //// collect responses from just the current call to the task function
                 //if retainResponses then taskResponses.Value.Clear()
@@ -459,9 +462,9 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
     member this.CurrentTask () = getCurrentTask ()
 
     /// Add a root task to the execution stack. A root task may be logged (if enabled) and may generate additional sub tasks.
-    member this.PushRootTask (taskFunctionSpecifier: TaskFunctionSpecifier) =
+    member this.PushRootTask (rootFolder: string) (taskFunctionSpecifier: TaskFunctionSpecifier) =
         rootTaskSpecifier <- Some(taskFunctionSpecifier)
-        taskLogger.StartLogging (taskFunctionSpecifier) |> ignore
+        taskLogger.StartLogging(rootFolder, taskFunctionSpecifier) |> ignore
         pushTask this taskFunctionSpecifier
 
     /// Add a single-task task sequence to the execution stack

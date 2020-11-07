@@ -35,6 +35,7 @@
     <ProjectReference Include="..\CloudWeaver.AWS\CloudWeaver.AWS.fsproj" />
     <ProjectReference Include="..\CloudWeaver.Types\CloudWeaver.Types.fsproj" />
     <ProjectReference Include="..\TustlerAWSLib\TustlerAWSLib.csproj" />
+    <ProjectReference Include="..\TustlerFFMPEG\TustlerFFMPEG.csproj" />
     <ProjectReference Include="..\TustlerInterfaces\TustlerInterfaces.csproj" />
     <ProjectReference Include="..\TustlerModels\TustlerModels.csproj" />
     <ProjectReference Include="..\TustlerServicesLib\TustlerServicesLib.csproj" />

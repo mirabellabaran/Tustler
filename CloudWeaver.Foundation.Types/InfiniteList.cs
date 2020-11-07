@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Text;
 
-namespace TustlerServicesLib
+namespace CloudWeaver.Foundation.Types
 {
     public class InfiniteList<T> : IEnumerable<T>
     {

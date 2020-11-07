@@ -1,9 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿using CloudWeaver.Foundation.Types;
+using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Input;
 using TustlerAWSLib;
 using TustlerModels;
-using TustlerServicesLib;
 
 namespace Tustler.UserControls
 {

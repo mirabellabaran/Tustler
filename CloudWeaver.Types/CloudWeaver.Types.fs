@@ -1,6 +1,6 @@
 ﻿namespace CloudWeaver.Types
 
-open TustlerServicesLib
+open CloudWeaver.Foundation.Types
 open System.Collections
 open System.Collections.Generic
 open System.Collections.Immutable
@@ -434,7 +434,7 @@ type StandardArgument =
 and StandardShareIntraModule(arg: StandardArgument) =
     interface IShareIntraModule with
         member this.ModuleTag with get() = Tag "StandardShareIntraModule"
-        member this.Identifier with get() = Identifier (CommonUtilities.toString arg)
+        member this.Identifier with get() = Identifier (BaseUtilities.toString arg)
         member this.ToString () = sprintf "StandardShareIntraModule(%s)" (arg.ToString())
         member this.Description () =
             match arg with
@@ -556,7 +556,7 @@ type StandardRequestIntraModule(stdRequest: StandardRequest) =
             let str1 = (this :> IRequestIntraModule).Identifier.AsString()
             let str2 = (obj :?> IRequestIntraModule).Identifier.AsString()
             System.String.Compare(str1, str2)
-        member this.Identifier with get() = Identifier (CommonUtilities.toString stdRequest)
+        member this.Identifier with get() = Identifier (BaseUtilities.toString stdRequest)
         member this.ToString () = sprintf "StandardRequestIntraModule(%s)" (stdRequest.ToString())
 
     member this.Request with get() = stdRequest

@@ -5,7 +5,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TustlerServicesLib
+namespace CloudWeaver.Foundation.Types
 {
     public class TaskLogger :IDisposable
     {
@@ -49,14 +49,14 @@ namespace TustlerServicesLib
         /// </summary>
         /// <returns>true if logging was enabled</returns>
         /// <remarks>Only root tasks own a folder within the File Cache; this is where the log file is written</remarks>
-        public bool StartLogging(TaskFunctionSpecifier taskSpecifier)
+        public bool StartLogging(string rootFolder, TaskFunctionSpecifier taskSpecifier)
         {
             this.taskSpecifier = taskSpecifier;
 
             if (this.taskSpecifier is object && this.taskSpecifier.IsLoggingEnabled)
             {
                 var logFileName = $"{DateTime.Now.Ticks}-{LogFileName}";
-                var filePath = Path.Combine(ApplicationSettings.FileCachePath, this.taskSpecifier.TaskName, logFileName);
+                var filePath = Path.Combine(rootFolder, this.taskSpecifier.TaskName, logFileName);
                 this.LogFilePath = new FileInfo(filePath);
 
                 IsLoggingEnabled = true;

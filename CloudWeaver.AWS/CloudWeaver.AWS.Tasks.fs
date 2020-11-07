@@ -5,6 +5,7 @@ open TustlerServicesLib
 open TustlerModels
 open System.Collections.Generic
 open CloudWeaver.Types
+open CloudWeaver.Types.CommonUtilities
 
 open TustlerAWSLib
 open System.IO
@@ -12,100 +13,14 @@ open AWSInterface
 open System.Text.RegularExpressions
 open System.Threading.Tasks
 open System.Text.Json
+open CloudWeaver.Foundation.Types
 
 [<CloudWeaverTaskFunctionModule>]
 module public Tasks =
 
-    let private mapResponseToRequest (response: TaskResponse) =
-        match response with
-        | TaskResponse.SetArgument arg ->
-            match arg with
-            | :? AWSShareIntraModule as awsShareIntraModule ->
-                match awsShareIntraModule.Argument with
-                // arguments corresponding to AWSRequest items
-                | SetAWSInterface _ -> Some(AWSRequestIntraModule(RequestAWSInterface) :> IRequestIntraModule)
-                | SetBucket _ -> Some(AWSRequestIntraModule(RequestBucket) :> IRequestIntraModule)
-                | SetBucketsModel _ -> Some(AWSRequestIntraModule(RequestBucketsModel) :> IRequestIntraModule)
-                | SetS3MediaReference _ -> Some(AWSRequestIntraModule(RequestS3MediaReference) :> IRequestIntraModule)
-                | SetTranscriptionJobsModel _ -> Some(AWSRequestIntraModule(RequestTranscriptionJobsModel) :> IRequestIntraModule)  // see also AWSDisplayValue.DisplayTranscriptionJobsModel
-                | SetTranscriptionJobName _ -> Some(AWSRequestIntraModule(RequestTranscriptionJobName) :> IRequestIntraModule)
-                | SetTranscriptJSON _ -> Some(AWSRequestIntraModule(RequestTranscriptJSON) :> IRequestIntraModule)
-                | SetTranscriptionDefaultTranscript _ -> Some(AWSRequestIntraModule(RequestTranscriptionDefaultTranscript) :> IRequestIntraModule)
-                | SetTranscriptURI _ -> Some(AWSRequestIntraModule(RequestTranscriptURI) :> IRequestIntraModule)
-                //| SetTranscriptionLanguageCode _ -> Some(AWSRequestIntraModule(RequestTranscriptionLanguageCode) :> IRequestIntraModule)
-                //| SetTranslationLanguageCodeSource _ -> Some(AWSRequestIntraModule(RequestTranslationLanguageCodeSource) :> IRequestIntraModule)
-                | SetLanguage lang when lang.LanguageDomain = LanguageDomain.Transcription -> Some(AWSRequestIntraModule(RequestTranscriptionLanguageCode) :> IRequestIntraModule)
-                | SetLanguage lang when lang.LanguageDomain = LanguageDomain.Translation -> Some(AWSRequestIntraModule(RequestTranslationLanguageCodeSource) :> IRequestIntraModule)
-                | SetLanguage _ -> invalidArg "arg" "Unexpected SetLanguage parameters"
-                | SetTranslationTargetLanguages _ -> Some(AWSRequestIntraModule(RequestTranslationTargetLanguages) :> IRequestIntraModule)
-                | SetTranscriptionVocabularyName _ -> Some(AWSRequestIntraModule(RequestTranscriptionVocabularyName) :> IRequestIntraModule)
-                | SetTranslationTerminologyNames _ -> Some(AWSRequestIntraModule(RequestTranslationTerminologyNames) :> IRequestIntraModule)
-                | SetTranslationSegments _ -> Some(AWSRequestIntraModule(RequestTranslationSegments) :> IRequestIntraModule)
-                | SetSubtitleFilePath _ -> Some(AWSRequestIntraModule(RequestSubtitleFilePath) :> IRequestIntraModule)
-            | :? StandardShareIntraModule as stdShareIntraModule ->
-                match stdShareIntraModule.Argument with
-                | SetNotificationsList _ -> Some(StandardRequestIntraModule(RequestNotifications) :> IRequestIntraModule)
-                | SetTaskIdentifier _ -> Some(StandardRequestIntraModule(RequestTaskIdentifier) :> IRequestIntraModule)
-                | SetTaskItem _ -> Some(StandardRequestIntraModule(RequestTaskItem) :> IRequestIntraModule)
-                | SetWorkingDirectory _ -> Some(StandardRequestIntraModule(RequestWorkingDirectory) :> IRequestIntraModule)
-                | SetSaveFlags _ -> Some(StandardRequestIntraModule(RequestSaveFlags) :> IRequestIntraModule)
-                | SetJsonEvents _ -> Some(StandardRequestIntraModule(RequestJsonEvents) :> IRequestIntraModule)
-                | SetFileMediaReference _ -> Some(StandardRequestIntraModule(RequestFileMediaReference) :> IRequestIntraModule)
-                | SetLogFormatEvents _ -> Some(StandardRequestIntraModule(RequestLogFormatEvents) :> IRequestIntraModule)
-                | SetFilePath path when path.Mode = FilePickerMode.Open && path.Extension = "json" -> Some(StandardRequestIntraModule(RequestOpenJsonFilePath) :> IRequestIntraModule)
-                | SetFilePath path when path.Mode = FilePickerMode.Save && path.Extension = "json" -> Some(StandardRequestIntraModule(RequestSaveJsonFilePath) :> IRequestIntraModule)
-                | SetFilePath path when path.Mode = FilePickerMode.Open && path.Extension = "bin" -> Some(StandardRequestIntraModule(RequestOpenLogFormatFilePath) :> IRequestIntraModule)
-                | SetFilePath path when path.Mode = FilePickerMode.Save && path.Extension = "bin" -> Some(StandardRequestIntraModule(RequestSaveLogFormatFilePath) :> IRequestIntraModule)
-                | SetFilePath _ -> invalidArg "arg" "Unexpected SetFilePath parameters"
-
-            | _ -> None     // ignore request types from other modules
-        | _ -> None
-
-    /// Get all requests that are not yet set
-    let private getUnResolvedRequests (argMap: Map<IRequestIntraModule, IShareIntraModule>) (required: TaskResponse []) =
-        required
-        |> Seq.map (fun response ->
-            match response with
-            | TaskResponse.RequestArgument arg -> arg
-            | _ -> invalidArg "response" "Expected RequestArgument in when checking input arguments"
-        )
-        |> Seq.filter (fun request -> not (argMap.ContainsKey request))
-        |> Seq.map (fun request -> TaskResponse.RequestArgument request)
-        |> Seq.toArray
-
-    // Get the first unresolved request and send to the UI to resolve the value
-    let private resolveByRequest (unresolvedRequests: TaskResponse []) =
-
-        let requestStack = Stack(unresolvedRequests)
-
-        if requestStack.Count > 0 then
-            Seq.singleton (requestStack.Pop())
-        else
-            Seq.empty
-
-    /// Create a map that contains those request arguments that are currently set
-    let private integrateUIRequestArguments (args:InfiniteList<MaybeResponse>) =
-        args
-        |> Seq.takeWhile (fun mr -> mr.IsSet)
-        |> Seq.fold (fun (map:Map<_,_>) mr ->
-            let request = mapResponseToRequest mr.Value
-            let response =
-                match mr.Value with
-                | TaskResponse.SetArgument arg -> Some(arg)
-                | _ -> None
-            if request.IsSome && response.IsSome then
-                map.Add (request.Value, response.Value)
-            else
-                map
-        ) (Map.empty)
-
-    /// Get any notifications generated from the last AWS call (errors or informational messages)
-    let private getNotificationResponse (notifications: NotificationsList) =
-        Seq.map (fun note -> TaskResponse.Notification note) notifications.Notifications
-
     // A minimal task function that does nothing
     [<HideFromUI>]
-    let MinimalFunction (queryMode: TaskFunctionQueryMode) (_args: InfiniteList<MaybeResponse>) =
+    let MinimalFunction (queryMode: TaskFunctionQueryMode) (_argMap: Map<IRequestIntraModule, IShareIntraModule>) =
     
         match queryMode with
         | Description -> Seq.singleton (TaskResponse.TaskDescription "A sample task function that does nothing")
@@ -117,7 +32,7 @@ module public Tasks =
                 yield TaskResponse.TaskComplete ("Task complete", DateTime.Now)
             }
 
-    let S3FetchItems (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let S3FetchItems (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
         let showS3Data argMap =
 
@@ -169,7 +84,7 @@ module public Tasks =
             seq {
                 // Eventually expecting three arguments: SetBucketsModel, SetBucket, SetBucketItemsModel
 
-                let argMap = integrateUIRequestArguments resolvable_arguments
+                //let argMap = integrateUIRequestArguments resolvable_arguments
                 let unresolvedRequests = getUnResolvedRequests argMap inputs
 
                 if unresolvedRequests.Length = 0 then
@@ -179,7 +94,7 @@ module public Tasks =
             }
 
     [<HideFromUI>]
-    let CleanTranscriptionJobHistory (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let CleanTranscriptionJobHistory (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
         let hasDeleteableJobs (model: TranscriptionJobsViewModel) =
             let empty =
@@ -259,7 +174,7 @@ module public Tasks =
                 // eventually expecting four arguments: AWSInterface, Notifications, TaskItem and TranscriptionJobsModel
                 // of which the first three must be resolved in advance
 
-                let argMap = integrateUIRequestArguments resolvable_arguments
+                //let argMap = integrateUIRequestArguments resolvable_arguments
                 let unresolvedRequests = getUnResolvedRequests argMap inputs
 
                 if unresolvedRequests.Length = 0 then
@@ -269,7 +184,7 @@ module public Tasks =
             }
 
     [<HideFromUI>]
-    let SomeSubTask (queryMode: TaskFunctionQueryMode) (_args: InfiniteList<MaybeResponse>) =
+    let SomeSubTask (queryMode: TaskFunctionQueryMode) (_argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
         match queryMode with
         | Description -> Seq.singleton (TaskResponse.TaskDescription "A temporary sample cleanup task")
@@ -282,7 +197,7 @@ module public Tasks =
                 yield TaskResponse.TaskComplete ("Finished SomeSubTask", DateTime.Now)
             }
 
-    let Cleanup (queryMode: TaskFunctionQueryMode) (args: InfiniteList<MaybeResponse>) =
+    let Cleanup (queryMode: TaskFunctionQueryMode) (_argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
         match queryMode with
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Choose from a selection of cleanup tasks")
@@ -298,7 +213,7 @@ module public Tasks =
             }
 
     [<HideFromUI>]
-    let UploadMediaFile (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let UploadMediaFile (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
         let uploadMediaFile argMap =
             let argsRecord = {|
@@ -337,7 +252,7 @@ module public Tasks =
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestS3MediaReference)))
         | Invoke ->
             seq {
-                let argMap = integrateUIRequestArguments resolvable_arguments
+                //let argMap = integrateUIRequestArguments resolvable_arguments
                 let unresolvedRequests = getUnResolvedRequests argMap inputs
 
                 if unresolvedRequests.Length = 0 then
@@ -347,7 +262,7 @@ module public Tasks =
             }
 
     [<HideFromUI>]
-    let StartTranscription (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let StartTranscription (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
         let startTranscription argMap =
             let argsRecord = {|
@@ -391,7 +306,7 @@ module public Tasks =
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionJobName)))
         | Invoke ->
             seq {
-                let argMap = integrateUIRequestArguments resolvable_arguments
+                //let argMap = integrateUIRequestArguments resolvable_arguments
                 let unresolvedRequests = getUnResolvedRequests argMap inputs
 
                 if unresolvedRequests.Length = 0 then
@@ -401,7 +316,7 @@ module public Tasks =
             }
 
     [<HideFromUI>]
-    let MonitorTranscription (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let MonitorTranscription (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
         let monitorTranscription argMap =
             let argsRecord = {|
@@ -443,7 +358,7 @@ module public Tasks =
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptURI)))
         | Invoke ->
             seq {
-                let argMap = integrateUIRequestArguments resolvable_arguments
+                //let argMap = integrateUIRequestArguments resolvable_arguments
                 let unresolvedRequests = getUnResolvedRequests argMap inputs
 
                 if unresolvedRequests.Length = 0 then
@@ -453,7 +368,7 @@ module public Tasks =
             }
 
     [<HideFromUI>]
-    let DownloadTranscript (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let DownloadTranscript (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
         let (|CompiledMatch|_|) pattern input =
             if input = null then None
@@ -522,7 +437,7 @@ module public Tasks =
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptJSON)))
         | Invoke ->
             seq {
-                let argMap = integrateUIRequestArguments resolvable_arguments
+                //let argMap = integrateUIRequestArguments resolvable_arguments
                 let unresolvedRequests = getUnResolvedRequests argMap inputs
 
                 if unresolvedRequests.Length = 0 then
@@ -532,7 +447,7 @@ module public Tasks =
             }
 
     [<HideFromUI>]
-    let SaveTranscript (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let SaveTranscript (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
         let saveTranscript argMap =
             let argsRecord = {|
@@ -567,7 +482,7 @@ module public Tasks =
         | Outputs -> Seq.empty
         | Invoke ->
             seq {
-                let argMap = integrateUIRequestArguments resolvable_arguments
+                //let argMap = integrateUIRequestArguments resolvable_arguments
                 let unresolvedRequests = getUnResolvedRequests argMap [|
                     TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
                     |]
@@ -596,7 +511,7 @@ module public Tasks =
             }
 
     [<HideFromUI>]
-    let ExtractTranscribedDefault (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let ExtractTranscribedDefault (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
         let extractTranscript argMap =
             let argsRecord = {|
@@ -628,7 +543,7 @@ module public Tasks =
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionDefaultTranscript)))
         | Invoke ->
             seq {
-                let argMap = integrateUIRequestArguments resolvable_arguments
+                //let argMap = integrateUIRequestArguments resolvable_arguments
                 let unresolvedRequests = getUnResolvedRequests argMap inputs
 
                 if unresolvedRequests.Length = 0 then
@@ -638,7 +553,7 @@ module public Tasks =
             }
 
     [<HideFromUI>]
-    let SaveTranscribedDefault (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let SaveTranscribedDefault (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
         let saveTranscript argMap =
             let argsRecord = {|
@@ -672,7 +587,7 @@ module public Tasks =
         | Outputs -> Seq.empty
         | Invoke ->
             seq {
-                let argMap = integrateUIRequestArguments resolvable_arguments
+                //let argMap = integrateUIRequestArguments resolvable_arguments
                 let unresolvedRequests = getUnResolvedRequests argMap [|
                     TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
                     |]
@@ -704,7 +619,7 @@ module public Tasks =
     /// Upload and transcribe some audio
     /// The function is called multiple times from the UI until all arguments are resolved
     [<EnableLogging>]
-    let TranscribeAudio (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let TranscribeAudio (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
         
         let inputs = [|
             TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionVocabularyName));
@@ -723,7 +638,7 @@ module public Tasks =
         | Outputs -> Seq.empty
         | Invoke ->
             seq {
-                let argMap = integrateUIRequestArguments resolvable_arguments
+                //let argMap = integrateUIRequestArguments resolvable_arguments
 
                 // don't include the internally resolvable arguments or they will be saved (see TaskSaveEvents below)
                 let unresolvedRequests = getUnResolvedRequests argMap [|
@@ -754,7 +669,7 @@ module public Tasks =
 
 
     [<HideFromUI>]
-    let CreateSubTitles (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let CreateSubTitles (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
         // Subtitle lines need to:
         //  last for at least three seconds
@@ -829,7 +744,7 @@ module public Tasks =
         | Outputs -> Seq.empty
         | Invoke ->
             seq {
-                let argMap = integrateUIRequestArguments resolvable_arguments
+                //let argMap = integrateUIRequestArguments resolvable_arguments
                 let unresolvedRequests = getUnResolvedRequests argMap inputs
 
                 if unresolvedRequests.Length = 0 then
@@ -840,7 +755,7 @@ module public Tasks =
 
 
     [<HideFromUI>]
-    let TranslateText (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let TranslateText (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
         // translate a chunk and return the number of attempts (retries)
         let processChunk (translator: (int * string) -> Task<struct (bool * bool)>) (chunk:KeyValuePair<int, string>) numRetriesLastChunk maxDelayLastChunk =
@@ -1006,7 +921,7 @@ module public Tasks =
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranslationSegments)))
         | Invoke ->
             seq {
-                let argMap = integrateUIRequestArguments resolvable_arguments
+                //let argMap = integrateUIRequestArguments resolvable_arguments
                 let unresolvedRequests = getUnResolvedRequests argMap inputs
 
                 if unresolvedRequests.Length = 0 then
@@ -1016,7 +931,7 @@ module public Tasks =
             }
 
     [<HideFromUI>]
-    let SaveTranslation (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let SaveTranslation (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
         let saveTranslation argMap =
             let argsRecord = {|
@@ -1067,7 +982,7 @@ module public Tasks =
         | Outputs -> Seq.empty
         | Invoke ->
             seq {
-                let argMap = integrateUIRequestArguments resolvable_arguments
+                //let argMap = integrateUIRequestArguments resolvable_arguments
                 let unresolvedRequests = getUnResolvedRequests argMap [|
                     TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
                     |]
@@ -1100,7 +1015,7 @@ module public Tasks =
     /// Translate text into multiple languages
     //[<HideFromUI>]
     [<EnableLogging>]
-    let MultiLanguageTranslateText (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let MultiLanguageTranslateText (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
         
         let inputs = [|
             TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestAWSInterface));
@@ -1122,7 +1037,7 @@ module public Tasks =
         | Outputs -> Seq.empty
         | Invoke ->
             seq {
-                let argMap = integrateUIRequestArguments resolvable_arguments
+                //let argMap = integrateUIRequestArguments resolvable_arguments
                 let unresolvedRequests = getUnResolvedRequests argMap inputs
 
                 if unresolvedRequests.Length = 0 then
@@ -1142,7 +1057,7 @@ module public Tasks =
 
     /// Convert the task events in a JSON document file to binary log format and save the result
     [<HideFromUI>]
-    let ConvertJsonLogToLogFormat (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let ConvertJsonLogToLogFormat (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
         let convertToLogFormat argMap =
             let argsRecord = {|
@@ -1192,7 +1107,7 @@ module public Tasks =
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestLogFormatEvents)))
         | Invoke ->
                 seq {
-                    let argMap = integrateUIRequestArguments resolvable_arguments
+                    //let argMap = integrateUIRequestArguments resolvable_arguments
                     let unresolvedRequests = getUnResolvedRequests argMap inputs
 
                     if unresolvedRequests.Length = 0 then
@@ -1203,7 +1118,7 @@ module public Tasks =
 
     /// Convert the task events in a binary log format file to a JSON document and save the result
     [<HideFromUI>]
-    let ConvertLogFormatToJsonLog (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let ConvertLogFormatToJsonLog (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
         let convertToJson argMap =
             let argsRecord = {|
@@ -1240,7 +1155,7 @@ module public Tasks =
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestJsonEvents)))
         | Invoke ->
             seq {
-                let argMap = integrateUIRequestArguments resolvable_arguments
+                //let argMap = integrateUIRequestArguments resolvable_arguments
                 let unresolvedRequests = getUnResolvedRequests argMap inputs
 
                 if unresolvedRequests.Length = 0 then
@@ -1250,7 +1165,7 @@ module public Tasks =
             }
 
     /// Choose a task function to run
-    let SelectTask (queryMode: TaskFunctionQueryMode) (resolvable_arguments: InfiniteList<MaybeResponse>) =
+    let SelectTask (queryMode: TaskFunctionQueryMode) (_argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
         let inputs = [| |]
 

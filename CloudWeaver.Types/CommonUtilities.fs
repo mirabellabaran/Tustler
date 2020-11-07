@@ -1,15 +1,32 @@
 ﻿namespace CloudWeaver.Types
 
-open Microsoft.FSharp.Reflection
+open CloudWeaver.Foundation.Types
+open System.Collections.Generic
 
 module CommonUtilities =
 
-    // extract the name of a discrimated union field as a string
-    let toString (x:'a) = 
-        match FSharpValue.GetUnionFields(x, typeof<'a>) with
-        | case, _ -> case.Name
+    /// Get any notifications generated from the last AWS call (errors or informational messages)
+    let getNotificationResponse (notifications: NotificationsList) =
+        Seq.map (fun note -> TaskResponse.Notification note) notifications.Notifications
 
-    let fromString<'a> (s:string) =
-        match FSharpType.GetUnionCases typeof<'a> |> Array.filter (fun case -> case.Name = s) with
-        |[|case|] -> Some(FSharpValue.MakeUnion(case,[||]) :?> 'a)
-        |_ -> None
+    /// Get all requests that are not yet set
+    let getUnResolvedRequests (argMap: Map<IRequestIntraModule, IShareIntraModule>) (required: TaskResponse []) =
+        required
+        |> Seq.map (fun response ->
+            match response with
+            | TaskResponse.RequestArgument arg -> arg
+            | _ -> invalidArg "response" "Expected RequestArgument in getUnResolvedRequests when checking input arguments"
+        )
+        |> Seq.filter (fun request -> not (argMap.ContainsKey request))
+        |> Seq.map (fun request -> TaskResponse.RequestArgument request)
+        |> Seq.toArray
+
+    // Get the first unresolved request and send to the UI to resolve the value
+    let resolveByRequest (unresolvedRequests: TaskResponse []) =
+
+        let requestStack = Stack(unresolvedRequests)
+
+        if requestStack.Count > 0 then
+            Seq.singleton (requestStack.Pop())
+        else
+            Seq.empty

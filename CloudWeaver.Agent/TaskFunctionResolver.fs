@@ -6,12 +6,13 @@ open System.Reflection
 open CloudWeaver.Types
 open TustlerServicesLib
 open System.IO
+open CloudWeaver.Foundation.Types
 
 type ResolverCachedItem(methodInfo: MethodInfo, taskFunctionSpecifier: TaskFunctionSpecifier) =
 
     let mutable cachedOutputs : Set<IRequestIntraModule> option = None
 
-    let mutable cachedDelegate : Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> option = None
+    let mutable cachedDelegate : Func<TaskFunctionQueryMode, Map<IRequestIntraModule, IShareIntraModule>, IEnumerable<TaskResponse>> option = None
 
     member this.CachedOutputs with get() = cachedOutputs and set(value) = cachedOutputs <- value
 
@@ -126,8 +127,8 @@ type TaskFunctionResolver private (pairs: seq<KeyValuePair<string, ResolverCache
                 ri.CachedDelegate.Value
             else
                 let mi = taskLookup.[taskFullPath].MethodInfo
-                let funcType = typeof<Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>>>
-                let del = Delegate.CreateDelegate(funcType, mi, true) :?> Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>>
+                let funcType = typeof<Func<TaskFunctionQueryMode, Map<IRequestIntraModule, IShareIntraModule>, IEnumerable<TaskResponse>>>
+                let del = Delegate.CreateDelegate(funcType, mi, true) :?> Func<TaskFunctionQueryMode, Map<IRequestIntraModule, IShareIntraModule>, IEnumerable<TaskResponse>>
                 ri.CachedDelegate <- Some(del)
                 del
         else
@@ -162,7 +163,7 @@ type TaskFunctionResolver private (pairs: seq<KeyValuePair<string, ResolverCache
                 let outputs =
                     let specifier = ri.TaskFunctionSpecifier
                     let func = this.CreateDelegate(specifier)
-                    func.Invoke(TaskFunctionQueryMode.Outputs, null)
+                    func.Invoke(TaskFunctionQueryMode.Outputs, Map.empty)
                     |> Seq.map (fun response ->
                         match response with
                         | TaskResponse.RequestArgument arg -> Some(arg)

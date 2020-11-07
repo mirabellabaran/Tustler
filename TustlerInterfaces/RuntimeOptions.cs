@@ -1,10 +1,11 @@
-﻿using System;
+﻿using CloudWeaver.Foundation.Types;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace TustlerInterfaces
 {
-    public class RuntimeOptions
+    public class RuntimeOptions : IRuntimeOptions
     {
         public RuntimeOptions()
         {

@@ -1,25 +1,16 @@
-﻿using System;
+﻿using CloudWeaver.Foundation.Types;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace TustlerInterfaces
 {
-    public class AWSException : ApplicationException
+    public class AWSException : ApplicationException, ICloudWeaverException
     {
         public AWSException()
         {
 
         }
-
-        //public AWSException(string message) : base(message)
-        //{
-
-        //}
-
-        //public AWSException(string message, Exception innerException) : base(message, innerException)
-        //{
-
-        //}
 
         public AWSException(string context, string message, Exception innerException) : base(message, innerException)
         {

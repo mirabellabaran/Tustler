@@ -1,15 +1,13 @@
-﻿using CloudWeaver.Types;
+﻿using CloudWeaver.Foundation.Types;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Tustler.Helpers;
-using TustlerServicesLib;
 using TustlerUIShared;
 
 namespace Tustler.UserControls.TaskMemberControls

@@ -1,4 +1,5 @@
 ﻿using Amazon;
+using CloudWeaver.Foundation.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +8,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using TustlerAWSLib;
 using TustlerModels;
-using TustlerServicesLib;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
 
 namespace Tustler.UserControls

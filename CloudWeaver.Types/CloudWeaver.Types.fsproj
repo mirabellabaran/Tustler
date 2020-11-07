@@ -5,13 +5,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="BaseUtilities.fs" />
     <Compile Include="RetainingStack.fs" />
-    <Compile Include="CommonUtilities.fs" />
     <Compile Include="SaveFlags.fs" />
     <Compile Include="CloudWeaver.Types.fs" />
+    <Compile Include="CommonUtilities.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CloudWeaver.Foundation.Types\CloudWeaver.Foundation.Types.csproj" />
     <ProjectReference Include="..\TustlerAWSLib\TustlerAWSLib.csproj" />
     <ProjectReference Include="..\TustlerModels\TustlerModels.csproj" />
     <ProjectReference Include="..\TustlerServicesLib\TustlerServicesLib.csproj" />

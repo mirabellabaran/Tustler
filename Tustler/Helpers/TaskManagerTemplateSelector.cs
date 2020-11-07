@@ -1,10 +1,10 @@
 ﻿#nullable enable
+using CloudWeaver.Foundation.Types;
 using CloudWeaver.Types;
 using System;
 using System.Windows;
 using System.Windows.Controls;
 using TustlerModels;
-using TustlerServicesLib;
 
 namespace Tustler.Helpers
 {

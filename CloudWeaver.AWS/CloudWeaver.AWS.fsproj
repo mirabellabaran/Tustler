@@ -11,9 +11,8 @@
     <Compile Include="CloudWeaver.AWS.Tasks.fs" />
   </ItemGroup>
 
-  <ItemGroup />
-
   <ItemGroup>
+    <ProjectReference Include="..\CloudWeaver.Foundation.Types\CloudWeaver.Foundation.Types.csproj" />
     <ProjectReference Include="..\CloudWeaver.Types\CloudWeaver.Types.fsproj" />
     <ProjectReference Include="..\TustlerModels\TustlerModels.csproj" />
     <ProjectReference Include="..\TustlerServicesLib\TustlerServicesLib.csproj" />

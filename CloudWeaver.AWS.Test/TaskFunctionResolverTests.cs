@@ -1,4 +1,5 @@
-﻿using CloudWeaver.Types;
+﻿using CloudWeaver.Foundation.Types;
+using CloudWeaver.Types;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Buffers;

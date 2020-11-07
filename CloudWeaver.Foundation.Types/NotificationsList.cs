@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
-using TustlerInterfaces;
 
-namespace TustlerServicesLib
+namespace CloudWeaver.Foundation.Types
 {
     public sealed class NotificationsList
     {
@@ -18,12 +17,12 @@ namespace TustlerServicesLib
             Notifications.Clear();
         }
 
-        public void Add(Notification errorInfo)
+        public void Add(Notification notification)
         {
-            Notifications.Add(errorInfo);
+            Notifications.Add(notification);
         }
 
-        public void HandleError<T>(AWSResult<T> result)
+        public void HandleError<T>(ICloudWeaverResult<T, ICloudWeaverException> result)
         {
             var ex = result.Exception;
 

@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="ArgumentResolver.fs" />
     <Compile Include="TaskFunctionResolver.fs" />
     <Compile Include="SerializableTypeGenerator.fs" />
     <Compile Include="Converters.fs" />
@@ -15,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CloudWeaver.AWS\CloudWeaver.AWS.fsproj" />
+    <ProjectReference Include="..\CloudWeaver.Foundation.Types\CloudWeaver.Foundation.Types.csproj" />
     <ProjectReference Include="..\CloudWeaver.Types\CloudWeaver.Types.fsproj" />
     <ProjectReference Include="..\TustlerAWSLib\TustlerAWSLib.csproj" />
     <ProjectReference Include="..\TustlerModels\TustlerModels.csproj" />
