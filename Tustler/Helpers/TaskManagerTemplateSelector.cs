@@ -44,6 +44,10 @@ namespace Tustler.Helpers
                     "RequestOpenJsonFilePath" => element.FindResource("OpenJsonFilePathRequestTemplate") as DataTemplate,
                     "RequestSaveJsonFilePath" => element.FindResource("SaveJsonFilePathRequestTemplate") as DataTemplate,
 
+                    // Note that the following FilePathRequestTemplates have the same underlying user control
+                    "RequestOpenMediaFilePath" => element.FindResource("OpenMediaFilePathRequestTemplate") as DataTemplate,
+                    "RequestSaveMediaFilePath" => element.FindResource("SaveMediaFilePathRequestTemplate") as DataTemplate,
+
                     _ => element.FindResource("DefaultResponseTemplate") as DataTemplate,
                 };
             }

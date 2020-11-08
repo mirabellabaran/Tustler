@@ -324,13 +324,14 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
                 currentTaskSpecifier <- Some(taskSpecifier)
                 uiResponsePending <- false
 
-                let args = new InfiniteList<MaybeResponse>(MaybeResponse.Nothing)
+                //let args = new InfiniteList<MaybeResponse>(MaybeResponse.Nothing)
+                let args = new List<TaskResponse>()
 
                 // replay the observed events, adding the arguments that have been set
                 events
                 |> Seq.iter (fun evt ->
                     match evt with
-                    | TaskEvent.SetArgument response -> args.Add(MaybeResponse.Just(response))
+                    | TaskEvent.SetArgument response -> args.Add(response)
                     | TaskEvent.ClearArguments -> args.Clear()
                     | _ -> ()
                 )
@@ -362,33 +363,6 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
         events.Add(TaskEvent.ForEachTask(singleTaskSequence))
         executionStack.Push(Tasks singleTaskSequence)
         nextTask self
-
-    //member this.PrepareFunctionArguments (args: InfiniteList<MaybeResponse>) =
-    //    // replay the observed events, adding the arguments that have been set
-    //    events
-    //    |> Seq.iter (fun evt ->
-    //        match evt with
-    //        | TaskEvent.SetArgument response -> args.Add(MaybeResponse.Just(response))
-    //        | TaskEvent.ClearArguments -> args.Clear()
-    //        | _ -> ()
-    //    )
-
-    ///// Process the responses from the current task function
-    //member this.RunTask (responses: seq<TaskResponse>) =
-    //    if errorState then
-    //        let reportState = async {
-    //            newUIResponseEvent.Trigger(this, TaskResponse.TaskInfo "The agent encountered an error. Start a new task to continue.")
-    //        }
-    //        Async.StartImmediateAsTask reportState
-    //    else
-    //        events.Add(TaskEvent.InvokingFunction)
-    //        uiResponsePending <- false
-
-    //        // collect responses from just the current call to the task function
-    //        if retainResponses then taskResponses.Value.Clear()
-
-    //        // The TaskItem parameter is to allow the current task to be queued for recall when specified by the task function
-    //        runTask this responses
 
     /// Start and stop task function execution
     member this.Enabled with get() = isEnabled and set(value) = isEnabled <- value
@@ -449,12 +423,6 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
 
     member this.TaskFunctions with get() : IEnumerable<TaskFunctionSpecifier> = Seq.cast<TaskFunctionSpecifier> taskFunctionLookup.Values
 
-    ///// Returns the next task specifier in the queue or null
-    //member this.NextTask () =
-    //    match taskQueue.TryDequeue() with
-    //    | true, taskFunctionSpecifier -> taskFunctionSpecifier
-    //    | _ -> null
-
     /// Return the path of all queued task functions (used for testing only)
     member this.QueuedTasks () : IEnumerable<string> = taskQueue |> Seq.map (fun spec -> spec.TaskFullPath)
 
@@ -494,9 +462,6 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
         events.Add(TaskEvent.ClearArguments)
         events.Add(TaskEvent.SelectArgument)
         events.Add(TaskEvent.SetArgument(response))
-
-    //member this.IsAwaitingResponse with get () =
-    //    uiResponsePending
 
     member this.AddArgument(response) =
         events.Add(TaskEvent.SetArgument(response))

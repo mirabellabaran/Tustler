@@ -65,7 +65,7 @@ namespace TustlerFFMPEG
 
         private void EnableMocking(IRuntimeOptions options)
         {
-            Interop = new MockFFAVInterop();
+            Interop = new FFAVInterop();        // no need to mock for now
         }
 
         private void DisableMocking()

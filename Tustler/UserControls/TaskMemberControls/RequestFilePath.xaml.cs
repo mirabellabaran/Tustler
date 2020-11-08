@@ -307,7 +307,15 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void Continue_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            static bool CheckFilePath(string filePath)
+            static bool CheckOpenCriteria(string filePath, string fileExtension)
+            {
+                if (fileExtension == "*")
+                    return File.Exists(filePath);
+                else
+                    return Path.GetExtension(filePath) == $".{fileExtension}" && File.Exists(filePath);
+            }
+
+            static bool CheckSaveCriteria(string filePath)
             {
                 var directoryPath = System.IO.Path.GetDirectoryName(filePath);
                 var fileName = System.IO.Path.GetFileName(filePath);
@@ -323,8 +331,8 @@ namespace Tustler.UserControls.TaskMemberControls
 
             e.CanExecute = PickerMode switch
             {
-                FilePickerMode.Open => System.IO.Path.GetExtension(tbFilePath.Text) == $".{FileExtension}" && File.Exists(tbFilePath.Text),
-                FilePickerMode.Save => CheckFilePath(tbFilePath.Text),
+                FilePickerMode.Open => CheckOpenCriteria(tbFilePath.Text, FileExtension),
+                FilePickerMode.Save => CheckSaveCriteria(tbFilePath.Text),
                 _ => throw new NotImplementedException(),
             };
         }
@@ -342,7 +350,7 @@ namespace Tustler.UserControls.TaskMemberControls
 
             var data = CloudWeaver.SerializableTypeGenerator.CreateFilePath(fileInfo, FileExtension, pickerMode);
 
-            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "", "", data);
+            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "StandardShareIntraModule", "SetFilePath", data);
 
             ExecuteCommand();
         }

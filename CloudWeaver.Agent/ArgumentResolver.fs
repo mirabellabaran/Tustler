@@ -2,7 +2,7 @@
 
 open CloudWeaver.Types
 open CloudWeaver.AWS
-open CloudWeaver.Foundation.Types
+open CloudWeaver.MediaServices
 
 module ArgumentResolver =
 
@@ -30,6 +30,12 @@ module ArgumentResolver =
                 | SetTranslationTerminologyNames _ -> Some(AWSRequestIntraModule(RequestTranslationTerminologyNames) :> IRequestIntraModule)
                 | SetTranslationSegments _ -> Some(AWSRequestIntraModule(RequestTranslationSegments) :> IRequestIntraModule)
                 | SetSubtitleFilePath _ -> Some(AWSRequestIntraModule(RequestSubtitleFilePath) :> IRequestIntraModule)
+            | :? AVShareIntraModule as avShareIntraModule ->
+                match avShareIntraModule.Argument with
+                | SetAVInterface _ -> Some(AVRequestIntraModule(RequestAVInterface) :> IRequestIntraModule)
+                | SetCodecName _ -> Some(AVRequestIntraModule(RequestCodecName) :> IRequestIntraModule)
+                | SetCodecInfo _ -> Some(AVRequestIntraModule(RequestCodecInfo) :> IRequestIntraModule)
+                | SetMediaInfo _ -> Some(AVRequestIntraModule(RequestMediaInfo) :> IRequestIntraModule)
             | :? StandardShareIntraModule as stdShareIntraModule ->
                 match stdShareIntraModule.Argument with
                 | SetNotificationsList _ -> Some(StandardRequestIntraModule(RequestNotifications) :> IRequestIntraModule)
@@ -44,19 +50,20 @@ module ArgumentResolver =
                 | SetFilePath path when path.Mode = FilePickerMode.Save && path.Extension = "json" -> Some(StandardRequestIntraModule(RequestSaveJsonFilePath) :> IRequestIntraModule)
                 | SetFilePath path when path.Mode = FilePickerMode.Open && path.Extension = "bin" -> Some(StandardRequestIntraModule(RequestOpenLogFormatFilePath) :> IRequestIntraModule)
                 | SetFilePath path when path.Mode = FilePickerMode.Save && path.Extension = "bin" -> Some(StandardRequestIntraModule(RequestSaveLogFormatFilePath) :> IRequestIntraModule)
+                | SetFilePath path when path.Mode = FilePickerMode.Open -> Some(AVRequestIntraModule(RequestOpenMediaFilePath) :> IRequestIntraModule)
+                | SetFilePath path when path.Mode = FilePickerMode.Save -> Some(AVRequestIntraModule(RequestSaveMediaFilePath) :> IRequestIntraModule)
                 | SetFilePath _ -> invalidArg "arg" "Unexpected SetFilePath parameters"
 
             | _ -> None     // ignore request types from other modules
         | _ -> None
 
     /// Create a map that contains those request arguments that are currently set
-    let integrateUIRequestArguments (args:InfiniteList<MaybeResponse>) =
+    let integrateUIRequestArguments (args:seq<TaskResponse>) =
         args
-        |> Seq.takeWhile (fun mr -> mr.IsSet)
-        |> Seq.fold (fun (map:Map<_,_>) mr ->
-            let request = mapResponseToRequest mr.Value
+        |> Seq.fold (fun (map:Map<_,_>) taskResponse ->
+            let request = mapResponseToRequest taskResponse
             let response =
-                match mr.Value with
+                match taskResponse with
                 | TaskResponse.SetArgument arg -> Some(arg)
                 | _ -> None
             if request.IsSome && response.IsSome then

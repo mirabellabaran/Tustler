@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TustlerAWSLib;
 using TustlerInterfaces;
-using TustlerServicesLib;
+using Microsoft.FSharp.Collections;
 
 namespace CloudWeaver.AWS.Test
 {
@@ -21,13 +21,13 @@ namespace CloudWeaver.AWS.Test
         [TestMethod]
         public async Task TestAddFunctionAsync()
         {
-            static IEnumerable<TaskResponse> PurgeFunction(TaskFunctionQueryMode queryMode, InfiniteList<MaybeResponse> resolvable_arguments)
+            static IEnumerable<TaskResponse> PurgeFunction(TaskFunctionQueryMode queryMode, FSharpMap<IRequestIntraModule, IShareIntraModule> argMap)
             {
                 // five more TaskComplete responses (six total)
                 return Enumerable.Range(0, 5).Select(i => TaskResponse.NewTaskComplete(i.ToString(), DateTime.Now));
             }
 
-            static MethodInfo Helper(Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> func)
+            static MethodInfo Helper(Func<TaskFunctionQueryMode, FSharpMap<IRequestIntraModule, IShareIntraModule>, IEnumerable <TaskResponse>> func)
             {
                 return func.Method;
             }

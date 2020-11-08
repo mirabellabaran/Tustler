@@ -25,7 +25,8 @@ namespace TustlerFFMPEG
 
         public AVInteropResult<CodecPair> GetCodecInfo(string codecName)
         {
-            var json = GetJson(nameof(GetCodecInfo), (byte[] data) => get_codec_info("h264", data, (UIntPtr)data.Length));
+            // e.g. aac, flac, h264
+            var json = GetJson(nameof(GetCodecInfo), (byte[] data) => get_codec_info(codecName, data, (UIntPtr)data.Length));
 
             if (json.IsError)
             {
@@ -64,10 +65,10 @@ namespace TustlerFFMPEG
 
         public AVInteropResult<bool> Transcode(string inputFilePath, string outputFilePath)
         {
-            var input = @"C:\Users\Zev\Projects\rust\ffavrunme\temp\temp.avi";
-            var output = @"C:\Users\Zev\Projects\rust\ffavrunme\temp\out.wmv";
+            //var input = @"C:\Users\Zev\Projects\rust\ffavrunme\temp\temp.avi";
+            //var output = @"C:\Users\Zev\Projects\rust\ffavrunme\temp\out.wmv";
 
-            var result = transcode(input, output);
+            var result = transcode(inputFilePath, outputFilePath);
 
             if (result < 0)
             {
@@ -108,7 +109,7 @@ namespace TustlerFFMPEG
             var data = new byte[5000];
             var result = func(data);
 
-            Console.WriteLine("Length: {0}", result);
+            //Console.WriteLine("Length: {0}", result);
             if (result < 0)
             {
                 var ex = HandleError(result, context);
@@ -124,21 +125,21 @@ namespace TustlerFFMPEG
         }
     }
 
-    public class MockFFAVInterop : IAVServiceInterface
-    {
-        public AVInteropResult<CodecPair> GetCodecInfo(string codecName)
-        {
-            throw new NotImplementedException();
-        }
+    //public class MockFFAVInterop : IAVServiceInterface
+    //{
+    //    public AVInteropResult<CodecPair> GetCodecInfo(string codecName)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
 
-        public AVInteropResult<MediaInfo> GetMediaInfo(string inputFilePath)
-        {
-            throw new NotImplementedException();
-        }
+    //    public AVInteropResult<MediaInfo> GetMediaInfo(string inputFilePath)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
 
-        public AVInteropResult<bool> Transcode(string inputFilePath, string outputFilePath)
-        {
-            throw new NotImplementedException();
-        }
-    }
+    //    public AVInteropResult<bool> Transcode(string inputFilePath, string outputFilePath)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
+    //}
 }

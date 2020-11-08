@@ -11,12 +11,13 @@
     <Compile Include="Converters.fs" />
     <Compile Include="ModuleResolver.fs" />
     <Compile Include="Serialization.fs" />
-    <Compile Include="CloudWeaver.Agent.fs" />
+    <Compile Include="Agent.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\CloudWeaver.AWS\CloudWeaver.AWS.fsproj" />
     <ProjectReference Include="..\CloudWeaver.Foundation.Types\CloudWeaver.Foundation.Types.csproj" />
+    <ProjectReference Include="..\CloudWeaver.MediaServices\CloudWeaver.MediaServices.fsproj" />
     <ProjectReference Include="..\CloudWeaver.Types\CloudWeaver.Types.fsproj" />
     <ProjectReference Include="..\TustlerAWSLib\TustlerAWSLib.csproj" />
     <ProjectReference Include="..\TustlerModels\TustlerModels.csproj" />

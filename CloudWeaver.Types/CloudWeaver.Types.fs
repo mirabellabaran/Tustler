@@ -72,7 +72,7 @@ type TaskItem(moduleName: string, taskName: string, description: string) =
     new() = TaskItem(null, null, null)
     override this.ToString() = sprintf "TaskItem: %s %s %s" this.ModuleName this.TaskName this.Description
 
-/// A reference to a media file stored locally (normally a file to be uploaded to S3)
+/// A reference to a media file stored locally (normally a file to be uploaded, to Amazon S3 for example)
 type FileMediaReference(filePath: string, mimeType: string, extension: string) =
     let mutable _filePath = filePath
     let mutable _mimeType = mimeType

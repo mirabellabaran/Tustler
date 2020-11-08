@@ -498,7 +498,7 @@ namespace Tustler
                         break;
                     case "task":
                         var taskFunctionElement = (initial as TaskFunctionElement);
-                        var uc = new TasksManager(awsInterface, taskFunctionElement.TaskFunctionSpecifier);
+                        var uc = new TasksManager(awsInterface, avInterface, taskFunctionElement.TaskFunctionSpecifier);
                         panControlsContainer.Children.Add(uc);
                         break;
                 }

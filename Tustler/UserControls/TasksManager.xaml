@@ -447,6 +447,14 @@
             <uctask:RequestFileMediaReference Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>
 
+        <DataTemplate x:Key="OpenMediaFilePathRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
+            <uctask:RequestFilePath PickerMode="Open" FileExtensionDescription="Media files" FileExtension="*" Command="{x:Static uc:TaskCommands.UIResponse}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="SaveMediaFilePathRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
+            <uctask:RequestFilePath PickerMode="Save" FileExtensionDescription="Media files" FileExtension="*" Command="{x:Static uc:TaskCommands.UIResponse}" />
+        </DataTemplate>
+
         <DataTemplate x:Key="OpenLogFormatFilePathRequestTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <uctask:RequestFilePath PickerMode="Open" FileExtensionDescription="Binary log format files" FileExtension="bin" Command="{x:Static uc:TaskCommands.UIResponse}" />
         </DataTemplate>

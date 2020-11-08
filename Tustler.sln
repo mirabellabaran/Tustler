@@ -39,7 +39,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TustlerFFMPEG", "TustlerFFM
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "CloudWeaver.MediaServices", "CloudWeaver.MediaServices\CloudWeaver.MediaServices.fsproj", "{D80D74A3-F5FF-4BEF-BC81-76185DD82297}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudWeaver.Foundation.Types", "CloudWeaver.Foundation.Types\CloudWeaver.Foundation.Types.csproj", "{1526021C-7051-422E-A2C4-E6797960EAF0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CloudWeaver.Foundation.Types", "CloudWeaver.Foundation.Types\CloudWeaver.Foundation.Types.csproj", "{1526021C-7051-422E-A2C4-E6797960EAF0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudWeaver.MediaServices.Test", "CloudWeaver.MediaServices.Test\CloudWeaver.MediaServices.Test.csproj", "{8D39D814-8FE2-43F9-846A-CEE532A54A3E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -107,6 +109,10 @@ Global
 		{1526021C-7051-422E-A2C4-E6797960EAF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1526021C-7051-422E-A2C4-E6797960EAF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1526021C-7051-422E-A2C4-E6797960EAF0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D39D814-8FE2-43F9-846A-CEE532A54A3E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D39D814-8FE2-43F9-846A-CEE532A54A3E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D39D814-8FE2-43F9-846A-CEE532A54A3E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D39D814-8FE2-43F9-846A-CEE532A54A3E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
