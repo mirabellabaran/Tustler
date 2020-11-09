@@ -311,11 +311,6 @@ and
     | RequestArgument of IRequestIntraModule
     with
     override this.ToString() =
-        let folder items mapper =
-            let strings =
-                items
-                |> Seq.map mapper
-            System.String.Join(", ", strings)
         match this with
         | TaskDescription str -> (sprintf "TaskDescription: %s" str)
         | TaskInfo str -> (sprintf "TaskInfo: %s" str)

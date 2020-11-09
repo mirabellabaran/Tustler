@@ -1,11 +1,15 @@
 ﻿using CloudWeaver;
+using CloudWeaver.AWS;
+using CloudWeaver.MediaServices;
 using CloudWeaver.Types;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -26,60 +30,189 @@ namespace Tustler.UserControls.TaskMemberControls
     /// </summary>
     public partial class DefaultResponseHandler : UserControl
     {
-        #region Message DependencyProperty
-        public static readonly DependencyProperty MessageProperty =
-            DependencyProperty.Register("Message", typeof(string), typeof(DefaultResponseHandler));
-
-        /// <summary>
-        ///  A message describing the unhandled response
-        /// </summary>
-        public string Message
-        {
-            get { return (string)GetValue(MessageProperty); }
-            set { SetValue(MessageProperty, value); }
-        }
-        #endregion
-
-        #region SuggestedTaskFunctions DependencyProperty
-        public static readonly DependencyProperty SuggestedTaskFunctionsProperty =
-            DependencyProperty.Register("SuggestedTaskFunctions", typeof(IEnumerable<string>), typeof(DefaultResponseHandler));
-
-        /// <summary>
-        ///  A list of TaskFunctions that are able to fulfill the argument request
-        /// </summary>
-        public IEnumerable<string> SuggestedTaskFunctions
-        {
-            get { return (IEnumerable<string>)GetValue(SuggestedTaskFunctionsProperty); }
-            set { SetValue(SuggestedTaskFunctionsProperty, value); }
-        }
-        #endregion
-
-        private readonly TaskFunctionResolver taskFunctionResolver;
-
         public DefaultResponseHandler()
         {
             InitializeComponent();
+        }
 
-            var serviceProvider = (Application.Current as App).ServiceProvider;
-            this.taskFunctionResolver = serviceProvider.GetRequiredService<TaskFunctionResolver>();
+        private static void AddObjectChild(TreeViewItem item, JsonProperty property)
+        {
+            foreach (var childProperty in property.Value.EnumerateObject())
+            {
+                item.Items.Add(CreateTreeItem(childProperty));
+            }
+        }
 
-            LayoutRoot.DataContext = this;      // child elements of LayoutRoot control use this as the context to access Available and Selected properties
+        private static void AddArrayChild(TreeViewItem item, JsonElement element)
+        {
+            var index = 0;
+
+            foreach (var childElement in element.EnumerateArray())
+            {
+                var arrayIndex = new TreeViewItem() { Header = $"[{index}]" };
+                item.Items.Add(arrayIndex);
+
+                switch (childElement.ValueKind)
+                {
+                    case JsonValueKind.Array:
+                        AddArrayChild(arrayIndex, childElement);
+                        break;
+                    case JsonValueKind.Object:
+                        foreach (var childProperty in childElement.EnumerateObject())
+                        {
+                            arrayIndex.Items.Add(CreateTreeItem(childProperty));
+                        }
+                        break;
+                    default:
+                        arrayIndex.Header = $"{arrayIndex.Header}: {childElement.GetRawText()}";
+                        break;
+                }
+
+                index++;
+            }
+        }
+
+        private static TreeViewItem CreateTreeItem(JsonProperty property)
+        {
+            TreeViewItem item = new TreeViewItem();
+
+            switch (property.Value.ValueKind)
+            {
+                case JsonValueKind.Array:
+                    item.Header = property.Name;
+                    AddArrayChild(item, property.Value);
+                    break;
+                case JsonValueKind.Object:
+                    item.Header = property.Name;
+                    AddObjectChild(item, property);
+                    break;
+                case JsonValueKind.Null:
+                    item.Header = $"{property.Name} : None";
+                    break;
+                default:
+                    item.Header = $"{property.Name} : {property.Value.GetRawText() }";
+                    break;
+            }
+
+            return item;
+        }
+
+        private object GetData(IShareIntraModule intraModule)
+        {
+            return intraModule switch
+            {
+                StandardShareIntraModule stdModule =>
+                    stdModule.Argument switch
+                    {
+                        //StandardArgument
+                        _ => tbInfo.Text = $"Unexpected Standard Module Response Argument: {stdModule.Argument}",
+                    },
+                AVShareIntraModule avModule =>
+                    avModule.Argument switch
+                    {
+                        AVArgument.SetCodecInfo codecInfo => codecInfo.Item,
+                        AVArgument.SetMediaInfo mediaInfo => mediaInfo.Item,
+                        _ => tbInfo.Text = $"Unexpected AV Module Response Argument: {avModule.Argument}",
+                    },
+                AWSShareIntraModule awsModule =>
+                    awsModule.Argument switch
+                    {
+                        _ => tbInfo.Text = $"Unexpected AWS Module Response Argument: {awsModule.Argument}",
+                    },
+                _ => tbInfo.Text = $"Unknown module: {nameof(intraModule)}"
+            };
+        }
+
+        /// <summary>
+        /// Suggest task functions that generate the requested output
+        /// </summary>
+        /// <param name="response"></param>
+        private void HandleRequestArgument(TaskResponse.RequestArgument response)
+        {
+            var defaultRepresentation = DefaultRepresentationGenerator.GetRepresentationFor(response.Item);
+            if (defaultRepresentation is object)
+            {
+                // generate a UI for the underlying type of this request
+                var jsonDoc = JsonDocument.Parse(defaultRepresentation);
+                var elements = jsonDoc.RootElement.EnumerateObject().Select(property => property.Value).ToArray();
+                var responseName = elements[1].GetString();
+                var valueElement = elements[2];
+                switch (valueElement.ValueKind)
+                {
+                    case JsonValueKind.True:
+                    case JsonValueKind.False:
+                        // create a UI to capture a boolean
+                        break;
+                    case JsonValueKind.Number:
+                        // create a UI to capture a string
+                        break;
+                    case JsonValueKind.String:
+                        // create a UI to capture a string
+                        break;
+                    default:
+                        break;
+                }
+            }
+            else
+            {
+                tbInfo.Text = $"Unknown request: {response}";
+
+                var serviceProvider = (Application.Current as App).ServiceProvider;
+                var taskFunctionResolver = serviceProvider.GetRequiredService<TaskFunctionResolver>();
+
+                var suggestedTaskFunctions = taskFunctionResolver.FindTaskFunctionsWithOutput(response.Item).ToArray();
+
+                icSuggestedTaskFunctions.ItemsSource = suggestedTaskFunctions;
+
+                innerBorderContainer.Width = 400.0;
+                SuggestTaskFunctionsContainer.Visibility = Visibility.Visible;
+            }
+        }
+
+        /// <summary>
+        /// Display the serialized response as a tree of properties
+        /// </summary>
+        /// <param name="response"></param>
+        private void HandleSetArgument(TaskResponse.SetArgument response)
+        {
+            object data = GetData(response.Item);
+
+            // set the title
+            tbInfo.Text = data.GetType().Name;
+
+            // serialize the object and load into JsonDocument
+            var options = new JsonSerializerOptions();
+            options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+            var serialized = JsonSerializer.Serialize(data, options);
+            var jsonDoc = JsonDocument.Parse(serialized);
+
+            // display the document as a tree
+            foreach (var property in jsonDoc.RootElement.EnumerateObject())
+            {
+                var item = CreateTreeItem(property);
+                tvData.Items.Add(item);
+            }
+
+            DisplayObjectContainer.Visibility = Visibility.Visible;
         }
 
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
             var wrapper = this.DataContext as ResponseWrapper;
             var response = wrapper.TaskResponse;
-            var description = response.IsRequestArgument ? "request" : "response";
 
-            tbInfo.Text = $"Unknown {description}: {response}";
-
-            // suggest task functions that generate the requested output
-            this.SuggestedTaskFunctions = response switch
+            switch (response)
             {
-                TaskResponse.RequestArgument request => taskFunctionResolver.FindTaskFunctionsWithOutput(request.Item).ToArray(),
-                _ => Array.Empty<string>()
-            };
+                case TaskResponse.RequestArgument arg:
+                    HandleRequestArgument(arg);
+                    break;
+                case TaskResponse.SetArgument arg:
+                    HandleSetArgument(arg);
+                    break;
+                default:
+                    tbInfo.Text = $"Unknown response: {response}";
+                    break;
+            }
         }
 
         #region ICommandSource

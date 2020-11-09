@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="DefaultRepresentationGenerator.fs" />
     <Compile Include="ArgumentResolver.fs" />
     <Compile Include="TaskFunctionResolver.fs" />
     <Compile Include="SerializableTypeGenerator.fs" />
