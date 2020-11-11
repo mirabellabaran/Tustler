@@ -9,9 +9,14 @@
 
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static uc:DefaultResponseHandlerCommands.Select}" CanExecute="Select_CanExecute" Executed="Select_Executed"/>
+        <CommandBinding Command="{x:Static uc:DefaultResponseHandlerCommands.Continue}" CanExecute="Continue_CanExecute" Executed="Continue_Executed"/>
     </UserControl.CommandBindings>
 
     <UserControl.Resources>
+        <Style TargetType="{x:Type TextBox}">
+            <Setter Property="Margin" Value="10" />
+        </Style>
+        
         <Style x:Key="linkButtonStyle" TargetType="Button">
             <Setter Property="Template">
                 <Setter.Value>
@@ -31,6 +36,50 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <Style TargetType="{x:Type Slider}">
+            <Style.Resources>
+                <Style x:Key="RepeatButtonStyle" TargetType="{x:Type RepeatButton}">
+                    <Setter Property="Focusable" Value="false" />
+                    <Setter Property="IsTabStop" Value="false" />
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="Width" Value="20" />
+                </Style>
+            </Style.Resources>
+            <Setter Property="Stylus.IsPressAndHoldEnabled" Value="false" />
+            <Setter Property="SmallChange" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Slider}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition />
+                                <RowDefinition />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.RowSpan="2"
+                             Height="Auto"
+                             Margin="0" Padding="0" VerticalAlignment="Stretch" VerticalContentAlignment="Center"
+                             Text="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=Value}" />
+                            <RepeatButton Grid.Row="0" Grid.Column="1" Command="{x:Static Slider.IncreaseLarge}" Style="{StaticResource RepeatButtonStyle}">
+                                <Path Data="M4,0 L0,4 8,4 Z" Fill="Black" />
+                            </RepeatButton>
+                            <RepeatButton Grid.Row="1" Grid.Column="1" Command="{x:Static Slider.DecreaseLarge}" Style="{StaticResource RepeatButtonStyle}">
+                                <Path Data="M0,0 L4,4 8,0 Z" Fill="Black" />
+                            </RepeatButton>
+                            <Border x:Name="TrackBackground" Visibility="Collapsed">
+                                <Rectangle x:Name="PART_SelectionRange" Visibility="Collapsed" />
+                            </Border>
+                            <Thumb x:Name="Thumb" Visibility="Collapsed" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
     </UserControl.Resources>
     
     <Border BorderBrush="DarkGray" BorderThickness="1" Padding="5" Margin="5">
@@ -65,6 +114,18 @@
                                 </TreeView.ItemContainerStyle>
                             </TreeView>
                         </ScrollViewer>
+                    </StackPanel>
+                    <StackPanel x:Name="ShowControlsContainer" Visibility="Collapsed" Orientation="Vertical">
+                        <StackPanel x:Name="ShowTextControlContainer" Visibility="Collapsed" Orientation="Vertical">
+                            <TextBox x:Name="txtControl" />
+                        </StackPanel>
+                        <StackPanel x:Name="ShowNumericalControlContainer" Visibility="Collapsed" Orientation="Vertical">
+                            <Slider x:Name="nudControl" Minimum="0" Maximum="100" />
+                        </StackPanel>
+                        <StackPanel x:Name="ShowBooleanControlContainer" Visibility="Collapsed" Orientation="Vertical">
+                            <RadioButton x:Name="rbControl" />
+                        </StackPanel>
+                        <Button x:Name="btnContinue" Content="Continue" Height="30" Width="80" Command="{x:Static uc:DefaultResponseHandlerCommands.Continue}" Style="{StaticResource ButtonDarkFlat}" />
                     </StackPanel>
                 </StackPanel>
             </Border>

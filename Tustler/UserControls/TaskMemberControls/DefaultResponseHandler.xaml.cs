@@ -28,11 +28,59 @@ namespace Tustler.UserControls.TaskMemberControls
     /// <summary>
     /// Interaction logic for DefaultResponseHandler.xaml
     /// </summary>
-    public partial class DefaultResponseHandler : UserControl
+    public partial class DefaultResponseHandler : UserControl, ICommandSource
     {
+        string requestModuleName;
+        string requestResponseName;
+
+        #region IsButtonEnabled DependencyProperty
+        public static readonly DependencyProperty IsButtonEnabledProperty =
+            DependencyProperty.Register("IsButtonEnabled", typeof(bool), typeof(DefaultResponseHandler), new PropertyMetadata(true, PropertyChangedCallback));
+
+        private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
+        {
+            if (dependencyObject is DefaultResponseHandler ctrl)
+            {
+                if (dependencyPropertyChangedEventArgs.NewValue != null)
+                {
+                    var newState = (bool)dependencyPropertyChangedEventArgs.NewValue;
+                    ctrl.btnContinue.IsEnabled = newState;
+                }
+            }
+        }
+
+        /// <summary>
+        ///  Enables or disables the Continue button
+        /// </summary>
+        public bool IsButtonEnabled
+        {
+            get { return (bool)GetValue(IsButtonEnabledProperty); }
+            set { SetValue(IsButtonEnabledProperty, value); }
+        }
+        #endregion
+
         public DefaultResponseHandler()
         {
             InitializeComponent();
+        }
+
+        private void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            var wrapper = this.DataContext as ResponseWrapper;
+            var response = wrapper.TaskResponse;
+
+            switch (response)
+            {
+                case TaskResponse.RequestArgument arg:
+                    HandleRequestArgument(arg);
+                    break;
+                case TaskResponse.SetArgument arg:
+                    HandleSetArgument(arg);
+                    break;
+                default:
+                    tbInfo.Text = $"Unknown response: {response}";
+                    break;
+            }
         }
 
         private static void AddObjectChild(TreeViewItem item, JsonProperty property)
@@ -135,22 +183,37 @@ namespace Tustler.UserControls.TaskMemberControls
                 // generate a UI for the underlying type of this request
                 var jsonDoc = JsonDocument.Parse(defaultRepresentation);
                 var elements = jsonDoc.RootElement.EnumerateObject().Select(property => property.Value).ToArray();
-                var responseName = elements[1].GetString();
-                var valueElement = elements[2];
+                this.requestModuleName = elements[0].GetString();
+                this.requestResponseName = elements[2].GetString();
+                var valueElement = elements[3];
+                tbInfo.Text = elements[4].GetString();
+                var controlEnabled = false;
                 switch (valueElement.ValueKind)
                 {
                     case JsonValueKind.True:
                     case JsonValueKind.False:
-                        // create a UI to capture a boolean
+                        // show a control to capture a boolean
+                        ShowBooleanControlContainer.Visibility = Visibility.Visible;
+                        controlEnabled = true;
                         break;
                     case JsonValueKind.Number:
-                        // create a UI to capture a string
+                        // show a control to capture a string
+                        ShowNumericalControlContainer.Visibility = Visibility.Visible;
+                        controlEnabled = true;
                         break;
                     case JsonValueKind.String:
-                        // create a UI to capture a string
+                        // show a control to capture a string
+                        ShowTextControlContainer.Visibility = Visibility.Visible;
+                        controlEnabled = true;
                         break;
                     default:
+                        tbInfo.Text = $"Unknown request: {response}";
                         break;
+                }
+
+                if (controlEnabled)
+                {
+                    ShowControlsContainer.Visibility = Visibility.Visible;
                 }
             }
             else
@@ -196,24 +259,6 @@ namespace Tustler.UserControls.TaskMemberControls
             DisplayObjectContainer.Visibility = Visibility.Visible;
         }
 
-        private void UserControl_Loaded(object sender, RoutedEventArgs e)
-        {
-            var wrapper = this.DataContext as ResponseWrapper;
-            var response = wrapper.TaskResponse;
-
-            switch (response)
-            {
-                case TaskResponse.RequestArgument arg:
-                    HandleRequestArgument(arg);
-                    break;
-                case TaskResponse.SetArgument arg:
-                    HandleSetArgument(arg);
-                    break;
-                default:
-                    tbInfo.Text = $"Unknown response: {response}";
-                    break;
-            }
-        }
 
         #region ICommandSource
 
@@ -344,6 +389,30 @@ namespace Tustler.UserControls.TaskMemberControls
 
             ExecuteCommand();
         }
+
+        private void Continue_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = true;
+        }
+
+        private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            var visibleControl =
+                new StackPanel[] { ShowBooleanControlContainer, ShowNumericalControlContainer, ShowTextControlContainer }
+                .First(panel => panel.Visibility == Visibility.Visible);
+
+            var data = visibleControl.Name switch
+            {
+                "ShowBooleanControlContainer" => JsonSerializer.SerializeToUtf8Bytes(rbControl.IsChecked ?? false),
+                "ShowNumericalControlContainer" => JsonSerializer.SerializeToUtf8Bytes(nudControl.Value),
+                "ShowTextControlContainer" => JsonSerializer.SerializeToUtf8Bytes(txtControl.Text),
+                _ => throw new NotImplementedException()
+            };
+
+            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, this.requestModuleName, this.requestResponseName, data);
+
+            ExecuteCommand();
+        }
     }
 
     public static class DefaultResponseHandlerCommands
@@ -356,5 +425,12 @@ namespace Tustler.UserControls.TaskMemberControls
                 null
             );
 
+        public static readonly RoutedUICommand Continue = new RoutedUICommand
+            (
+                "Continue",
+                "Continue",
+                typeof(DefaultResponseHandlerCommands),
+                null
+            );
     }
 }

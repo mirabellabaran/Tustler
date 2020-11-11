@@ -4,7 +4,7 @@ open System.Collections.Generic
 open System
 open CloudWeaver.Types
 open CloudWeaver.AWS
-open System.Text.Json
+open CloudWeaver.MediaServices
 open Converters
 open TustlerServicesLib
 
@@ -92,4 +92,5 @@ type ModuleResolver (serializerOptions, flagSetLookup: Dictionary<string, Func<s
         match moduleTag with
         | "StandardShareIntraModule" -> GetStandardResolver ()
         | "AWSShareIntraModule" -> Func<_, _, _>(fun propertyName jsonString -> AWSShareIntraModule.Deserialize propertyName jsonString serializerOptions :> IShareIntraModule)
+        | "AVShareIntraModule" -> Func<_, _, _>(fun propertyName jsonString -> AVShareIntraModule.Deserialize propertyName jsonString serializerOptions :> IShareIntraModule)
         | _ -> invalidArg "moduleTag" (sprintf "Unexpected module tag (%s) in ModuleLookup" moduleTag)

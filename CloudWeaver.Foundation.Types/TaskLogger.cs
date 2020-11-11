@@ -65,6 +65,14 @@ namespace CloudWeaver.Foundation.Types
             return IsLoggingEnabled;
         }
 
+        public void RestartLogging()
+        {
+            if (this.taskSpecifier is object && this.taskSpecifier.IsLoggingEnabled && this.LogFilePath is object)
+            {
+                IsLoggingEnabled = true;
+            }
+        }
+
         public void StopLogging()
         {
             if (IsLoggingEnabled)
@@ -79,7 +87,8 @@ namespace CloudWeaver.Foundation.Types
             {
                 if (logFile is null)
                 {
-                    logFile = File.Open(LogFilePath!.FullName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+                    // append to the file if it already exists
+                    logFile = File.Open(LogFilePath!.FullName, FileMode.Append, FileAccess.Write, FileShare.None);
                 }
 
                 logFile.Write(new ReadOnlySpan<byte>(data));

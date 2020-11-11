@@ -12,7 +12,7 @@ using TustlerUIShared;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
-    public class IndexedSpecifier: IEqualityComparer    //, IComparable
+    public class IndexedSpecifier: IEqualityComparer
     {
         public IndexedSpecifier(int index, TaskFunctionSpecifier specifier)
         {

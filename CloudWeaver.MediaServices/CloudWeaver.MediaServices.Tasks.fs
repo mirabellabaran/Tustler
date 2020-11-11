@@ -123,8 +123,8 @@ module public Tasks =
         let inputs = [|
             TaskResponse.RequestArgument (AVRequestIntraModule(AVRequest.RequestAVInterface));
             TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestNotifications));
-            TaskResponse.RequestArgument (AVRequestIntraModule(AVRequest.RequestOpenMediaFilePath));
             TaskResponse.RequestArgument (AVRequestIntraModule(AVRequest.RequestSaveMediaFilePath));
+            TaskResponse.RequestArgument (AVRequestIntraModule(AVRequest.RequestOpenMediaFilePath));
             |]
 
 
