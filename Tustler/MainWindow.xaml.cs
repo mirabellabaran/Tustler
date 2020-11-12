@@ -144,6 +144,7 @@ namespace Tustler
             aboutDialog.ShowDialog();
         }
 
+        // Invoked when the Enter key is pressed when a treeview element is selected
         private void SwitchCommand_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
             bool canExecute = false;
@@ -162,10 +163,10 @@ namespace Tustler
                     {
                         if (firstChild is TasksManager tasksManager)
                         {
-                            var currentTask = tasksManager.TaskSpecifier.TaskName;
-                            if (tag is TaskFunctionSpecifier specifier)
+                            var currentTask = tasksManager.RootTaskSpecifier.TaskName;
+                            if (tag is TaskFunctionElement element)
                             {
-                                return currentTask != specifier.TaskName;
+                                return currentTask != element.TaskName;
                             }
                             else
                             {

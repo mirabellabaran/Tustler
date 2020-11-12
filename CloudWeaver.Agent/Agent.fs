@@ -354,7 +354,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
                 let next = checkQueue ()
                 if next.IsSome then
                     run self next.Value    
-                else
+                else if not uiResponsePending then
                     taskCompleteEvent.Trigger(self, EventArgs())
 
     let pushTask self (taskFunctionSpecifier: TaskFunctionSpecifier) =
@@ -363,6 +363,9 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
         events.Add(TaskEvent.ForEachTask(singleTaskSequence))
         executionStack.Push(Tasks singleTaskSequence)
         nextTask self
+
+    /// Return true if waiting on input or permission to continue from the user interface
+    member this.WaitingOnResponse with get() = uiResponsePending
 
     /// Start and stop task function execution
     member this.Enabled with get() = isEnabled and set(value) = isEnabled <- value
@@ -420,9 +423,6 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
 
     /// Returns true if the root task has the EnableLogging attribute set
     member this.IsLoggingEnabled with get() = taskLogger.IsLoggingEnabled
-
-    /// Returns the task argument specified in RunTask (taskSpecifier)
-    member this.RootTask with get() = if rootTaskSpecifier.IsSome then rootTaskSpecifier.Value else null
 
     member this.TaskFunctions with get() : IEnumerable<TaskFunctionSpecifier> = Seq.cast<TaskFunctionSpecifier> taskFunctionLookup.Values
 

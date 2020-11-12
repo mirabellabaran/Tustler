@@ -146,7 +146,7 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void Continue_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = true;
+            e.CanExecute = (lbTasks.SelectedItems.Count > 0);
         }
 
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
