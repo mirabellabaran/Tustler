@@ -320,7 +320,6 @@ namespace Tustler.UserControls
                 {
                     if (lbLogFiles.SelectedItem is LogFile selectedLogFile && File.Exists(selectedLogFile.FilePath))
                     {
-                        // MG TODO diagnose 12 Nov 3:13pm log file
                         UnLogEvents(selectedLogFile.FilePath);
                         SetStandardVariables(taskFolderPath);
 

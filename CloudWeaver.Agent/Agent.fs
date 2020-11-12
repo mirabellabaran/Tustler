@@ -158,7 +158,24 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
             
         events.Clear()
         executionStack.Clear()
-        events.AddRange(loggedEvents)
+        events.AddRange(
+            // don't add the deserialized notifications list as the Agent owns its own instance of this object
+            loggedEvents
+            |> Seq.filter (fun (evt: TaskEvent) ->
+                match evt with
+                | TaskEvent.SetArgument response ->
+                    match response with
+                    | TaskResponse.SetArgument arg ->
+                        match arg with
+                        | :? StandardShareIntraModule as standard ->
+                            match standard.Argument with
+                            | StandardArgument.SetNotificationsList _ -> false
+                            | _ -> true
+                        | _ -> true
+                    | _ -> true
+                | _ -> true
+            )
+        )
         //loggedCount <- events.Count   // new log file; start from the beginning
 
         if events.Count > 0 then
