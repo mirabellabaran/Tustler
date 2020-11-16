@@ -383,11 +383,13 @@
         </DataTemplate>
         
         <DataTemplate x:Key="DefaultTranscriptTemplate"  DataType="{x:Type helpers:IResponseWrapper}">
-            <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
+            <Border MaxWidth="1000" BorderBrush="DarkGray" BorderThickness="1" CornerRadius="10" Padding="5" Margin="5">
                 <UniformGrid Margin="5">
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Default Transcript:" Style="{StaticResource TaskInfoLabelStyle}" />
-                        <TextBlock Text="{Binding Path=Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
+                        <ScrollViewer MaxWidth="800" HorizontalAlignment="Left" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <TextBlock Text="{Binding Path=Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
+                        </ScrollViewer>
                     </StackPanel>
                 </UniformGrid>
             </Border>

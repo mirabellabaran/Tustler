@@ -120,9 +120,9 @@ module public Tasks =
                     // MG TODO get the mimetype (used for S3 file classification)
                     let fileReference = FileMediaReference(outputFilePath.Path, "audio/aac", outputFilePath.Extension)
                     yield (StandardArgument.SetFileMediaReference fileReference).toTaskResponse()
-                    yield TaskResponse.TaskComplete ("Task completed successfully", DateTime.Now)
+                    yield TaskResponse.TaskComplete ("Audio stripping and transcoding completed successfully", DateTime.Now)
                 else
-                    yield TaskResponse.TaskComplete ("Task failed", DateTime.Now)
+                    yield TaskResponse.TaskComplete ("Audio stripping and transcoding failed", DateTime.Now)
             }
 
         let inputs = [|

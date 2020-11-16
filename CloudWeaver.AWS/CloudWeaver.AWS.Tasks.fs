@@ -288,14 +288,31 @@ module public Tasks =
 
             let jobName = Guid.NewGuid().ToString()
 
-            // note: the task name may be used as the output S3 key
-            let jobsModel = Transcribe.startTranscriptionJob awsInterface notifications jobName s3Media.BucketName s3Media.Key (languageCode.Code) vocabularyName |> Async.RunSynchronously
-
             seq {
+                // note: the task name may be used as the output S3 key
+                let callSuceeded, jobsModel = Transcribe.startTranscriptionJob awsInterface notifications jobName s3Media.BucketName s3Media.Key (languageCode.Code) vocabularyName |> Async.RunSynchronously
                 yield! getNotificationResponse notifications
+
+                if callSuceeded then
+                    let job = jobsModel.[jobName]
+                    match job.TranscriptionJobStatus with
+                    | "QUEUED" ->   // Amazon.TranscribeService.TranscriptionJobStatus.QUEUED
+                        yield TaskResponse.TaskInfo "Job is queued"
+                    | "IN_PROGRESS" ->
+                        yield TaskResponse.TaskInfo "Job in progress"
+                    | "COMPLETED" ->
+                        yield TaskResponse.TaskComplete ("Job has completed", DateTime.Now)
+                    | "FAILED" ->
+                        let message = sprintf "Job failed: %s" job.FailureReason 
+                        notifications.HandleError ("StartTranscription", message, null)
+                        yield! getNotificationResponse notifications
+                    | _ -> ()
+                else
+                    yield TaskResponse.TaskInfo "StartTranscription: Call failure"
+
                 yield (AWSArgument.SetTranscriptionJobName jobName).toSetArgumentTaskResponse()
                 yield TaskResponse.ShowValue (AWSShowIntraModule(AWSDisplayValue.DisplayTranscriptionJobsModel jobsModel))
-                yield TaskResponse.TaskComplete ("Transcription started", DateTime.Now)
+                yield TaskResponse.TaskComplete ("", DateTime.Now)
             }
 
         let inputs = [|
@@ -325,6 +342,13 @@ module public Tasks =
     [<HideFromUI>]
     let MonitorTranscription (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
+        let continueMonitoring delay responses =
+            seq {
+                yield TaskResponse.TaskInfo "Querying job status"
+                yield! responses
+                yield TaskResponse.TaskContinue delay
+            }
+
         let monitorTranscription argMap =
             let argsRecord = {|
                 AWSInterface = PatternMatchers.getAWSInterface argMap;
@@ -339,23 +363,28 @@ module public Tasks =
 
             seq {
                 // note: the task name may be used as the output S3 key
-                let jobsModel = Transcribe.getTranscriptionJobByName awsInterface notifications jobName |> Async.RunSynchronously
+                let callSuceeded, jobsModel = Transcribe.getTranscriptionJobByName awsInterface notifications jobName |> Async.RunSynchronously
                 yield! getNotificationResponse notifications
 
-                if jobsModel.IsSome then
-                    let isComplete = (jobsModel.Value.TranscriptionJobStatus = "COMPLETED") //Amazon.TranscribeService.TranscriptionJobStatus.COMPLETED)
-                    if isComplete then
-                        yield (AWSArgument.SetTranscriptURI jobsModel.Value.OutputURI).toSetArgumentTaskResponse()
-                        yield TaskResponse.ShowValue (AWSShowIntraModule(AWSDisplayValue.DisplayTranscriptionJob jobsModel.Value))
+                let delay = if awsInterface.RuntimeOptions.IsMocked then 1000 else 30_000
+
+                if callSuceeded then
+                    match jobsModel.TranscriptionJobStatus with
+                    | "QUEUED" ->   // Amazon.TranscribeService.TranscriptionJobStatus.QUEUED
+                        yield! continueMonitoring delay (seq { yield TaskResponse.TaskInfo "Job is queued" })
+                    | "IN_PROGRESS" ->
+                        yield! continueMonitoring delay (seq { yield TaskResponse.TaskInfo "Job in progress" })
+                    | "COMPLETED" ->
+                        yield (AWSArgument.SetTranscriptURI jobsModel.OutputURI).toSetArgumentTaskResponse()
+                        yield TaskResponse.ShowValue (AWSShowIntraModule(AWSDisplayValue.DisplayTranscriptionJob jobsModel))
                         yield TaskResponse.TaskComplete ("Transcription Job Completed", DateTime.Now)
-                    else
-                        yield TaskResponse.TaskInfo "Querying job status"
-                        let delay =
-                            if awsInterface.RuntimeOptions.IsMocked then
-                                1000
-                            else
-                                60000
-                        yield TaskResponse.TaskContinue delay
+                    | "FAILED" ->
+                        let message = sprintf "Job failed: %s" jobsModel.FailureReason 
+                        notifications.HandleError ("MonitorTranscription", message, null)
+                        yield! getNotificationResponse notifications
+                    | _ -> ()
+                else
+                    yield! continueMonitoring delay (seq { yield TaskResponse.TaskInfo "Call failure" })
             }
 
         let inputs = [|
@@ -662,7 +691,7 @@ module public Tasks =
                 |]
 
                 if unresolvedRequests.Length = 0 then
-                    let inputRequests = GetRootTaskInputRequests argMap
+                    let inputRequests = getRootTaskInputRequests argMap
 
                     let unresolvedInputs = getUnResolvedRequests argMap inputRequests
                     if unresolvedInputs.Length = 0 then
@@ -707,7 +736,7 @@ module public Tasks =
                 |]
 
                 if unresolvedRequests.Length = 0 then
-                    let inputRequests = GetRootTaskInputRequests argMap
+                    let inputRequests = getRootTaskInputRequests argMap
 
                     let unresolvedInputs = getUnResolvedRequests argMap inputRequests
                     if unresolvedInputs.Length = 0 then

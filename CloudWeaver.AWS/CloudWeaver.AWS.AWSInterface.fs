@@ -50,8 +50,8 @@ module public AWSInterface =
         let startTranscriptionJob awsInterface notifications jobName bucketName s3MediaKey languageCode vocabularyName =
             async {
                 let model = TranscriptionJobsViewModel()
-                let _success = model.AddNewTask (awsInterface, notifications, jobName, bucketName, s3MediaKey, languageCode, vocabularyName) |> Async.AwaitTask |> Async.RunSynchronously
-                return model
+                let success = model.AddNewTask (awsInterface, notifications, jobName, bucketName, s3MediaKey, languageCode, vocabularyName) |> Async.AwaitTask |> Async.RunSynchronously
+                return (success, model)
             }
 
         let listTranscriptionJobs awsInterface notifications =
@@ -66,7 +66,7 @@ module public AWSInterface =
             async {
                 let model = TranscriptionJobsViewModel()
                 let success = model.GetTaskByName (awsInterface, notifications, jobName) |> Async.AwaitTask |> Async.RunSynchronously
-                return if success then Some(model.[jobName]) else None
+                return (success, model.[jobName])
             }
 
         let deleteTranscriptionJobByName awsInterface notifications jobName =
