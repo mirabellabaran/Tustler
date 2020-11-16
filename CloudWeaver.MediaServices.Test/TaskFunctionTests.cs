@@ -33,7 +33,7 @@ namespace CloudWeaver.MediaServices.Test
             var taskName = "GetCodecInfo";   // used as both the name of the task function and the task identifier
 
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, null);
-            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.MediaServices", "CloudWeaver.MediaServices.Tasks", taskName, true));
+            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.MediaServices", "CloudWeaver.MediaServices.Tasks", taskName, false, true));
 
             var codecName = "aac";
 
@@ -69,7 +69,7 @@ namespace CloudWeaver.MediaServices.Test
             var taskName = "GetCodecInfo";   // used as both the name of the task function and the task identifier
 
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, null);
-            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.MediaServices", "CloudWeaver.MediaServices.Tasks", taskName, true));
+            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.MediaServices", "CloudWeaver.MediaServices.Tasks", taskName, false, true));
 
             var codecName = "unknown";
 
@@ -94,7 +94,7 @@ namespace CloudWeaver.MediaServices.Test
             var taskName = "GetMediaInfo";
 
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, null);
-            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.MediaServices", "CloudWeaver.MediaServices.Tasks", taskName, true));
+            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.MediaServices", "CloudWeaver.MediaServices.Tasks", taskName, false, true));
 
             var fileMediaReference = new FilePickerPath(@"C:\Users\Zev\Videos\The Shawshank Redemption (1994)\The.Shawshank.Redemption.1994.CD1.AC3.iNTERNAL.DVDRip.XviD-xCZ.avi", "", FilePickerMode.Open);
 
@@ -130,7 +130,7 @@ namespace CloudWeaver.MediaServices.Test
             var taskName = "GetMediaInfo";
 
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, null);
-            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.MediaServices", "CloudWeaver.MediaServices.Tasks", taskName, true));
+            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.MediaServices", "CloudWeaver.MediaServices.Tasks", taskName, false, true));
 
             var fileMediaReference = new FileMediaReference(@"C:\temp\temp.avi", "", "");
 

@@ -46,6 +46,7 @@ module ArgumentResolver =
                 | SetJsonEvents _ -> Some(StandardRequestIntraModule(RequestJsonEvents) :> IRequestIntraModule)
                 | SetFileMediaReference _ -> Some(StandardRequestIntraModule(RequestFileMediaReference) :> IRequestIntraModule)
                 | SetLogFormatEvents _ -> Some(StandardRequestIntraModule(RequestLogFormatEvents) :> IRequestIntraModule)
+                | SetSubTaskInputs _ -> Some(StandardRequestIntraModule(RequestSubTaskInputs) :> IRequestIntraModule)
                 | SetFilePath path when path.Mode = FilePickerMode.Open && path.Extension = "json" -> Some(StandardRequestIntraModule(RequestOpenJsonFilePath) :> IRequestIntraModule)
                 | SetFilePath path when path.Mode = FilePickerMode.Save && path.Extension = "json" -> Some(StandardRequestIntraModule(RequestSaveJsonFilePath) :> IRequestIntraModule)
                 | SetFilePath path when path.Mode = FilePickerMode.Open && path.Extension = "bin" -> Some(StandardRequestIntraModule(RequestOpenLogFormatFilePath) :> IRequestIntraModule)

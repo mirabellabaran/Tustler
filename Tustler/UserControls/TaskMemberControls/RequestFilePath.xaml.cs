@@ -348,7 +348,7 @@ namespace Tustler.UserControls.TaskMemberControls
                 _ => throw new NotImplementedException(),
             };
 
-            var data = CloudWeaver.SerializableTypeGenerator.CreateFilePath(fileInfo, FileExtension, pickerMode);
+            var data = CloudWeaver.SerializableTypeGenerator.CreateFilePath(fileInfo, fileInfo.Extension, pickerMode);
 
             CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "StandardShareIntraModule", "SetFilePath", data);
 

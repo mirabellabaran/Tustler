@@ -197,7 +197,7 @@ namespace Tustler.UserControls.TaskMemberControls
             if (cbVocabularyName.SelectedItem is TustlerModels.Vocabulary vocabulary)
             {
                 // handle special case of 'None'
-                var vocabularyName = (vocabulary.VocabularyName == "None" && vocabulary.LanguageCode is null) ? null : vocabulary.VocabularyName;
+                var vocabularyName = (vocabulary.VocabularyName == "[None]" && vocabulary.LanguageCode is null) ? null : vocabulary.VocabularyName;
                 var data = CloudWeaver.SerializableTypeGenerator.CreateVocabularyName(vocabularyName);
 
                 CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetTranscriptionVocabularyName", data);

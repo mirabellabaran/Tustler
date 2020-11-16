@@ -37,8 +37,9 @@ type TaskFunctionResolver private (pairs: seq<KeyValuePair<string, ResolverCache
 
                 methods
                 |> Seq.map (fun mi ->
+                    let isRootTask = Attribute.IsDefined(mi, typeof<RootTask>)
                     let enableLogging = Attribute.IsDefined(mi, typeof<EnableLogging>)
-                    let specifier = new TaskFunctionSpecifier(assembly.GetName().Name, currentModule.FullName, mi.Name, enableLogging)
+                    let specifier = new TaskFunctionSpecifier(assembly.GetName().Name, currentModule.FullName, mi.Name, isRootTask, enableLogging)
                     let key = specifier.TaskFullPath
                     new KeyValuePair<string, ResolverCachedItem>(key, ResolverCachedItem(mi, specifier))
                 )
@@ -87,7 +88,7 @@ type TaskFunctionResolver private (pairs: seq<KeyValuePair<string, ResolverCache
 
         let functionModule = methodinfo.DeclaringType
         let assembly = functionModule.Assembly
-        let taskFunctionSpecifier = new TaskFunctionSpecifier(assembly.FullName, functionModule.FullName, methodinfo.Name, false)
+        let taskFunctionSpecifier = new TaskFunctionSpecifier(assembly.FullName, functionModule.FullName, methodinfo.Name, false, false)
 
         let ri = new ResolverCachedItem(methodinfo, taskFunctionSpecifier)
         taskLookup.Add(taskFunctionSpecifier.TaskFullPath, ri)
@@ -154,6 +155,76 @@ type TaskFunctionResolver private (pairs: seq<KeyValuePair<string, ResolverCache
             )
         new Dictionary<string, TaskFunctionSpecifier>(pairs)
 
+    /// Return the sequence of request responses needed to satisfy the task functions invoked by a root task
+    /// excluding internally resolvable tasks (note that this sequence is normally serialized to disk as default arguments to the root task)
+    /// This is used to pre-evaluate the arguments required for the sequence of tasks defined by a root task
+    member this.GetRootTaskInputs(rootTask: TaskItem, knownArguments: KnownArgumentsCollection) : seq<IRequestIntraModule> =
+
+        let getFunc (task: TaskItem) =
+            let key = task.FullPath
+            if taskLookup.ContainsKey key then
+                let ri = taskLookup.[key]
+                let specifier = ri.TaskFunctionSpecifier
+                Some(this.CreateDelegate(specifier))
+            else
+                None
+
+        let rootFunc = getFunc rootTask
+        if rootFunc.IsNone then
+            invalidArg "rootTask" "Lookup of root task failed"
+        else
+            let tasks =
+                // expecting a single response (a TaskSequence)
+                let taskSequenceResponse =
+                    rootFunc.Value.Invoke(TaskFunctionQueryMode.SubTasks, Map.empty)
+                    |> Seq.exactlyOne
+                match taskSequenceResponse with
+                | TaskResponse.TaskSequence tasks -> tasks
+                | _ -> invalidArg "taskSequenceResponse" "TaskFunctionQueryMode.SubTasks should return a single TaskResponse.TaskSequence"
+
+            let inputs, _ =
+                tasks
+                |> Seq.fold (fun (inputs: IRequestIntraModule list, outputs: Set<IRequestIntraModule>) task ->
+                
+                    let key = task.FullPath
+                    if taskLookup.ContainsKey key then
+                        let ri = taskLookup.[key]
+                        let specifier = ri.TaskFunctionSpecifier
+                        let func = this.CreateDelegate(specifier)
+                        // outputs accumulate in the Agent events list over the session...
+                        let taskInputs =
+                            func.Invoke(TaskFunctionQueryMode.Inputs, Map.empty)
+                            |> Seq.map (fun response ->
+                                match response with
+                                | TaskResponse.RequestArgument arg when knownArguments.IsKnownArgument(arg) -> None
+                                | TaskResponse.RequestArgument arg -> Some(arg)
+                                | _ -> None
+                            )
+                            |> Seq.choose id
+                            |> Seq.filter (fun request -> not (outputs.Contains request))   // ...therefore remove all inputs that match the outputs as seen so far
+                            |> Seq.toList
+                        let accumlatedInputs =
+                            taskInputs
+                            |> Seq.rev
+                            |> Seq.fold (fun accum request -> request :: accum) inputs
+                        let taskOutputs =
+                            func.Invoke(TaskFunctionQueryMode.Outputs, Map.empty)
+                            |> Seq.map (fun response ->
+                                match response with
+                                | TaskResponse.RequestArgument arg -> Some(arg)
+                                | _ -> None
+                            )
+                            |> Seq.choose id
+                            |> Seq.fold (fun accum request -> Set.add request accum) outputs
+
+                        (accumlatedInputs, taskOutputs)
+                    else
+                        (inputs, outputs)
+                ) (List.empty, Set.empty)
+
+            inputs |> List.toSeq
+
+    /// Return the TaskFullPath of task functions that produce the ouput specified by the request argument
     member this.FindTaskFunctionsWithOutput(output: IRequestIntraModule) =
 
         taskLookup.Values

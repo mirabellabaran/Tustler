@@ -147,27 +147,28 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private object GetData(IShareIntraModule intraModule)
         {
+            // return either a string error message or a specified object
             return intraModule switch
             {
                 StandardShareIntraModule stdModule =>
                     stdModule.Argument switch
                     {
-                        //StandardArgument
-                        _ => tbInfo.Text = $"Unexpected Standard Module Response Argument: {stdModule.Argument}",
+                        StandardArgument.SetFileMediaReference fileReference => fileReference.Item,
+                        _ => $"Unexpected Standard Module Response Argument: {stdModule.Argument}",
                     },
                 AVShareIntraModule avModule =>
                     avModule.Argument switch
                     {
                         AVArgument.SetCodecInfo codecInfo => codecInfo.Item,
                         AVArgument.SetMediaInfo mediaInfo => mediaInfo.Item,
-                        _ => tbInfo.Text = $"Unexpected AV Module Response Argument: {avModule.Argument}",
+                        _ => $"Unexpected AV Module Response Argument: {avModule.Argument}",
                     },
                 AWSShareIntraModule awsModule =>
                     awsModule.Argument switch
                     {
-                        _ => tbInfo.Text = $"Unexpected AWS Module Response Argument: {awsModule.Argument}",
+                        _ => $"Unexpected AWS Module Response Argument: {awsModule.Argument}",
                     },
-                _ => tbInfo.Text = $"Unknown module: {nameof(intraModule)}"
+                _ => $"Unknown module: {nameof(intraModule)}"
             };
         }
 
@@ -240,23 +241,31 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             object data = GetData(response.Item);
 
-            // set the title
-            tbInfo.Text = data.GetType().Name;
-
-            // serialize the object and load into JsonDocument
-            var options = new JsonSerializerOptions();
-            options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
-            var serialized = JsonSerializer.Serialize(data, options);
-            var jsonDoc = JsonDocument.Parse(serialized);
-
-            // display the document as a tree
-            foreach (var property in jsonDoc.RootElement.EnumerateObject())
+            if (data is string)
             {
-                var item = CreateTreeItem(property);
-                tvData.Items.Add(item);
+                // an error message
+                tbInfo.Text = data as string;
             }
+            else
+            {
+                // set the title
+                tbInfo.Text = data.GetType().Name;
 
-            DisplayObjectContainer.Visibility = Visibility.Visible;
+                // serialize the object and load into JsonDocument
+                var options = new JsonSerializerOptions();
+                options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+                var serialized = JsonSerializer.Serialize(data, options);
+                var jsonDoc = JsonDocument.Parse(serialized);
+
+                // display the document as a tree
+                foreach (var property in jsonDoc.RootElement.EnumerateObject())
+                {
+                    var item = CreateTreeItem(property);
+                    tvData.Items.Add(item);
+                }
+
+                DisplayObjectContainer.Visibility = Visibility.Visible;
+            }
         }
 
 

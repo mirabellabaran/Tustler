@@ -26,6 +26,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "A sample task function that does nothing")
         | Inputs -> Seq.empty
         | Outputs -> Seq.empty
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 yield TaskResponse.TaskInfo "Minimal task function"
@@ -80,6 +81,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Show the items stored in Amazon S3 buckets")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestBucketsModel)))
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 // Eventually expecting three arguments: SetBucketsModel, SetBucket, SetBucketItemsModel
@@ -169,6 +171,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Clean up the transcription job history stored on the AWS Transcribe Service")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionJobsModel)))
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 // eventually expecting four arguments: AWSInterface, Notifications, TaskItem and TranscriptionJobsModel
@@ -190,6 +193,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "A temporary sample cleanup task")
         | Inputs -> Seq.empty
         | Outputs -> Seq.empty
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 yield TaskResponse.TaskInfo "Doing SomeSubTask"
@@ -203,6 +207,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Choose from a selection of cleanup tasks")
         | Inputs -> Seq.empty
         | Outputs -> Seq.empty
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 // show the sub-task names (the TaskName is used for function selection)
@@ -250,6 +255,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Upload a media file to Amazon S3")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestS3MediaReference)))
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 //let argMap = integrateUIRequestArguments resolvable_arguments
@@ -304,6 +310,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Start the transcription of a media file")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionJobName)))
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 //let argMap = integrateUIRequestArguments resolvable_arguments
@@ -343,7 +350,12 @@ module public Tasks =
                         yield TaskResponse.TaskComplete ("Transcription Job Completed", DateTime.Now)
                     else
                         yield TaskResponse.TaskInfo "Querying job status"
-                        yield TaskResponse.TaskContinue 1000
+                        let delay =
+                            if awsInterface.RuntimeOptions.IsMocked then
+                                1000
+                            else
+                                60000
+                        yield TaskResponse.TaskContinue delay
             }
 
         let inputs = [|
@@ -356,6 +368,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Monitor the transcription of a media file")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptURI)))
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 //let argMap = integrateUIRequestArguments resolvable_arguments
@@ -435,6 +448,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Download the transcript produced by transcription of a media file")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptJSON)))
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 //let argMap = integrateUIRequestArguments resolvable_arguments
@@ -471,7 +485,7 @@ module public Tasks =
 
         let inputs = [|
             TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
-            TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionDefaultTranscript));
+            TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptJSON));
             TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory));
             TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestTaskIdentifier));
             |]
@@ -480,6 +494,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Save the JSON transcript produced by transcribing a media file")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.empty
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 //let argMap = integrateUIRequestArguments resolvable_arguments
@@ -541,6 +556,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Extract the default text from a transcribed media file")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionDefaultTranscript)))
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 //let argMap = integrateUIRequestArguments resolvable_arguments
@@ -585,6 +601,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Save the default text from a transcribed media file")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.empty
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 //let argMap = integrateUIRequestArguments resolvable_arguments
@@ -598,7 +615,6 @@ module public Tasks =
                     if saveFlags.IsSome then
                         if saveFlags.Value.IsSet (AWSFlag(AWSFlagItem.TranscribeSaveDefaultTranscript)) then
                             let unresolvedRequests = getUnResolvedRequests argMap [|
-                                TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
                                 TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionDefaultTranscript));
                                 TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory));
                                 TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestTaskIdentifier));
@@ -616,57 +632,96 @@ module public Tasks =
                     yield! resolveByRequest unresolvedRequests
             }
 
-    /// Upload and transcribe some audio
+    /// Upload and transcribe some video
     /// The function is called multiple times from the UI until all arguments are resolved
+    [<RootTask>]
     [<EnableLogging>]
-    let TranscribeAudio (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
-        
-        let inputs = [|
-            TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionVocabularyName));
-            TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionLanguageCode));
-            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestFileMediaReference));
-            TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestBucket));
+    let TranscribeVideo (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
 
-            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestTaskIdentifier));
-            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestWorkingDirectory));
-            TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSaveFlags));
-        |]
+        let tasks = TaskResponse.TaskSequence ([|
+            TaskItem(ModuleName = "CloudWeaver.MediaServices.Tasks", TaskName = "StripAudioStream", Description = "Strip and transcode the best available audio stream from a media file");
+            TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "UploadMediaFile", Description = "Upload a media file for transcription");
+            TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "StartTranscription", Description = "Start a transcription job");
+            TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "MonitorTranscription", Description = "Monitor the transcription job");
+            TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "DownloadTranscript", Description = "Download the transcription job output file from S3");
+            TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "SaveTranscript", Description = "Save the JSON transcript to a file");
+            TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "ExtractTranscribedDefault", Description = "Extract the transcribed text from the JSON transcript");
+            TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "SaveTranscribedDefault", Description = "Save the extracted transcribed text to a file");
+        |])
 
         match queryMode with
-        | Description -> Seq.singleton (TaskResponse.TaskDescription "Transcribe an audio file and extract and save the transcripted text")
-        | Inputs -> Seq.ofArray inputs
+        | Description -> Seq.singleton (TaskResponse.TaskDescription "Transcribe a video file and extract and save the transcripted text")
+        | Inputs -> Seq.empty
         | Outputs -> Seq.empty
+        | SubTasks -> Seq.singleton tasks
         | Invoke ->
             seq {
-                //let argMap = integrateUIRequestArguments resolvable_arguments
-
-                // don't include the internally resolvable arguments or they will be saved (see TaskSaveEvents below)
+                // request and pre-evaluate the inputs for all sub-tasks
                 let unresolvedRequests = getUnResolvedRequests argMap [|
-                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionVocabularyName));
-                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranscriptionLanguageCode));
-                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestFileMediaReference));
-                    TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestBucket));
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSubTaskInputs))
                 |]
 
                 if unresolvedRequests.Length = 0 then
+                    let inputRequests = GetRootTaskInputRequests argMap
 
-                    // restored from a previous session OR resolved by request to the UI
-                    yield TaskResponse.TaskSaveEvents SaveEventsFilter.ArgumentsOnly     // save the resolved arguments (if not already saved)
+                    let unresolvedInputs = getUnResolvedRequests argMap inputRequests
+                    if unresolvedInputs.Length = 0 then
 
-                    yield TaskResponse.TaskSequence ([|
-                        TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "UploadMediaFile", Description = "Upload a media file for transcription");
-                        TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "StartTranscription", Description = "Start a transcription job");
-                        TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "MonitorTranscription", Description = "Monitor the transcription job");
-                        TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "DownloadTranscript", Description = "Download the transcription job output file from S3");
-                        TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "SaveTranscript", Description = "Save the JSON transcript to a file");
-                        TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "ExtractTranscribedDefault", Description = "Extract the transcribed text from the JSON transcript");
-                        TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "SaveTranscribedDefault", Description = "Save the extracted transcribed text to a file");
-                    |])
-                    yield TaskResponse.TaskComplete ("Starting task", DateTime.Now)
+                        // these arguments can be either restored from a previous session OR resolved by request to the UI
+                        yield TaskResponse.TaskSaveEvents SaveEventsFilter.ArgumentsOnly     // save the resolved arguments (if not already saved)
+
+                        yield tasks
+                        yield TaskResponse.TaskComplete ("Starting task", DateTime.Now)
+                    else
+                        yield! resolveByRequest unresolvedInputs
                 else
                     yield! resolveByRequest unresolvedRequests
             }
 
+    /// Upload and transcribe some audio
+    /// The function is called multiple times from the UI until all arguments are resolved
+    [<RootTask>]
+    [<EnableLogging>]
+    let TranscribeAudio (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
+
+        let tasks = TaskResponse.TaskSequence ([|
+            TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "UploadMediaFile", Description = "Upload a media file for transcription");
+            TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "StartTranscription", Description = "Start a transcription job");
+            TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "MonitorTranscription", Description = "Monitor the transcription job");
+            TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "DownloadTranscript", Description = "Download the transcription job output file from S3");
+            TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "SaveTranscript", Description = "Save the JSON transcript to a file");
+            TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "ExtractTranscribedDefault", Description = "Extract the transcribed text from the JSON transcript");
+            TaskItem(ModuleName = "CloudWeaver.AWS.Tasks", TaskName = "SaveTranscribedDefault", Description = "Save the extracted transcribed text to a file");
+        |])
+
+        match queryMode with
+        | Description -> Seq.singleton (TaskResponse.TaskDescription "Transcribe an audio file and extract and save the transcripted text")
+        | Inputs -> Seq.empty
+        | Outputs -> Seq.empty
+        | SubTasks -> Seq.singleton tasks
+        | Invoke ->
+            seq {
+                // request and pre-evaluate the inputs for all sub-tasks
+                let unresolvedRequests = getUnResolvedRequests argMap [|
+                    TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestSubTaskInputs))
+                |]
+
+                if unresolvedRequests.Length = 0 then
+                    let inputRequests = GetRootTaskInputRequests argMap
+
+                    let unresolvedInputs = getUnResolvedRequests argMap inputRequests
+                    if unresolvedInputs.Length = 0 then
+
+                        // these arguments can be either restored from a previous session OR resolved by request to the UI
+                        yield TaskResponse.TaskSaveEvents SaveEventsFilter.ArgumentsOnly     // save the resolved arguments (if not already saved)
+
+                        yield tasks
+                        yield TaskResponse.TaskComplete ("Starting task", DateTime.Now)
+                    else
+                        yield! resolveByRequest unresolvedInputs
+                else
+                    yield! resolveByRequest unresolvedRequests
+            }
 
     [<HideFromUI>]
     let CreateSubTitles (queryMode: TaskFunctionQueryMode) (argMap: Map<IRequestIntraModule, IShareIntraModule>) =
@@ -742,6 +797,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Create a subtitles file from a JSON transcript")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.empty
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 //let argMap = integrateUIRequestArguments resolvable_arguments
@@ -919,6 +975,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Translate text from a source language to a target language")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AWSRequestIntraModule(AWSRequest.RequestTranslationSegments)))
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 //let argMap = integrateUIRequestArguments resolvable_arguments
@@ -980,6 +1037,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Save translated text to a file")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.empty
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 //let argMap = integrateUIRequestArguments resolvable_arguments
@@ -1035,6 +1093,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Translate text into multiple languages, saving each translation")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.empty
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 //let argMap = integrateUIRequestArguments resolvable_arguments
@@ -1105,6 +1164,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Convert a JSON event log into binary log format")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestLogFormatEvents)))
+        | SubTasks -> Seq.empty
         | Invoke ->
                 seq {
                     //let argMap = integrateUIRequestArguments resolvable_arguments
@@ -1153,6 +1213,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Convert a binary log format event log into a JSON event log")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestJsonEvents)))
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 //let argMap = integrateUIRequestArguments resolvable_arguments
@@ -1173,6 +1234,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Select a task to run")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestJsonEvents)))
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                     yield TaskResponse.ChooseTask

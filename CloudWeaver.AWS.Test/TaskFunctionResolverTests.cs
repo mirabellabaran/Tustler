@@ -40,7 +40,7 @@ namespace CloudWeaver.AWS.Test
 
             var functionModule = mi.DeclaringType;
             var assembly = functionModule.Assembly;
-            var taskFunctionSpecifier = new TaskFunctionSpecifier(assembly.FullName, functionModule.FullName, mi.Name, false);
+            var taskFunctionSpecifier = new TaskFunctionSpecifier(assembly.FullName, functionModule.FullName, mi.Name, false, false);
 
             agent.PushTask(taskFunctionSpecifier);
             await agent.RunNext();

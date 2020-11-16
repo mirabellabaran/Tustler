@@ -23,7 +23,7 @@ namespace CloudWeaver.AWS.Test
             var taskName = "UploadMediaFile";   // used as both the name of the task function and the task identifier
             // Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskName = Tasks.UploadMediaFile;
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, null);
-            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, true));
+            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, false, true));
 
             var mediaFilePath = Path.Combine(WorkingDirectory, "SallyRide2.wav");
             var mediaFileReference = new FileMediaReference(mediaFilePath, "audio/mpeg", "wav");
@@ -55,7 +55,7 @@ namespace CloudWeaver.AWS.Test
             var taskName = "StartTranscription";
             // Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskName = Tasks.StartTranscription;
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, null);
-            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, true));
+            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, false, true));
 
             var vocabularyName = "Bob";
             var languageCodeDomain = new LanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US");
@@ -93,7 +93,7 @@ namespace CloudWeaver.AWS.Test
             var taskName = "MonitorTranscription";
             // Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskName = Tasks.MonitorTranscription;
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, null);
-            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, true));
+            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, false, true));
 
             var transcriptionJobName = "myJob1";    // first of three mocked jobs
 
@@ -127,7 +127,7 @@ namespace CloudWeaver.AWS.Test
             var transcriptURI = "https://s3.ap-southeast-2.amazonaws.com/test/item1";   // assumed to exist
 
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, saveFlags);
-            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, true));
+            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, false, true));
 
             var result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
@@ -160,7 +160,7 @@ namespace CloudWeaver.AWS.Test
             });
 
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, saveFlags);
-            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, true));
+            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, false, true));
 
             var transcriptJSONTestFilePath = Path.Combine(WorkingDirectory, transcriptJSONTestFilename);
             var jsonData = File.ReadAllBytes(transcriptJSONTestFilePath);
@@ -191,7 +191,7 @@ namespace CloudWeaver.AWS.Test
             var taskName = "ExtractTranscribedDefault";
             // Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskName = Tasks.ExtractTranscribedDefault;
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, null);
-            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, true));
+            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, false, true));
 
             var transcriptJSONTestFilePath = Path.Combine(WorkingDirectory, transcriptJSONTestFilename);
             var jsonData = File.ReadAllBytes(transcriptJSONTestFilePath);
@@ -222,7 +222,7 @@ namespace CloudWeaver.AWS.Test
                 })
             });
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, saveFlags);
-            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, true));
+            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, false, true));
 
             var transcript = "This is a test transcript";
 
@@ -250,7 +250,7 @@ namespace CloudWeaver.AWS.Test
             var taskName = "TranslateText";
             // Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskName = Tasks.TranslateText;
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, null);
-            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, true));
+            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, false, true));
 
             var languageCodeDomain = new LanguageCodeDomain(LanguageDomain.Translation, "English", "en");
             var languages = new TustlerModels.LanguageCode[] {
@@ -314,7 +314,7 @@ namespace CloudWeaver.AWS.Test
                 })
             });
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, saveFlags);
-            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, true));
+            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, false, true));
 
             var languages = new TustlerModels.LanguageCode[] {
                     new TustlerModels.LanguageCode() { Name = "French", Code = "fr" }
@@ -366,7 +366,7 @@ namespace CloudWeaver.AWS.Test
                 })
             });
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, saveFlags);
-            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, true));
+            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, false, true));
 
             var languageCodeDomain = new LanguageCodeDomain(LanguageDomain.Translation, "English", "en");
             var languages = new TustlerModels.LanguageCode[] {
@@ -450,7 +450,7 @@ namespace CloudWeaver.AWS.Test
 
             var taskName = "CreateSubTitles";
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, null);
-            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, true));
+            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, false, true));
 
             var transcriptJSONTestFilePath = Path.Combine(WorkingDirectory, TestDataFolderName, transcriptJSONTestFilename);
             var jsonData = File.ReadAllBytes(transcriptJSONTestFilePath);
@@ -498,7 +498,7 @@ namespace CloudWeaver.AWS.Test
             var taskName = "ConvertJsonLogToLogFormat";
             // Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskName = Tasks.ConvertJsonLogToLogFormat;
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, null);
-            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, true));
+            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, false, true));
 
             void Agent_ConvertToBinary(object sender, System.Text.Json.JsonDocument document)
             {
@@ -547,7 +547,7 @@ namespace CloudWeaver.AWS.Test
             var taskName = "ConvertLogFormatToJsonLog";
             // Func<TaskFunctionQueryMode, InfiniteList<MaybeResponse>, IEnumerable<TaskResponse>> taskName = Tasks.ConvertLogFormatToJsonLog;
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, null);
-            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, true));
+            agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, false, true));
 
             void Agent_ConvertToJson(object sender, byte[] data)
             {

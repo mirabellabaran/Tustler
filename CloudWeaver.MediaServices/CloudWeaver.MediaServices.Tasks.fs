@@ -41,6 +41,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Find a codec by name and return an encoder/decoder pair")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AVRequestIntraModule(AVRequest.RequestCodecInfo)))
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 let unresolvedRequests = getUnResolvedRequests argMap inputs
@@ -84,6 +85,7 @@ module public Tasks =
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Get media information for a media file")
         | Inputs -> Seq.ofArray inputs
         | Outputs -> Seq.singleton (TaskResponse.RequestArgument (AVRequestIntraModule(AVRequest.RequestMediaInfo)))
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 let unresolvedRequests = getUnResolvedRequests argMap inputs
@@ -115,6 +117,9 @@ module public Tasks =
             seq {
                 yield! getNotificationResponse notifications
                 if success then
+                    // MG TODO get the mimetype (used for S3 file classification)
+                    let fileReference = FileMediaReference(outputFilePath.Path, "audio/aac", outputFilePath.Extension)
+                    yield (StandardArgument.SetFileMediaReference fileReference).toTaskResponse()
                     yield TaskResponse.TaskComplete ("Task completed successfully", DateTime.Now)
                 else
                     yield TaskResponse.TaskComplete ("Task failed", DateTime.Now)
@@ -131,7 +136,8 @@ module public Tasks =
         match queryMode with
         | Description -> Seq.singleton (TaskResponse.TaskDescription "Get the best audio stream from a media file, transcoding if necessary")
         | Inputs -> Seq.ofArray inputs
-        | Outputs -> Seq.empty
+        | Outputs -> Seq.singleton (TaskResponse.RequestArgument (StandardRequestIntraModule(StandardRequest.RequestFileMediaReference)))
+        | SubTasks -> Seq.empty
         | Invoke ->
             seq {
                 let unresolvedRequests = getUnResolvedRequests argMap inputs

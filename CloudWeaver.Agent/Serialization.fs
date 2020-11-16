@@ -168,8 +168,11 @@ module public Serialization =
             let sequence = ReadOnlyMemory<byte>(block)
             use document = JsonDocument.Parse(sequence, documentOptions)
 
-            // expecting a single child object
-            DeserializeEvent (document.RootElement) serializerOptions
+            try
+                // expecting a single child object
+                DeserializeEvent (document.RootElement) serializerOptions
+            with
+            | :? System.Exception as ex -> None
         )
         |> Seq.choose id
         |> Seq.toArray

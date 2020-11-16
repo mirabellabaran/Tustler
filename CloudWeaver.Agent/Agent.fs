@@ -242,14 +242,18 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
         // resolve requests for common arguments immediately (other requests get passed to the UI)
         | TaskResponse.RequestArgument arg when knownArguments.IsKnownArgument(arg) ->
             events.Add(knownArguments.GetKnownArgument(arg))
-            //callTaskEvent.Trigger(self, getCurrentTask ())
             enqueueCurrentTask ()
+        | TaskResponse.RequestArgument arg when arg.Identifier = Identifier "RequestSubTaskInputs" ->
+            // Pre-evaluate arguments for root tasks
+            let currentTask = getCurrentTask ()
+            let combinedInputs = taskFunctionResolver.GetRootTaskInputs(currentTask, knownArguments)
+            events.Add((StandardArgument.SetSubTaskInputs combinedInputs).toTaskEvent())
+            taskQueue.Enqueue(taskFunctionLookup.[currentTask.FullPath])
         | TaskResponse.TaskSequence taskSequence ->
             addTaskSequenceEvent taskSequence ItemOrdering.Sequential
             newUIResponseEvent.Trigger(self, response)
         | TaskResponse.TaskContinue delayMilliseconds ->
             Async.AwaitTask (Task.Delay(delayMilliseconds)) |> Async.RunSynchronously
-            //callTaskEvent.Trigger(self, getCurrentTask ())
             enqueueCurrentTask ()
         | TaskResponse.TaskComplete _ ->
             events.Add(TaskEvent.FunctionCompleted)
@@ -266,19 +270,27 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
                 | SaveEventsFilter.ArgumentsOnly ->
                     events
                     |> Seq.filter (fun evt ->
+                        // return true for any SetArgument except StandardArgument.SetSubTaskInputs
                         match evt with
-                        | TaskEvent.SetArgument _ -> true
+                        | TaskEvent.SetArgument response ->
+                            match response with
+                            | TaskResponse.SetArgument arg ->
+                                match arg with
+                                | :? StandardShareIntraModule as stdModule ->
+                                    match stdModule.Argument with
+                                    | StandardArgument.SetSubTaskInputs _ -> false
+                                    | _ -> true
+                                | _ -> true
+                            | _ -> false
                         | _ -> false
                     )
                     |> Seq.toArray
             saveEventsEvent.Trigger(self, eventsCopy)
         | TaskResponse.TaskConvertToJson data ->
             convertToJsonEvent.Trigger(self, data)
-            //callTaskEvent.Trigger(self, getCurrentTask ())
             enqueueCurrentTask ()
         | TaskResponse.TaskConvertToBinary document ->
             convertToBinaryEvent.Trigger(self, document)
-            //callTaskEvent.Trigger(self, getCurrentTask ())
             enqueueCurrentTask ()
         | TaskResponse.Notification notification ->
             match notification with
@@ -333,7 +345,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
     //    let writer = processor self responses
     //    Async.StartAsTask writer
 
-    let rec run self (taskSpecifier) =
+    let rec run self (taskSpecifier: TaskFunctionSpecifier) =
         if isEnabled then
             if errorState then
                 newUIResponseEvent.Trigger(self, TaskResponse.TaskInfo "The agent encountered an error. Start a new task to continue.")
@@ -366,7 +378,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
                 //if retainResponses then taskResponses.Value.Clear()
 
                 processor self responseStream |> Async.StartAsTask |> Async.AwaitTask |> Async.RunSynchronously
-
+                        
                 // once the previous call has been processed start the next task (if any)
                 let next = checkQueue ()
                 if next.IsSome then

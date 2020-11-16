@@ -9,11 +9,12 @@ namespace CloudWeaver.Foundation.Types
     /// </summary>
     public class TaskFunctionSpecifier
     {
-        public TaskFunctionSpecifier(string assemblyName, string moduleName, string taskName, bool enableLogging)
+        public TaskFunctionSpecifier(string assemblyName, string moduleName, string taskName, bool isRootTask, bool enableLogging)
         {
             this.AssemblyName = assemblyName;
             this.ModuleName = moduleName;
             this.TaskName = taskName;
+            this.IsRootTask = isRootTask;
             this.IsLoggingEnabled = enableLogging;
         }
 
@@ -24,6 +25,12 @@ namespace CloudWeaver.Foundation.Types
         public string ModuleName { get; }
 
         public string TaskName { get; }
+
+        /// <summary>
+        /// Root tasks encompass a sequence of sub-tasks
+        /// </summary>
+        /// <remarks>Setting this to true causes the Agent to pre-evaluate the inputs of the constituent tasks</remarks>
+        public bool IsRootTask { get; }
 
         public bool IsLoggingEnabled { get; }
 
