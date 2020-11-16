@@ -158,7 +158,7 @@ type TaskFunctionResolver private (pairs: seq<KeyValuePair<string, ResolverCache
     /// Return the sequence of request responses needed to satisfy the task functions invoked by a root task
     /// excluding internally resolvable tasks (note that this sequence is normally serialized to disk as default arguments to the root task)
     /// This is used to pre-evaluate the arguments required for the sequence of tasks defined by a root task
-    member this.GetRootTaskInputs(rootTask: TaskItem, knownArguments: KnownArgumentsCollection) : seq<IRequestIntraModule> =
+    member this.GetRootTaskInputs(rootTask: TaskItem, knownArguments: KnownArgumentsCollection) : SubTaskInputs =
 
         let getFunc (task: TaskItem) =
             let key = task.FullPath
@@ -222,7 +222,7 @@ type TaskFunctionResolver private (pairs: seq<KeyValuePair<string, ResolverCache
                         (inputs, outputs)
                 ) (List.empty, Set.empty)
 
-            inputs |> List.toSeq
+            SubTaskInputs(inputs)
 
     /// Return the TaskFullPath of task functions that produce the ouput specified by the request argument
     member this.FindTaskFunctionsWithOutput(output: IRequestIntraModule) =

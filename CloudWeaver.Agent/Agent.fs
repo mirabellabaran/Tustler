@@ -112,6 +112,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
         | _ -> invalidOp "getCurrentTask: execution stack is empty"
 
     /// Replace the events stack with the specified logged events and continue execution
+    /// If the Agent is able to continue then there will be a queued task in the task queue on function exit
     let continueWith self loggedEvents =
             
         let regenerateExecutionStack () =
@@ -405,15 +406,6 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
     /// If the retainResponses flag has been set then clear the response list
     member this.ClearResponses () = if taskResponses.IsSome then taskResponses.Value.Clear()
 
-    ///// Run the specified root task function (and any other task functions that serve this root task)
-    //member this.RunTask taskSpecifier =
-    //    async {
-    //        rootTaskSpecifier <- Some(taskSpecifier)
-    //        taskLogger.StartLogging (taskSpecifier) |> ignore
-    //        run this taskSpecifier
-    //    }
-    //    |> Async.StartAsTask
-
     /// Continue running the current task
     member this.RunCurrent () =
         async {
@@ -525,6 +517,8 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
     /// Replace the events stack and continue execution with the new stack
     member this.ContinueWith loggedEvents =
         continueWith this loggedEvents
+        if taskQueue.Count = 0 && not uiResponsePending then
+            taskCompleteEvent.Trigger(this, EventArgs())
 
     member this.LastCallResponseList () = if retainResponses then taskResponses.Value else new List<TaskResponse>()
 

@@ -5,6 +5,7 @@ open System.Text.Json
 open System.Text.Json.Serialization
 open CloudWeaver.Types
 open CloudWeaver.AWS
+open CloudWeaver.MediaServices
 open System.Collections.Generic
 open TustlerModels
 open System.Globalization
@@ -33,6 +34,7 @@ module public Converters =
     | None
     | IterationArgument
     | TaskItem
+    | Requests
 
     type JsonSerializedValue =
     | Identifier of Guid
@@ -41,6 +43,7 @@ module public Converters =
     | DateTime of DateTime
     | Array of IShareIterationArgument[]
     | Tasks of TaskItem[]
+    | Requests of IRequestIntraModule[]
     with
         static member getGuid value =
             match value with
@@ -71,6 +74,11 @@ module public Converters =
             match value with
             | JsonSerializedValue.Tasks tasks -> tasks
             | _ -> raise (JsonException("Expecting the name of an array of TaskItems"))
+
+        static member getRequests value =
+            match value with
+            | JsonSerializedValue.Requests requests -> requests
+            | _ -> raise (JsonException("Expecting the name of an array of sub-task requests (IRequestIntraModule)"))
 
     let private read (reader: byref<Utf8JsonReader>) (arrayKind: JsonSerializedArrayKind) =
         let dict = System.Collections.Generic.Dictionary<string, JsonSerializedValue>()
@@ -116,6 +124,21 @@ module public Converters =
                                         JsonSerializer.Deserialize<IEnumerable<TaskItem>>(&reader)
                                         |> Seq.toArray
                                     JsonSerializedValue.Tasks data
+                                | JsonSerializedArrayKind.Requests ->
+                                    let data =
+                                        JsonSerializer.Deserialize<IEnumerable<string>>(&reader)
+                                        |> Seq.map (fun label ->
+                                            let span = ReadOnlySpan<char>(label.ToCharArray())
+                                            let index = span.IndexOf('.')
+                                            let moduleName, request = span.Slice(0, index).ToString(), span.Slice(index + 1).ToString()
+                                            match moduleName with
+                                            | "StandardRequestIntraModule" -> StandardRequestIntraModule.FromString(request)
+                                            | "AWSRequestIntraModule" -> AWSRequestIntraModule.FromString(request)
+                                            | "AVRequestIntraModule" -> AVRequestIntraModule.FromString(request)
+                                            | _ -> invalidArg "label" (sprintf "Unknown request label: %s" label)
+                                        )
+                                        |> Seq.toArray
+                                    JsonSerializedValue.Requests data
                             | _ -> raise (JsonException())
                         dict.Add(propertyName, data)
                 | _ -> ()
@@ -276,4 +299,27 @@ module public Converters =
                 writer.WriteString("VocabularyName", instance.VocabularyName.Value)
             else
                 writer.WriteNull("VocabularyName")
+            writer.WriteEndObject()
+
+    /// Json converter for SubTaskInputs
+    type SubTaskInputsConverter() =
+        inherit JsonConverter<SubTaskInputs>()
+
+        override this.Read(reader, _typeToConvert, _options) =
+            let dict = read &reader JsonSerializedArrayKind.Requests
+
+            if (dict.ContainsKey "Requests") then
+                let requests = JsonSerializedValue.getRequests (dict.["Requests"])
+                SubTaskInputs(requests)
+            else
+                raise (JsonException("Error parsing SubTaskInputs"))
+
+
+        override this.Write(writer, instance, _options) =
+            writer.WriteStartObject()
+            writer.WriteStartArray("Requests")
+            if not (isNull instance.Requests) then
+                instance.Requests
+                |> Seq.iter (fun request -> writer.WriteStringValue(request.ToString()))
+            writer.WriteEndArray()
             writer.WriteEndObject()

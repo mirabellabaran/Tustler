@@ -34,6 +34,6 @@ module CommonUtilities =
     // Find the SetSubTaskInputs argument and map the requests to an array of responses
     let getRootTaskInputRequests argMap =
         let subTaskInputs = PatternMatchers.getSubTaskInputs argMap
-        subTaskInputs.Value
+        subTaskInputs.Value.Requests
         |> Seq.map (fun request -> TaskResponse.RequestArgument request)
         |> Seq.toArray

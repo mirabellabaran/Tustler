@@ -88,6 +88,12 @@ type AVRequest =
         | RequestMediaInfo -> "RequestMediaInfo"
         | RequestOpenMediaFilePath -> "RequestOpenMediaFilePath"
         | RequestSaveMediaFilePath -> "RequestSaveMediaFilePath"
+    static member fromString(label) =
+        let arg = BaseUtilities.fromString<AVRequest>(label)
+        if arg.IsSome then
+            arg.Value
+        else
+            invalidArg "label" "Unknown request label"
 
 /// Wrapper for the requests used by this module
 type AVRequestIntraModule(avRequest: AVRequest) =
@@ -98,9 +104,10 @@ type AVRequestIntraModule(avRequest: AVRequest) =
             let str2 = (obj :?> IRequestIntraModule).Identifier.AsString()
             System.String.Compare(str1, str2)
         member this.Identifier with get() = Identifier (BaseUtilities.toString avRequest)
-        member this.ToString () = sprintf "AVRequestIntraModule(%s)" (avRequest.ToString())
+        member this.ToString () = sprintf "AVRequestIntraModule.%s" (avRequest.ToString())
 
     member this.Request with get() = avRequest
+    static member FromString(label: string): IRequestIntraModule = AVRequestIntraModule(AVRequest.fromString(label)) :> IRequestIntraModule
 
 /// Wrapper for the pre-assigned values used by this module
 /// (values that are known in advance by the user interface layer)

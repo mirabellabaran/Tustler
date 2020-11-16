@@ -341,6 +341,12 @@ type AWSRequest =
         | RequestTranslationTerminologyNames -> "RequestTranslationTerminologyNames"
         | RequestTranslationSegments -> "RequestTranslationSegments"
         | RequestSubtitleFilePath -> "RequestSubtitleFilePath"
+    static member fromString(label) =
+        let arg = BaseUtilities.fromString<AWSRequest>(label)
+        if arg.IsSome then
+            arg.Value
+        else
+            invalidArg "label" "Unknown request label"
 
 /// Wrapper for the requests used by this module
 type AWSRequestIntraModule(awsRequest: AWSRequest) =
@@ -351,9 +357,10 @@ type AWSRequestIntraModule(awsRequest: AWSRequest) =
             let str2 = (obj :?> IRequestIntraModule).Identifier.AsString()
             System.String.Compare(str1, str2)
         member this.Identifier with get() = Identifier (BaseUtilities.toString awsRequest)
-        member this.ToString () = sprintf "AWSRequestIntraModule(%s)" (awsRequest.ToString())
+        member this.ToString () = sprintf "AWSRequestIntraModule.%s" (awsRequest.ToString())
 
     member this.Request with get() = awsRequest
+    static member FromString(label: string): IRequestIntraModule = AWSRequestIntraModule(AWSRequest.fromString(label)) :> IRequestIntraModule
 
 /// Wrapper for the pre-assigned values used by this module
 /// (values that are known in advance by the user interface layer)
