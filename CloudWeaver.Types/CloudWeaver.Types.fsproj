@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="FileServices.fs" />
     <Compile Include="BaseUtilities.fs" />
     <Compile Include="RetainingStack.fs" />
     <Compile Include="SaveFlags.fs" />
@@ -17,6 +18,7 @@
     <ProjectReference Include="..\TustlerAWSLib\TustlerAWSLib.csproj" />
     <ProjectReference Include="..\TustlerModels\TustlerModels.csproj" />
     <ProjectReference Include="..\TustlerServicesLib\TustlerServicesLib.csproj" />
+    <ProjectReference Include="..\TustlerWinPlatformLib\TustlerWinPlatformLib.csproj" />
   </ItemGroup>
 
 </Project>

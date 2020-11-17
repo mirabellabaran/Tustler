@@ -182,7 +182,7 @@ namespace Tustler.UserControls
         {
             static (bool proceed, string path, string mimetype, string extension) CheckAddExtension(string path)
             {
-                var mimetype = Helpers.FileServices.GetMimeType(path);
+                var mimetype = CloudWeaver.Types.FileServices.GetMimeType(path);
                 var extension = Path.GetExtension(path);
 
                 if (string.IsNullOrEmpty(extension))

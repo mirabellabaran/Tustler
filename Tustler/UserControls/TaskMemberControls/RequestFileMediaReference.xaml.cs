@@ -187,7 +187,7 @@ namespace Tustler.UserControls.TaskMemberControls
                 var exists = File.Exists(path);
                 lblFileExists.Content = exists;
 
-                string? mimetype = exists ? Helpers.FileServices.GetMimeType(path) : null;
+                string? mimetype = exists ? FileServices.GetMimeType(path) : null;
                 string? extension = Path.GetExtension(path);
 
                 if (string.IsNullOrEmpty(extension))

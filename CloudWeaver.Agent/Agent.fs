@@ -469,17 +469,21 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
 
     /// Insert a task into the IConsumableTaskSequence at the top of the stack
     member this.InsertTaskBeforeCurrent taskPath =
-        let taskSpecifier = taskFunctionLookup.[taskPath]   // MG could throw
-        let taskItem = TaskItem(taskSpecifier.ModuleName, taskSpecifier.TaskName, System.String.Empty)
+        // the task path is normally provided by the DefaultResponseHandler (but may not be)
+        if taskFunctionLookup.ContainsKey taskPath then
+            let taskSpecifier = taskFunctionLookup.[taskPath]
+            let taskItem = TaskItem(taskSpecifier.ModuleName, taskSpecifier.TaskName, System.String.Empty)
 
-        match executionStack.TryPeek() with
-        | true, Tasks taskSequence ->
-            executionStack.Pop() |> ignore
-            let newSequence = taskSequence.InsertBeforeCurrent taskItem
-            events.Add(TaskEvent.ForEachTask(newSequence))
-            executionStack.Push(Tasks newSequence)
-            nextTask this
-        | _ -> ()
+            match executionStack.TryPeek() with
+            | true, Tasks taskSequence ->
+                executionStack.Pop() |> ignore
+                let newSequence = taskSequence.InsertBeforeCurrent taskItem
+                events.Add(TaskEvent.ForEachTask(newSequence))
+                executionStack.Push(Tasks newSequence)
+                nextTask this
+            | _ -> ()
+        else
+            invalidArg "taskPath" "Unknown task path"
 
     /// A new UI selection has been made
     member this.NewSelection response =
