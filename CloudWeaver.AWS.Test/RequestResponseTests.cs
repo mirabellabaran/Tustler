@@ -1,11 +1,14 @@
 ﻿using CloudWeaver.Foundation.Types;
+using CloudWeaver.MediaServices;
 using CloudWeaver.Types;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using TustlerAWSLib;
+using TustlerFFMPEG.Types.CodecInfo;
 using TustlerInterfaces;
 using TustlerModels;
 using TustlerServicesLib;
@@ -21,9 +24,40 @@ namespace CloudWeaver.AWS.Test
             var agent = await InitializeTestAsync();
 
             var serializerOptions = Converters.CreateSerializerOptions();
-            Assert.IsTrue(serializerOptions.Converters.Count == 6);
+            Assert.IsTrue(serializerOptions.Converters.Count == 7);
 
-            // the following will all throw if not correct
+            // Test type serialization and deserialization: each of the following will throw if not correct
+            // each call tests that the second argument can be deserialized into the type requested by the first argument
+
+            // Deserialize an empty SubTaskInputs instance
+            TestRequest(
+                new StandardRequestIntraModule(StandardRequest.RequestSubTaskInputs),
+                JsonSerializer.SerializeToUtf8Bytes(new SubTaskInputs(), serializerOptions),
+                agent);
+
+            // Deserialize a SubTaskInputs instance w/ four requests
+            TestRequest(
+                new StandardRequestIntraModule(StandardRequest.RequestSubTaskInputs),
+                JsonSerializer.SerializeToUtf8Bytes(new SubTaskInputs(new IRequestIntraModule[] {
+                    new AWSRequestIntraModule(AWSRequest.RequestTranscriptionLanguageCode),
+                    new AWSRequestIntraModule(AWSRequest.RequestTranscriptionVocabularyName),
+                    new AWSRequestIntraModule(AWSRequest.RequestBucket),
+                    new StandardRequestIntraModule(StandardRequest.RequestFileMediaReference)
+                }), serializerOptions),
+                agent);
+
+            //TestRequest(
+            //    new AVRequestIntraModule(AVRequest.RequestCodecInfo),
+            //    JsonSerializer.SerializeToUtf8Bytes(new CodecInfo(), serializerOptions),
+            //    agent);
+
+            // MG note this should fail
+            //TestRequest(
+            //    new AVRequestIntraModule(AVRequest.RequestMediaInfo),
+            //    JsonSerializer.SerializeToUtf8Bytes(new CodecInfo(), serializerOptions),
+            //    agent);
+
+
 
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestBucket),
@@ -120,8 +154,10 @@ namespace CloudWeaver.AWS.Test
         {
             return request switch
             {
+                // map the request to the shareable settable type
                 StandardRequestIntraModule _ => "StandardShareIntraModule",
                 AWSRequestIntraModule _ => "AWSShareIntraModule",
+                AVRequestIntraModule _ => "AVShareIntraModule",
                 _ => throw new ArgumentException()
             };
         }
@@ -154,10 +190,11 @@ namespace CloudWeaver.AWS.Test
                 {
                     StandardRequestIntraModule standardRequest => standardRequest.Request.ToString(),
                     AWSRequestIntraModule awsRequest => awsRequest.Request.ToString(),
+                    AVRequestIntraModule avRequest => avRequest.Request.ToString(),
                     _ => throw new ArgumentException()
                 };
 
-                result = $"Set{requestAsString.Substring(7)}";
+                result = $"Set{requestAsString[7..]}";
             }
 
             return result;
