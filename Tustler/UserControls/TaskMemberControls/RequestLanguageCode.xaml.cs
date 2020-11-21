@@ -13,6 +13,8 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using TustlerUIShared;
 using TustlerModels;
+using Tustler.Helpers;
+using CloudWeaver.Types;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
@@ -226,21 +228,28 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            if (cbLanguage.SelectedItem is TustlerModels.LanguageCode languageCode)
+            if (this.DataContext is ResponseWrapper wrapper)
             {
-                LanguageDomain domain = LanguageCodesViewModelType switch
+                if (cbLanguage.SelectedItem is TustlerModels.LanguageCode languageCode)
                 {
-                    LanguageCodesViewModelType.Transcription => LanguageDomain.Transcription,
-                    LanguageCodesViewModelType.Translation => LanguageDomain.Translation,
-                    _ => null
-                };
+                    LanguageDomain domain = LanguageCodesViewModelType switch
+                    {
+                        LanguageCodesViewModelType.Transcription => LanguageDomain.Transcription,
+                        LanguageCodesViewModelType.Translation => LanguageDomain.Translation,
+                        _ => null
+                    };
 
-                var data = CloudWeaver.SerializableTypeGenerator.CreateLanguageCodeDomain(domain, languageCode.Name, languageCode.Code);
+                    var data = CloudWeaver.SerializableTypeGenerator.CreateLanguageCodeDomain(domain, languageCode.Name, languageCode.Code);
 
+                    // this user control is responding to a RequestArgument
+                    if (wrapper.TaskResponse is TaskResponse.RequestArgument arg)
+                    {
+                        var mode = UITaskMode.NewSetArgument(arg.Item);
+                        CommandParameter = new UITaskArguments(mode, "AWSShareIntraModule", "SetLanguage", data);
 
-                CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetLanguage", data);
-
-                ExecuteCommand();
+                        ExecuteCommand();
+                    }
+                }
             }
         }
     }

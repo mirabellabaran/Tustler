@@ -132,7 +132,7 @@ namespace CloudWeaver.AWS.Test
 
         private void TestRequest(IRequestIntraModule request, byte[] data, Agent agent)
         {
-            agent.AddArgument(GetModuleName(request), GetPropertyName(request), data);
+            agent.AddArgument(request, GetModuleName(request), GetPropertyName(request), data);
         }
 
         private static async Task<Agent> InitializeTestAsync()

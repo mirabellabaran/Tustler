@@ -128,9 +128,7 @@ module public Converters =
                                     let data =
                                         JsonSerializer.Deserialize<IEnumerable<string>>(&reader)
                                         |> Seq.map (fun label ->
-                                            let span = ReadOnlySpan<char>(label.ToCharArray())
-                                            let index = span.IndexOf('.')
-                                            let moduleName, request = span.Slice(0, index).ToString(), span.Slice(index + 1).ToString()
+                                            let moduleName, request = BaseUtilities.deStringifyRequest label
                                             match moduleName with
                                             | "StandardRequestIntraModule" -> StandardRequestIntraModule.FromString(request)
                                             | "AWSRequestIntraModule" -> AWSRequestIntraModule.FromString(request)

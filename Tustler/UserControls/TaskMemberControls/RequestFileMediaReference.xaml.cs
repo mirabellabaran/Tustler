@@ -253,7 +253,8 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             var data = SerializableTypeGenerator.CreateFileMediaReference(tbFilePath.Text, this.Mimetype, this.Extension);
 
-            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "StandardShareIntraModule", "SetFileMediaReference", data);
+            var mode = UITaskMode.NewSetArgument(new StandardRequestIntraModule(StandardRequest.RequestFileMediaReference));
+            CommandParameter = new UITaskArguments(mode, "StandardShareIntraModule", "SetFileMediaReference", data);
 
             ExecuteCommand();
         }

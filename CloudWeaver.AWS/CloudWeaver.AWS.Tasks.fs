@@ -59,7 +59,7 @@ module public Tasks =
                     yield! getNotificationResponse notifications
                     if model.Buckets.Count > 0 then
                         yield TaskResponse.TaskSelect "Choose a bucket:"
-                        yield (AWSArgument.SetBucketsModel model).toSetArgumentTaskResponse()
+                        yield (AWSArgument.SetBucketsModel model).toTaskResponse(AWSRequestIntraModule(AWSRequest.RequestBucketsModel))
 
                 if bucketModel.IsSome && selectedBucket.IsSome then
                     let bucketName = selectedBucket.Value.Name
@@ -140,7 +140,7 @@ module public Tasks =
 
                         let model = Transcribe.listTranscriptionJobs awsInterface notifications |> Async.RunSynchronously
                         yield! getNotificationResponse notifications
-                        yield (AWSArgument.SetTranscriptionJobsModel model).toSetArgumentTaskResponse()
+                        yield (AWSArgument.SetTranscriptionJobsModel model).toTaskResponse(AWSRequestIntraModule(AWSRequest.RequestTranscriptionJobsModel))
                         yield TaskResponse.TaskPrompt "Delete all completed transcription jobs?"
 
                     if transcriptionJobsModel.IsSome then
@@ -240,7 +240,8 @@ module public Tasks =
             seq {
                 yield! getNotificationResponse notifications
                 if success then
-                    yield (AWSArgument.SetS3MediaReference (S3MediaReference(bucketName, newKey, media.MimeType, media.Extension))).toSetArgumentTaskResponse()
+                    yield (AWSArgument.SetS3MediaReference (S3MediaReference(bucketName, newKey, media.MimeType, media.Extension)))
+                        .toTaskResponse(AWSRequestIntraModule(AWSRequest.RequestS3MediaReference))
                 yield TaskResponse.TaskComplete ("Uploaded media file", DateTime.Now)
             }
 
@@ -310,7 +311,7 @@ module public Tasks =
                 else
                     yield TaskResponse.TaskInfo "StartTranscription: Call failure"
 
-                yield (AWSArgument.SetTranscriptionJobName jobName).toSetArgumentTaskResponse()
+                yield (AWSArgument.SetTranscriptionJobName jobName).toTaskResponse(AWSRequestIntraModule(AWSRequest.RequestTranscriptionJobName))
                 yield TaskResponse.ShowValue (AWSShowIntraModule(AWSDisplayValue.DisplayTranscriptionJobsModel jobsModel))
                 yield TaskResponse.TaskComplete ("", DateTime.Now)
             }
@@ -375,7 +376,7 @@ module public Tasks =
                     | "IN_PROGRESS" ->
                         yield! continueMonitoring delay (seq { yield TaskResponse.TaskInfo "Job in progress" })
                     | "COMPLETED" ->
-                        yield (AWSArgument.SetTranscriptURI jobsModel.OutputURI).toSetArgumentTaskResponse()
+                        yield (AWSArgument.SetTranscriptURI jobsModel.OutputURI).toTaskResponse(AWSRequestIntraModule(AWSRequest.RequestTranscriptURI))
                         yield TaskResponse.ShowValue (AWSShowIntraModule(AWSDisplayValue.DisplayTranscriptionJob jobsModel))
                         yield TaskResponse.TaskComplete ("Transcription Job Completed", DateTime.Now)
                     | "FAILED" ->
@@ -458,7 +459,7 @@ module public Tasks =
 
                 yield! getNotificationResponse notifications
                 if transcriptData.IsSome then
-                    yield (AWSArgument.SetTranscriptJSON transcriptData.Value).toSetArgumentTaskResponse()
+                    yield (AWSArgument.SetTranscriptJSON transcriptData.Value).toTaskResponse(AWSRequestIntraModule(AWSRequest.RequestTranscriptJSON))
                 let message =
                     if transcriptData.IsSome then
                         "Downloaded transcript file"
@@ -571,7 +572,7 @@ module public Tasks =
                 if notifications.Notifications.Count > 0 then
                     yield! getNotificationResponse notifications
                 if not (isNull defaultTranscript) then
-                    yield (AWSArgument.SetTranscriptionDefaultTranscript defaultTranscript).toSetArgumentTaskResponse()
+                    yield (AWSArgument.SetTranscriptionDefaultTranscript defaultTranscript).toTaskResponse(AWSRequestIntraModule(AWSRequest.RequestTranscriptionDefaultTranscript))
 
                 yield TaskResponse.TaskComplete ("Extracted transcript data", DateTime.Now)
             }
@@ -977,7 +978,7 @@ module public Tasks =
                     if notifications.Notifications.Count > 0 then
                         yield! getNotificationResponse notifications
 
-                    yield (AWSArgument.SetTranslationSegments chunker).toSetArgumentTaskResponse()
+                    yield (AWSArgument.SetTranslationSegments chunker).toTaskResponse(AWSRequestIntraModule(AWSRequest.RequestTranslationSegments))
 
                     if chunker.IsJobComplete then
                         yield TaskResponse.TaskComplete ((sprintf "Translation from %s to %s is complete" (sourceLanguageCode.Name) (targetLanguageCode.Name)), DateTime.Now)

@@ -1,4 +1,5 @@
 ﻿using CloudWeaver;
+using CloudWeaver.AWS;
 using CloudWeaver.Foundation.Types;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -198,7 +199,8 @@ namespace Tustler.UserControls.TaskMemberControls
                 .Select(term => term.Name);
             var data = SerializableTypeGenerator.CreateTranslationTerminologyNames(terminologyNames);
 
-            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetTranslationTerminologyNames", data);
+            var mode = UITaskMode.NewSetArgument(new AWSRequestIntraModule(AWSRequest.RequestTranslationTerminologyNames));
+            CommandParameter = new UITaskArguments(mode, "AWSShareIntraModule", "SetTranslationTerminologyNames", data);
 
             ExecuteCommand();
         }

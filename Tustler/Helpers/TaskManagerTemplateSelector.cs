@@ -104,7 +104,7 @@ namespace Tustler.Helpers
                 TaskResponse.TaskSequence _ => element.FindResource("TaskSequenceTemplate") as DataTemplate,
 
                 TaskResponse.ShowValue arg => GetShowValueTemplate(arg.Item),
-                TaskResponse.SetArgument arg => GetSetArgumentTemplate(arg.Item),
+                TaskResponse.SetArgument arg => GetSetArgumentTemplate(arg.Item2),
 
                 TaskResponse.RequestArgument arg => GetRequestTemplate(arg.Item),
 

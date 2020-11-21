@@ -1,4 +1,5 @@
-﻿using CloudWeaver.Foundation.Types;
+﻿using CloudWeaver.AWS;
+using CloudWeaver.Foundation.Types;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Windows;
@@ -200,7 +201,8 @@ namespace Tustler.UserControls.TaskMemberControls
                 var vocabularyName = (vocabulary.VocabularyName == "[None]" && vocabulary.LanguageCode is null) ? null : vocabulary.VocabularyName;
                 var data = CloudWeaver.SerializableTypeGenerator.CreateVocabularyName(vocabularyName);
 
-                CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetTranscriptionVocabularyName", data);
+                var mode = UITaskMode.NewSetArgument(new AWSRequestIntraModule(AWSRequest.RequestTranscriptionVocabularyName));
+                CommandParameter = new UITaskArguments(mode, "AWSShareIntraModule", "SetTranscriptionVocabularyName", data);
 
                 ExecuteCommand();
             }

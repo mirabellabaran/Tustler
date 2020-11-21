@@ -30,8 +30,9 @@ namespace Tustler.UserControls.TaskMemberControls
     /// </summary>
     public partial class DefaultResponseHandler : UserControl, ICommandSource
     {
-        string requestModuleName;
-        string requestResponseName;
+        private IRequestIntraModule request;
+        private string requestModuleName;
+        private string requestResponseName;
 
         #region IsButtonEnabled DependencyProperty
         public static readonly DependencyProperty IsButtonEnabledProperty =
@@ -145,40 +146,14 @@ namespace Tustler.UserControls.TaskMemberControls
             return item;
         }
 
-        private object GetData(IShareIntraModule intraModule)
-        {
-            // return either a string error message or a specified object
-            return intraModule switch
-            {
-                StandardShareIntraModule stdModule =>
-                    stdModule.Argument switch
-                    {
-                        StandardArgument.SetFileMediaReference fileReference => fileReference.Item,
-                        _ => $"Unexpected Standard Module Response Argument: {stdModule.Argument}",
-                    },
-                AVShareIntraModule avModule =>
-                    avModule.Argument switch
-                    {
-                        AVArgument.SetCodecInfo codecInfo => codecInfo.Item,
-                        AVArgument.SetMediaInfo mediaInfo => mediaInfo.Item,
-                        _ => $"Unexpected AV Module Response Argument: {avModule.Argument}",
-                    },
-                AWSShareIntraModule awsModule =>
-                    awsModule.Argument switch
-                    {
-                        _ => $"Unexpected AWS Module Response Argument: {awsModule.Argument}",
-                    },
-                _ => $"Unknown module: {nameof(intraModule)}"
-            };
-        }
-
         /// <summary>
         /// Suggest task functions that generate the requested output
         /// </summary>
         /// <param name="response"></param>
         private void HandleRequestArgument(TaskResponse.RequestArgument response)
         {
-            var defaultRepresentation = DefaultRepresentationGenerator.GetRepresentationFor(response.Item);
+            this.request = response.Item;
+            var defaultRepresentation = DefaultRepresentationGenerator.GetRepresentationFor(this.request);
             if (defaultRepresentation is object)
             {
                 // generate a UI for the underlying type of this request
@@ -233,13 +208,40 @@ namespace Tustler.UserControls.TaskMemberControls
             }
         }
 
+        private object GetData(IShareIntraModule intraModule)
+        {
+            // return either a string error message or a specified object
+            return intraModule switch
+            {
+                StandardShareIntraModule stdModule =>
+                    stdModule.Argument switch
+                    {
+                        StandardArgument.SetFileMediaReference fileReference => fileReference.Item,
+                        _ => $"Unexpected Standard Module Response Argument: {stdModule.Argument}",
+                    },
+                AVShareIntraModule avModule =>
+                    avModule.Argument switch
+                    {
+                        AVArgument.SetCodecInfo codecInfo => codecInfo.Item,
+                        AVArgument.SetMediaInfo mediaInfo => mediaInfo.Item,
+                        _ => $"Unexpected AV Module Response Argument: {avModule.Argument}",
+                    },
+                AWSShareIntraModule awsModule =>
+                    awsModule.Argument switch
+                    {
+                        _ => $"Unexpected AWS Module Response Argument: {awsModule.Argument}",
+                    },
+                _ => $"Unknown module: {nameof(intraModule)}"
+            };
+        }
+
         /// <summary>
         /// Display the serialized response as a tree of properties
         /// </summary>
         /// <param name="response"></param>
         private void HandleSetArgument(TaskResponse.SetArgument response)
         {
-            object data = GetData(response.Item);
+            object data = GetData(response.Item2);
 
             if (data is string)
             {
@@ -418,7 +420,8 @@ namespace Tustler.UserControls.TaskMemberControls
                 _ => throw new NotImplementedException()
             };
 
-            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, this.requestModuleName, this.requestResponseName, data);
+            var mode = UITaskMode.NewSetArgument(request);
+            CommandParameter = new UITaskArguments(mode, this.requestModuleName, this.requestResponseName, data);
 
             ExecuteCommand();
         }

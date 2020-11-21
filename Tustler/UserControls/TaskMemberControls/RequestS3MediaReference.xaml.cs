@@ -1,4 +1,5 @@
 ﻿using CloudWeaver;
+using CloudWeaver.AWS;
 using CloudWeaver.Foundation.Types;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -240,7 +241,8 @@ namespace Tustler.UserControls.TaskMemberControls
             {
                 var data = SerializableTypeGenerator.CreateS3MediaReference(bucket.Name, bucketItem.Key, bucketItem.MimeType, bucketItem.Extension);
 
-                CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetS3MediaReference", data);
+                var mode = UITaskMode.NewSetArgument(new AWSRequestIntraModule(AWSRequest.RequestS3MediaReference));
+                CommandParameter = new UITaskArguments(mode, "AWSShareIntraModule", "SetS3MediaReference", data);
 
                 ExecuteCommand();
             }

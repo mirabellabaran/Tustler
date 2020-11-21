@@ -39,22 +39,25 @@ namespace CloudWeaver.MediaServices.Test
 
             var result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AVRequestIntraModule(RequestCodecName)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AVShareIntraModule(AVArgument.NewSetCodecName(codecName))));
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AVRequestIntraModule.RequestCodecName" });
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AVRequestIntraModule(AVRequest.RequestCodecName),
+                new AVShareIntraModule(AVArgument.NewSetCodecName(codecName))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 4);
             Assert.IsTrue(CheckAllStartWith(result, new string[] {
-                    "RequestArgument: StandardRequestIntraModule(RequestNotifications)",
-                    "RequestArgument: AVRequestIntraModule(RequestAVInterface)",
-                    "SetArgument: AVShareIntraModule(SetCodecInfo: TustlerFFMPEG.Types.CodecInfo.CodecPair)",
+                    "RequestArgument: StandardRequestIntraModule.RequestNotifications",
+                    "RequestArgument: AVRequestIntraModule.RequestAVInterface",
+                    "SetArgument: AVRequestIntraModule.RequestCodecInfo -> AVShareIntraModule(SetCodecInfo: TustlerFFMPEG.Types.CodecInfo.CodecPair)",
                     "TaskComplete: Task complete"
                 }));
 
             var codecPair = agent.LastCallResponseList()
                 .Where(response => response.IsSetArgument)
                 .Select(response => {
-                    var iface = (response as TaskResponse.SetArgument).Item;
+                    var iface = (response as TaskResponse.SetArgument).Item2;
                     var mod = iface as AVShareIntraModule;
                     return (mod.Argument as AVArgument.SetCodecInfo).Item;
                 })
@@ -75,8 +78,11 @@ namespace CloudWeaver.MediaServices.Test
 
             var result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AVRequestIntraModule(RequestCodecName)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AVShareIntraModule(AVArgument.NewSetCodecName(codecName))));
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AVRequestIntraModule.RequestCodecName" });
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AVRequestIntraModule(AVRequest.RequestCodecName),
+                new AVShareIntraModule(AVArgument.NewSetCodecName(codecName))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 4);
@@ -101,21 +107,24 @@ namespace CloudWeaver.MediaServices.Test
             var result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AVRequestIntraModule(RequestOpenMediaFilePath)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetFilePath(fileMediaReference))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AVRequestIntraModule(AVRequest.RequestOpenMediaFilePath),
+                new StandardShareIntraModule(StandardArgument.NewSetFilePath(fileMediaReference))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 4);
             Assert.IsTrue(CheckAllStartWith(result, new string[] {
                     "RequestArgument: StandardRequestIntraModule(RequestNotifications)",
                     "RequestArgument: AVRequestIntraModule(RequestAVInterface)",
-                    "SetArgument: AVShareIntraModule(SetMediaInfo: TustlerFFMPEG.Types.MediaInfo.MediaInfo)",
+                    "SetArgument: AVShareIntraModule.SetMediaInfo: TustlerFFMPEG.Types.MediaInfo.MediaInfo)",
                     "TaskComplete: Task complete"
                 }));
 
             var mediaInfo = agent.LastCallResponseList()
                 .Where(response => response.IsSetArgument)
                 .Select(response => {
-                    var iface = (response as TaskResponse.SetArgument).Item;
+                    var iface = (response as TaskResponse.SetArgument).Item2;
                     var mod = iface as AVShareIntraModule;
                     return (mod.Argument as AVArgument.SetMediaInfo).Item;
                 })
@@ -137,7 +146,10 @@ namespace CloudWeaver.MediaServices.Test
             var result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestFileMediaReference)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetFileMediaReference(fileMediaReference))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AVRequestIntraModule(AVRequest.RequestOpenMediaFilePath),
+                new StandardShareIntraModule(StandardArgument.NewSetFileMediaReference(fileMediaReference))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 4);

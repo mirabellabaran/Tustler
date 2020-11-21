@@ -166,7 +166,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
                 match evt with
                 | TaskEvent.SetArgument response ->
                     match response with
-                    | TaskResponse.SetArgument arg ->
+                    | TaskResponse.SetArgument (_req, arg) ->
                         match arg with
                         | :? StandardShareIntraModule as standard ->
                             match standard.Argument with
@@ -244,11 +244,11 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
         | TaskResponse.RequestArgument arg when knownArguments.IsKnownArgument(arg) ->
             events.Add(knownArguments.GetKnownArgument(arg))
             enqueueCurrentTask ()
-        | TaskResponse.RequestArgument arg when arg.Identifier = Identifier "RequestSubTaskInputs" ->
+        | TaskResponse.RequestArgument req when req.Identifier = Identifier "RequestSubTaskInputs" ->
             // Pre-evaluate arguments for root tasks
             let currentTask = getCurrentTask ()
             let combinedInputs = taskFunctionResolver.GetRootTaskInputs(currentTask, knownArguments)
-            events.Add((StandardArgument.SetSubTaskInputs combinedInputs).toTaskEvent())
+            events.Add((StandardArgument.SetSubTaskInputs combinedInputs).toTaskEvent(req))
             taskQueue.Enqueue(taskFunctionLookup.[currentTask.FullPath])
         | TaskResponse.TaskSequence taskSequence ->
             addTaskSequenceEvent taskSequence ItemOrdering.Sequential
@@ -275,7 +275,7 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
                         match evt with
                         | TaskEvent.SetArgument response ->
                             match response with
-                            | TaskResponse.SetArgument arg ->
+                            | TaskResponse.SetArgument (_req, arg) ->
                                 match arg with
                                 | :? StandardShareIntraModule as stdModule ->
                                     match stdModule.Argument with
@@ -494,11 +494,11 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
     member this.AddArgument(response) =
         events.Add(TaskEvent.SetArgument(response))
 
-    member this.AddArgument(moduleName, propertyName, data: byte[]) =
+    member this.AddArgument(request, moduleName, propertyName, data: byte[]) =
         let jsonString = UTF8Encoding.UTF8.GetString(data)
         let resolveProperty = ModuleResolver.ModuleLookup(moduleName)
         let shareIntraModule = resolveProperty.Invoke(propertyName, jsonString)
-        let response = TaskResponse.SetArgument shareIntraModule
+        let response = TaskResponse.SetArgument (request, shareIntraModule)
         events.Add(TaskEvent.SetArgument(response))
 
     member this.AddEvents evts =

@@ -317,7 +317,7 @@ and
     // Values for UI display only
     | ShowValue of IShowValue
 
-    | SetArgument of IShareIntraModule
+    | SetArgument of IRequestIntraModule * IShareIntraModule    // the request and the argument value (some requests can map to the same value type e.g. multiple Request types map to SetFilePath instances)
     //| SetBoundaryArgument of IShareInterModule
     
     // Values that are sent as requests to the user
@@ -340,7 +340,7 @@ and
         | Notification notification -> (sprintf "Notification: %s" (notification.ToString()))
         | BeginLoopSequence (consumable, taskItems) -> (sprintf "BeginLoopSequence (%d items): %s" consumable.Total (System.String.Join(", ", (Seq.map (fun (item: TaskItem) -> item.TaskName) taskItems))))
         | ShowValue showValue -> (sprintf "ShowValue: %s" (showValue.ToString()))
-        | SetArgument arg -> (sprintf "SetArgument: %s" (arg.ToString()))
+        | SetArgument (req, arg) -> (sprintf "SetArgument: %s -> %s" (req.ToString()) (arg.ToString()))
         //| SetBoundaryArgument arg -> (sprintf "SetBoundaryArgument: %s" (arg.ToString()))
         | RequestArgument request -> (sprintf "RequestArgument: %s" (request.ToString()))
 
@@ -421,7 +421,7 @@ type StandardArgument =
     | SetJsonEvents of byte[]
     | SetFileMediaReference of FileMediaReference
     | SetLogFormatEvents of byte[]
-    | SetFilePath of FilePickerPath         // set by RequestOpenJsonFilePath, RequestSaveJsonFilePath, RequestOpenLogFormatFilePath and RequestSaveLogFormatFilePath
+    | SetFilePath of FilePickerPath         // set by RequestOpenJsonFilePath, RequestSaveJsonFilePath, RequestOpenLogFormatFilePath and RequestSaveLogFormatFilePath (also in the MediaServices module)
     | SetSubTaskInputs of SubTaskInputs     // allow root tasks to preevaluate the input requests for their constituent sub-tasks
 
     with
@@ -438,8 +438,8 @@ type StandardArgument =
         | SetFilePath filePath -> (sprintf "SetFilePath: %s" filePath.Path)
         | SetSubTaskInputs requests -> (sprintf "SetSubTaskInputs: %d requests" (Seq.length requests.Requests))
 
-    member this.toTaskResponse() = TaskResponse.SetArgument (StandardShareIntraModule(this))
-    member this.toTaskEvent() = TaskEvent.SetArgument(this.toTaskResponse());
+    member this.toTaskResponse(request) = TaskResponse.SetArgument (request, StandardShareIntraModule(this))
+    member this.toTaskEvent(request) = TaskEvent.SetArgument(this.toTaskResponse(request));
 
 /// Wraps standard argument types
 and StandardShareIntraModule(arg: StandardArgument) =
@@ -565,7 +565,7 @@ type StandardKnownArguments(notificationsList) =
                 | :? StandardRequestIntraModule as stdRequestIntraModule -> stdRequestIntraModule.Request
                 | _ -> invalidArg "request" "The request is not of type StandardRequestIntraModule"
             match (unWrapRequest request) with
-            | RequestNotifications -> StandardArgument.SetNotificationsList(notificationsList).toTaskEvent()
+            | RequestNotifications -> StandardArgument.SetNotificationsList(notificationsList).toTaskEvent(request)
             | _ -> invalidArg "request" "Unexpected request type (do you mean to use StandardVariables?)"
 
 /// Runtime modifiable values
@@ -589,10 +589,10 @@ type StandardVariables() =
                 | :? StandardRequestIntraModule as stdRequestIntraModule -> stdRequestIntraModule.Request
                 | _ -> invalidArg "request" "The request is not of type StandardRequestIntraModule"
             match (unWrapRequest request) with
-            | RequestTaskIdentifier -> taskIdentifierArgument.toTaskEvent()
-            | RequestTaskItem -> taskItemArgument.toTaskEvent()
-            | RequestWorkingDirectory -> workingDirectoryArgument.toTaskEvent()
-            | RequestSaveFlags -> saveFlagsArgument.toTaskEvent()
+            | RequestTaskIdentifier -> taskIdentifierArgument.toTaskEvent(request)
+            | RequestTaskItem -> taskItemArgument.toTaskEvent(request)
+            | RequestWorkingDirectory -> workingDirectoryArgument.toTaskEvent(request)
+            | RequestSaveFlags -> saveFlagsArgument.toTaskEvent(request)
             | _ -> invalidArg "request" "Unexpected request type (do you mean to use StandardKnownArguments?)"
 
     member this.SetValue(request, value:obj) =

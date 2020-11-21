@@ -9,6 +9,7 @@ open TustlerServicesLib
 open System.Text.Json.Serialization
 open CloudWeaver.AWS
 open Converters
+open CloudWeaver.MediaServices
 
 module public Serialization =
 
@@ -19,11 +20,12 @@ module public Serialization =
         | TaskEvent.InvokingFunction -> writer.WritePropertyName("TaskEvent.InvokingFunction"); JsonSerializer.Serialize(writer, "InvokingFunction")
         | TaskEvent.SetArgument arg ->
             match arg with
-            | TaskResponse.SetArgument responseArg ->
-                writer.WriteString("Tag", JsonEncodedText.Encode(responseArg.ModuleTag.AsString()))     // store the module for the argument type
+            | TaskResponse.SetArgument (req, arg) ->
+                writer.WriteString("Tag", JsonEncodedText.Encode(arg.ModuleTag.AsString()))     // store the module for the argument type
                 writer.WritePropertyName("TaskEvent.SetArgument");
                 writer.WriteStartObject()
-                responseArg.Serialize writer serializerOptions
+                writer.WritePropertyName("Request"); JsonSerializer.Serialize(writer, req.ToString())
+                arg.Serialize writer serializerOptions
                 writer.WriteEndObject()
             | _ -> invalidArg "event" (sprintf "Unexpected event stack set-argument type: %A" arg)
         | TaskEvent.ForEachTask consumableTaskSequence -> writer.WritePropertyName("TaskEvent.ForEachTask"); JsonSerializer.Serialize(writer, consumableTaskSequence :?> TaskSequence, serializerOptions)
@@ -52,9 +54,29 @@ module public Serialization =
                 if acc.IsSome then
                     let resolveProperty = ModuleResolver.ModuleLookup(acc.Value)
                     let wrappedArg =
-                        property.Value.EnumerateObject()
-                        |> Seq.map (fun property -> resolveProperty.Invoke(property.Name, property.Value.GetRawText()))
-                        |> Seq.exactlyOne
+                        //property.Value.EnumerateObject()
+                        //|> Seq.map (fun property -> resolveProperty.Invoke(property.Name, property.Value.GetRawText()))
+                        //|> Seq.exactlyOne
+                        let request, response =
+                            property.Value.EnumerateObject()
+                            |> Seq.fold (fun (request: IRequestIntraModule option, responseArg: IShareIntraModule option) property ->
+                                if property.Name = "Request" then
+                                    let request =
+                                        let label = property.Value.GetString()
+                                        let moduleName, request = BaseUtilities.deStringifyRequest label
+                                        match moduleName with
+                                        | "StandardRequestIntraModule" -> StandardRequestIntraModule.FromString(request)
+                                        | "AWSRequestIntraModule" -> AWSRequestIntraModule.FromString(request)
+                                        | "AVRequestIntraModule" -> AVRequestIntraModule.FromString(request)
+                                        | _ -> invalidArg "label" (sprintf "Unknown request label: %s" label)
+                                    (Some(request), None)
+                                else
+                                    let arg = resolveProperty.Invoke(property.Name, property.Value.GetRawText())
+                                    (request, Some(arg))
+                            ) (None, None)
+                        if request.IsNone then invalidOp "Error parsing TaskEvent.SetArgument: Request not found"
+                        if response.IsNone then invalidOp "Error parsing TaskEvent.SetArgument: Response not found"
+                        request.Value, response.Value
                     let event = TaskEvent.SetArgument (TaskResponse.SetArgument wrappedArg)
                     taskEvent <- Some(event); None
                 else

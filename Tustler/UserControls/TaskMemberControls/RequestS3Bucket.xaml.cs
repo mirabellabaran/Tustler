@@ -1,4 +1,5 @@
 ﻿using CloudWeaver;
+using CloudWeaver.AWS;
 using CloudWeaver.Foundation.Types;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -198,9 +199,9 @@ namespace Tustler.UserControls.TaskMemberControls
         {
             var bucket = (e.OriginalSource as Button).DataContext as Bucket;
             var data = SerializableTypeGenerator.CreateBucket(bucket.Name, bucket.CreationDate);
-            //var data = JsonSerializer.SerializeToUtf8Bytes(bucket);
 
-            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetBucket", data);
+            var mode = UITaskMode.NewSetArgument(new AWSRequestIntraModule(AWSRequest.RequestBucket));
+            CommandParameter = new UITaskArguments(mode, "AWSShareIntraModule", "SetBucket", data);
 
             ExecuteCommand();
         }

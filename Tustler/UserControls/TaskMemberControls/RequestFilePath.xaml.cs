@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using CloudWeaver.Types;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Tustler.Helpers;
 using TustlerUIShared;
 using AppSettings = TustlerServicesLib.ApplicationSettings;
 using Path = System.IO.Path;
@@ -339,22 +341,30 @@ namespace Tustler.UserControls.TaskMemberControls
 
         private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var filePath = Path.HasExtension(tbFilePath.Text) ? tbFilePath.Text : Path.ChangeExtension(tbFilePath.Text, FileExtension);
-            var fileInfo = new FileInfo(filePath);
-            var pickerMode = PickerMode switch
+            if (this.DataContext is ResponseWrapper wrapper)
             {
-                FilePickerMode.Open => CloudWeaver.Types.FilePickerMode.Open,
-                FilePickerMode.Save => CloudWeaver.Types.FilePickerMode.Save,
-                _ => throw new NotImplementedException(),
-            };
+                var filePath = Path.HasExtension(tbFilePath.Text) ? tbFilePath.Text : Path.ChangeExtension(tbFilePath.Text, FileExtension);
+                var fileInfo = new FileInfo(filePath);
+                var pickerMode = PickerMode switch
+                {
+                    FilePickerMode.Open => CloudWeaver.Types.FilePickerMode.Open,
+                    FilePickerMode.Save => CloudWeaver.Types.FilePickerMode.Save,
+                    _ => throw new NotImplementedException(),
+                };
 
 
-            var extension = fileInfo.Extension.AsSpan()[1..].ToString();
-            var data = CloudWeaver.SerializableTypeGenerator.CreateFilePath(fileInfo, extension, pickerMode);
+                var extension = fileInfo.Extension.AsSpan()[1..].ToString();
+                var data = CloudWeaver.SerializableTypeGenerator.CreateFilePath(fileInfo, extension, pickerMode);
 
-            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "StandardShareIntraModule", "SetFilePath", data);
+                // this user control is responding to a RequestArgument
+                if (wrapper.TaskResponse is TaskResponse.RequestArgument arg)
+                {
+                    var mode = UITaskMode.NewSetArgument(arg.Item);
+                    CommandParameter = new UITaskArguments(mode, "StandardShareIntraModule", "SetFilePath", data);
 
-            ExecuteCommand();
+                    ExecuteCommand();
+                }
+            }
         }
     }
 

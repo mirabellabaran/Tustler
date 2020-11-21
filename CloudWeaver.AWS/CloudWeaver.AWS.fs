@@ -167,8 +167,6 @@ type AWSArgument =
     | SetTranslationSegments of SentenceChunker
     | SetSubtitleFilePath of FileInfo
     with
-    member this.toSetArgumentTaskResponse() = TaskResponse.SetArgument (AWSShareIntraModule(this))
-    member this.toTaskEvent() = TaskEvent.SetArgument(this.toSetArgumentTaskResponse());
     override this.ToString() =
         match this with
         | SetAWSInterface amazonWebServiceInterface -> (sprintf "SetAWSInterface: %s" (amazonWebServiceInterface.ToString()))
@@ -187,6 +185,8 @@ type AWSArgument =
         | SetTranslationSegments chunker -> (sprintf "SetTranslationSegments: %s" (chunker.ToString()))
         | SetSubtitleFilePath fileInfo -> (sprintf "SetSubtitleFilePath: %s" fileInfo.FullName)
 
+    member this.toTaskResponse(request) = TaskResponse.SetArgument (request, AWSShareIntraModule(this))
+    member this.toTaskEvent(request) = TaskEvent.SetArgument(this.toTaskResponse(request));
 
 /// Wrapper for the arguments used by this module
 and AWSShareIntraModule(arg: AWSArgument) =
@@ -376,7 +376,7 @@ type AWSKnownArguments(awsInterface) =
                 | :? AWSRequestIntraModule as awsRequestIntraModule -> awsRequestIntraModule.Request
                 | _ -> invalidArg "request" "The request is not of type AWSRequestIntraModule"
             match (unWrapRequest request) with
-            | RequestAWSInterface -> AWSArgument.SetAWSInterface(awsInterface).toTaskEvent()
+            | RequestAWSInterface -> AWSArgument.SetAWSInterface(awsInterface).toTaskEvent(request)
             | _ -> invalidArg "request" "The request is not a known argument"
 
 type AWSFlagItem =

@@ -272,7 +272,7 @@ namespace Tustler.UserControls
                         {
                             if (arg.Item is TaskResponse.SetArgument response)
                             {
-                                descriptions.Add(response.Item.Description());
+                                descriptions.Add(response.Item2.Description());
                             }
                         }
                     }
@@ -455,7 +455,10 @@ namespace Tustler.UserControls
                 var taskEvents = Serialization.DeserializeEventsFromJSON(document);
                 var blocks = Serialization.SerializeEventsAsBytes(taskEvents, 0);
                 var data = EventLoggingUtilities.BlockArrayToByteArray(blocks);
-                agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetLogFormatEvents(data))));
+                agent.AddArgument(TaskResponse.NewSetArgument(
+                    new StandardRequestIntraModule(StandardRequest.RequestLogFormatEvents),
+                    new StandardShareIntraModule(StandardArgument.NewSetLogFormatEvents(data))
+                ));
             });
         }
 
@@ -466,7 +469,10 @@ namespace Tustler.UserControls
                 var blocks = EventLoggingUtilities.ByteArrayToBlockArray(data);
                 var taskEvents = Serialization.DeserializeEventsFromBytes(blocks);
                 var serializedData = Serialization.SerializeEventsAsJSON(taskEvents);
-                agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetJsonEvents(serializedData))));
+                agent.AddArgument(TaskResponse.NewSetArgument(
+                    new StandardRequestIntraModule(StandardRequest.RequestJsonEvents),
+                    new StandardShareIntraModule(StandardArgument.NewSetJsonEvents(serializedData))
+                ));
             });
         }
 
@@ -695,18 +701,22 @@ namespace Tustler.UserControls
                 }
 
                 // Add a SetArgument event to the events list and reinvoke the function
-                agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, parameterInfo.SerializedArgument);
+                if (parameterInfo.TaskMode is UITaskMode.SetArgument arg)
+                {
+                    var request = arg.Item;
+                    agent.AddArgument(request, parameterInfo.ModuleName, parameterInfo.PropertyName, parameterInfo.SerializedArgument);
 
-                if (hasCompleted)
-                {
-                    // current task has been reset (pushes the current task on the queue)
-                    //await CheckQueue().ConfigureAwait(false);
-                    await agent.RunNext().ConfigureAwait(false);
-                }
-                else
-                {
-                    // current task not yet complete
-                    await agent.RunCurrent().ConfigureAwait(false);
+                    if (hasCompleted)
+                    {
+                        // current task has been reset (pushes the current task on the queue)
+                        //await CheckQueue().ConfigureAwait(false);
+                        await agent.RunNext().ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        // current task not yet complete
+                        await agent.RunCurrent().ConfigureAwait(false);
+                    }
                 }
             }
 
@@ -727,7 +737,8 @@ namespace Tustler.UserControls
                 var s3URI = $"https://s3.ap-southeast-2.amazonaws.com/{bucketItem.BucketName}/{bucketItem.Key}";
                 var data = JsonSerializer.SerializeToUtf8Bytes<string>(s3URI);
 
-                var parameters = new UITaskArguments(UITaskMode.SetArgument, parameterInfo.ModuleName, "SetTranscriptURI", data);
+                var mode = UITaskMode.NewSetArgument(new AWSRequestIntraModule(AWSRequest.RequestTranscriptURI));
+                var parameters = new UITaskArguments(mode, parameterInfo.ModuleName, "SetTranscriptURI", data);
                 await RunUIResponseSetArgumentAsync(parameters).ConfigureAwait(false);
             }
 
@@ -773,9 +784,13 @@ namespace Tustler.UserControls
                 }
 
                 // Add a SetArgument event to the events list and reinvoke the function
-                agent.AddArgument(parameterInfo.ModuleName, parameterInfo.PropertyName, parameterInfo.SerializedArgument);
+                if (parameterInfo.TaskMode is UITaskMode.SetArgument arg)
+                {
+                    var request = arg.Item;
+                    agent.AddArgument(request, parameterInfo.ModuleName, parameterInfo.PropertyName, parameterInfo.SerializedArgument);
 
-                await agent.RunCurrent().ConfigureAwait(false);
+                    await agent.RunCurrent().ConfigureAwait(false);
+                }
             }
 
             async Task RunUIResponseContinueAsync()
@@ -801,30 +816,30 @@ namespace Tustler.UserControls
 
             var parameterInfo = e.Parameter as UITaskArguments;
 
-            switch (parameterInfo?.TaskMode)
+            switch (parameterInfo?.TaskMode.Tag)
             {
-                case UITaskMode.SelectTask:
+                case UITaskMode.Tags.SelectTask:
                     await RunUIResponseSelectTasksAsync(parameterInfo).ConfigureAwait(false);
                     break;
-                case UITaskMode.RestartTask:
+                case UITaskMode.Tags.RestartTask:
                     await RunUIResponseRestartTaskAsync(parameterInfo).ConfigureAwait(false);
                     break;
-                case UITaskMode.InsertTask:
+                case UITaskMode.Tags.InsertTask:
                     await RunUIResponseInsertTaskAsync(parameterInfo).ConfigureAwait(false);
                     break;
-                case UITaskMode.SetArgument:
+                case UITaskMode.Tags.SetArgument:
                     await RunUIResponseSetArgumentAsync(parameterInfo).ConfigureAwait(false);
                     break;
-                case UITaskMode.TransformSetArgument:
+                case UITaskMode.Tags.TransformSetArgument:
                     await RunUIResponseTransformArgumentAsync(parameterInfo).ConfigureAwait(false);
                     break;
-                case UITaskMode.SelectDefaultArguments:
+                case UITaskMode.Tags.SelectDefaultArguments:
                     await RunUIResponseSelectDefaultArgumentsAsync(parameterInfo).ConfigureAwait(false);
                     break;
-                case UITaskMode.Continue:
+                case UITaskMode.Tags.Continue:
                     await RunUIResponseContinueAsync().ConfigureAwait(false);
                     break;
-                case UITaskMode.ForEachIndependantTask:
+                case UITaskMode.Tags.ForEachIndependantTask:
                     await RunUIResponseForEachIndependantTaskAsync(parameterInfo).ConfigureAwait(false);
                     break;
                 default:

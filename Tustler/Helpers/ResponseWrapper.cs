@@ -52,9 +52,9 @@ namespace Tustler.Helpers
                     TaskResponse.TaskConvertToBinary response => response.Item,
                     TaskResponse.TaskConvertToJson response => response.Item,
                     TaskResponse.Notification response => response.Item,
-                    TaskResponse.BeginLoopSequence response => (response.Item1, response.Item2),
+                    TaskResponse.BeginLoopSequence response => new Tuple<IConsumable, IEnumerable<TaskItem>>(response.Item1, response.Item2),
                     TaskResponse.ShowValue response => response.Item,
-                    TaskResponse.SetArgument response => response.Item,
+                    TaskResponse.SetArgument response => new Tuple<IRequestIntraModule, IShareIntraModule>(response.Item1, response.Item2),
                     TaskResponse.RequestArgument response => response.Item,
 
                     _ => throw new System.InvalidOperationException(),      // e.g. TaskResponse.ChooseTask which has no Item

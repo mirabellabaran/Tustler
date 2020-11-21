@@ -223,19 +223,19 @@
                         </UniformGrid.Resources>
                         <StackPanel Orientation="Horizontal">
                             <Label Content="BucketName:" Style="{StaticResource s3LabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.BucketName}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Item2.Argument.Item.BucketName}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <Label Content="Key:" Style="{StaticResource s3LabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.Key}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Item2.Argument.Item.Key}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <Label Content="MimeType:" Style="{StaticResource s3LabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.MimeType}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Item2.Argument.Item.MimeType}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <Label Content="Extension:" Style="{StaticResource s3LabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.Extension}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Item2.Argument.Item.Extension}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                     </UniformGrid>
                 </StackPanel>
@@ -247,10 +247,10 @@
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Transcription Jobs Summary:" Style="{StaticResource TaskInfoTextStyle}" Margin="5" />
-                        <TextBlock Text="{Binding Path=Item.Argument.Item.TranscriptionJobs.Count, StringFormat=(Jobs: {0})}" Style="{StaticResource TaskInfoTextStyle}" Margin="5" />
+                        <TextBlock Text="{Binding Path=Item.Item2.Argument.Item.TranscriptionJobs.Count, StringFormat=(Jobs: {0})}" Style="{StaticResource TaskInfoTextStyle}" Margin="5" />
                     </StackPanel>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <ItemsControl Margin="20, 10, 20, 10" Background="{StaticResource NormalBackground}" ItemsSource="{Binding Path=Item.Argument.Item.TranscriptionJobs}" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ItemsControl Margin="20, 10, 20, 10" Background="{StaticResource NormalBackground}" ItemsSource="{Binding Path=Item.Item2.Argument.Item.TranscriptionJobs}" ScrollViewer.VerticalScrollBarVisibility="Auto">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Margin="5">
@@ -350,7 +350,7 @@
                 <UniformGrid Margin="5">
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Transcription Job Name:" Style="{StaticResource TaskInfoLabelStyle}" />
-                        <TextBlock Text="{Binding Path=Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
+                        <TextBlock Text="{Binding Path=Item.Item2.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
                     </StackPanel>
                 </UniformGrid>
             </Border>
@@ -361,7 +361,7 @@
                 <UniformGrid Margin="5">
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Transcript URI:" Style="{StaticResource TaskInfoLabelStyle}" />
-                        <TextBlock Text="{Binding Path=Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
+                        <TextBlock Text="{Binding Path=Item.Item2.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
                     </StackPanel>
                 </UniformGrid>
             </Border>
@@ -372,7 +372,7 @@
                 <UniformGrid Margin="5">
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Transcript JSON:" Style="{StaticResource TaskInfoLabelStyle}" />
-                        <TextBlock Text="{Binding Path=Item.Argument.Item.Length, StringFormat=(Length: {0})}" Style="{StaticResource TaskInfoTextStyle}" />
+                        <TextBlock Text="{Binding Path=Item.Item2.Argument.Item.Length, StringFormat=(Length: {0})}" Style="{StaticResource TaskInfoTextStyle}" />
                     </StackPanel>
                 </UniformGrid>
             </Border>
@@ -388,7 +388,7 @@
                     <StackPanel Orientation="Horizontal">
                         <Label Content="Default Transcript:" Style="{StaticResource TaskInfoLabelStyle}" />
                         <ScrollViewer MaxWidth="800" HorizontalAlignment="Left" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto">
-                            <TextBlock Text="{Binding Path=Item.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Item2.Argument.Item}" Style="{StaticResource TaskInfoTextStyle}" />
                         </ScrollViewer>
                     </StackPanel>
                 </UniformGrid>

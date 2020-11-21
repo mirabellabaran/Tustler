@@ -1,4 +1,5 @@
 ﻿using CloudWeaver;
+using CloudWeaver.AWS;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -178,7 +179,8 @@ namespace Tustler.UserControls.TaskMemberControls
             {
                 var data = SerializableTypeGenerator.CreateTranscriptionDefaultTranscript(tbTranscript.Text);
 
-                CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetTranscriptionDefaultTranscript", data);
+                var mode = UITaskMode.NewSetArgument(new AWSRequestIntraModule(AWSRequest.RequestTranscriptionDefaultTranscript));
+                CommandParameter = new UITaskArguments(mode, "AWSShareIntraModule", "SetTranscriptionDefaultTranscript", data);
 
                 ExecuteCommand();
             }

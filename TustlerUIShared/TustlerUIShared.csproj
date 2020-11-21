@@ -4,4 +4,10 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Reference Include="CloudWeaver.Types">
+      <HintPath>..\CloudWeaver.Types\bin\Debug\netcoreapp3.1\CloudWeaver.Types.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

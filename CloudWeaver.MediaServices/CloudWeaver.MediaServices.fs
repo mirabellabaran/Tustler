@@ -13,14 +13,15 @@ type AVArgument =
     | SetCodecInfo of CodecPair
     | SetMediaInfo of MediaInfo
     with
-    member this.toSetArgumentTaskResponse() = TaskResponse.SetArgument (AVShareIntraModule(this))
-    member this.toTaskEvent() = TaskEvent.SetArgument(this.toSetArgumentTaskResponse());
     override this.ToString() =
         match this with
         | SetAVInterface avServiceInterface -> (sprintf "SetAVInterface: %s" (avServiceInterface.ToString()))
         | SetCodecName codecName -> (sprintf "SetCodecName: %s" (codecName))
         | SetCodecInfo codecPair -> (sprintf "SetCodecInfo: %s" (codecPair.ToString()))
         | SetMediaInfo mediaInfo -> (sprintf "SetMediaInfo: %s" (mediaInfo.ToString()))
+
+    member this.toTaskResponse(request) = TaskResponse.SetArgument (request, AVShareIntraModule(this))
+    member this.toTaskEvent(request) = TaskEvent.SetArgument(this.toTaskResponse(request));
 
 /// Wrapper for the arguments used by this module
 and AVShareIntraModule(arg: AVArgument) =
@@ -123,7 +124,7 @@ type AVKnownArguments(avInterface) =
                 | :? AVRequestIntraModule as avRequestIntraModule -> avRequestIntraModule.Request
                 | _ -> invalidArg "request" "The request is not of type AVRequestIntraModule"
             match (unWrapRequest request) with
-            | RequestAVInterface -> AVArgument.SetAVInterface(avInterface).toTaskEvent()
+            | RequestAVInterface -> AVArgument.SetAVInterface(avInterface).toTaskEvent(request)
             | _ -> invalidArg "request" "The request is not a known argument"
 
 module public PatternMatchers =

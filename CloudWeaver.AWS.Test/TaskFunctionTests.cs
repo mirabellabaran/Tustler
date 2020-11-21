@@ -31,12 +31,18 @@ namespace CloudWeaver.AWS.Test
             var result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestFileMediaReference)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetFileMediaReference(mediaFileReference))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new StandardRequestIntraModule(StandardRequest.RequestFileMediaReference),
+                new StandardShareIntraModule(StandardArgument.NewSetFileMediaReference(mediaFileReference))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestBucket)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetBucket(new TustlerModels.Bucket() { Name = "tator" }))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestBucket),
+                new AWSShareIntraModule(AWSArgument.NewSetBucket(new TustlerModels.Bucket() { Name = "tator" }))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 5);
@@ -64,17 +70,26 @@ namespace CloudWeaver.AWS.Test
             var result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranscriptionVocabularyName)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptionVocabularyName(vocabularyName))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranscriptionVocabularyName),
+                new AWSShareIntraModule(AWSArgument.NewSetTranscriptionVocabularyName(vocabularyName))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranscriptionLanguageCode)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetLanguage(languageCodeDomain))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranscriptionLanguageCode),
+                new AWSShareIntraModule(AWSArgument.NewSetLanguage(languageCodeDomain))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestS3MediaReference)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetS3MediaReference(s3MediaReference))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestS3MediaReference),
+                new AWSShareIntraModule(AWSArgument.NewSetS3MediaReference(s3MediaReference))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 5);
@@ -100,7 +115,10 @@ namespace CloudWeaver.AWS.Test
             var result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranscriptionJobName)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptionJobName(transcriptionJobName))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranscriptionJobName),
+                new AWSShareIntraModule(AWSArgument.NewSetTranscriptionJobName(transcriptionJobName))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 5);
@@ -132,7 +150,10 @@ namespace CloudWeaver.AWS.Test
             var result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranscriptURI)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptURI(transcriptURI))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranscriptURI),
+                new AWSShareIntraModule(AWSArgument.NewSetTranscriptURI(transcriptURI))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 5);
@@ -174,7 +195,10 @@ namespace CloudWeaver.AWS.Test
                 "RequestArgument: AWSRequestIntraModule(RequestTranscriptJSON)"
             }));
 
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptJSON(jsonData))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranscriptJSON),
+                new AWSShareIntraModule(AWSArgument.NewSetTranscriptJSON(jsonData))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
@@ -199,7 +223,10 @@ namespace CloudWeaver.AWS.Test
             var result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranscriptJSON)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptJSON(jsonData))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranscriptJSON),
+                new AWSShareIntraModule(AWSArgument.NewSetTranscriptJSON(jsonData))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 3);
@@ -235,7 +262,10 @@ namespace CloudWeaver.AWS.Test
                 "RequestArgument: AWSRequestIntraModule(RequestTranscriptionDefaultTranscript)"
             }));
 
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptionDefaultTranscript(transcript))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranscriptionDefaultTranscript),
+                new AWSShareIntraModule(AWSArgument.NewSetTranscriptionDefaultTranscript(transcript))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
@@ -271,22 +301,34 @@ namespace CloudWeaver.AWS.Test
                 "RequestArgument: AWSRequestIntraModule(RequestTranslationTerminologyNames)"
             });
 
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationTerminologyNames(terminologyNames))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranslationTerminologyNames),
+                new AWSShareIntraModule(AWSArgument.NewSetTranslationTerminologyNames(terminologyNames))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranslationTargetLanguages)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationTargetLanguages(languageTargets))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranslationTargetLanguages),
+                new AWSShareIntraModule(AWSArgument.NewSetTranslationTargetLanguages(languageTargets))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranslationLanguageCodeSource)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetLanguage(languageCodeDomain))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranslationLanguageCodeSource),
+                new AWSShareIntraModule(AWSArgument.NewSetLanguage(languageCodeDomain))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranscriptionDefaultTranscript)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptionDefaultTranscript(transcript))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranscriptionDefaultTranscript),
+                new AWSShareIntraModule(AWSArgument.NewSetTranscriptionDefaultTranscript(transcript))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 8);
@@ -339,12 +381,18 @@ namespace CloudWeaver.AWS.Test
                 "RequestArgument: AWSRequestIntraModule(RequestTranslationTargetLanguages)"
             });
 
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationTargetLanguages(languageTargets))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranslationTargetLanguages),
+                new AWSShareIntraModule(AWSArgument.NewSetTranslationTargetLanguages(languageTargets))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranslationSegments)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationSegments(chunker))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranslationSegments),
+                new AWSShareIntraModule(AWSArgument.NewSetTranslationSegments(chunker))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 2);
@@ -390,22 +438,34 @@ namespace CloudWeaver.AWS.Test
                 "RequestArgument: StandardRequestIntraModule(RequestTaskIdentifier)",
                 "RequestArgument: AWSRequestIntraModule(RequestTranslationLanguageCodeSource)"
             });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetLanguage(languageCodeDomain))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranslationLanguageCodeSource),
+                new AWSShareIntraModule(AWSArgument.NewSetLanguage(languageCodeDomain))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranslationTargetLanguages)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationTargetLanguages(languageTargets))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranslationTargetLanguages),
+                new AWSShareIntraModule(AWSArgument.NewSetTranslationTargetLanguages(languageTargets))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranslationTerminologyNames)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranslationTerminologyNames(terminologyNames))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranslationTerminologyNames),
+                new AWSShareIntraModule(AWSArgument.NewSetTranslationTerminologyNames(terminologyNames))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranscriptionDefaultTranscript)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptionDefaultTranscript(transcript))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranscriptionDefaultTranscript),
+                new AWSShareIntraModule(AWSArgument.NewSetTranscriptionDefaultTranscript(transcript))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 28);
@@ -460,12 +520,18 @@ namespace CloudWeaver.AWS.Test
             var result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestTranscriptJSON)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetTranscriptJSON(jsonData))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestTranscriptJSON),
+                new AWSShareIntraModule(AWSArgument.NewSetTranscriptJSON(jsonData))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AWSRequestIntraModule(RequestSubtitleFilePath)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new AWSShareIntraModule(AWSArgument.NewSetSubtitleFilePath(subTitleFileInfo))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new AWSRequestIntraModule(AWSRequest.RequestSubtitleFilePath),
+                new AWSShareIntraModule(AWSArgument.NewSetSubtitleFilePath(subTitleFileInfo))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 2);
@@ -505,7 +571,10 @@ namespace CloudWeaver.AWS.Test
                 var taskEvents = Serialization.DeserializeEventsFromJSON(document);
                 var blocks = Serialization.SerializeEventsAsBytes(taskEvents, 0);
                 var data = EventLoggingUtilities.BlockArrayToByteArray(blocks);
-                agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetLogFormatEvents(data))));
+                agent.AddArgument(TaskResponse.NewSetArgument(
+                new StandardRequestIntraModule(StandardRequest.RequestLogFormatEvents),
+                    new StandardShareIntraModule(StandardArgument.NewSetLogFormatEvents(data))
+                ));
             }
 
             agent.ConvertToBinary += Agent_ConvertToBinary;
@@ -520,12 +589,18 @@ namespace CloudWeaver.AWS.Test
             var result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestOpenJsonFilePath)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetFilePath(jsonFilePath))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new StandardRequestIntraModule(StandardRequest.RequestOpenJsonFilePath),
+                new StandardShareIntraModule(StandardArgument.NewSetFilePath(jsonFilePath))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestSaveLogFormatFilePath)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetFilePath(logFilePath))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new StandardRequestIntraModule(StandardRequest.RequestSaveLogFormatFilePath),
+                new StandardShareIntraModule(StandardArgument.NewSetFilePath(logFilePath))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 3);
@@ -554,7 +629,10 @@ namespace CloudWeaver.AWS.Test
                 var blocks = EventLoggingUtilities.ByteArrayToBlockArray(data);
                 var taskEvents = Serialization.DeserializeEventsFromBytes(blocks);
                 var serializedData = Serialization.SerializeEventsAsJSON(taskEvents);
-                agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetJsonEvents(serializedData))));
+                agent.AddArgument(TaskResponse.NewSetArgument(
+                    new StandardRequestIntraModule(StandardRequest.RequestJsonEvents),
+                    new StandardShareIntraModule(StandardArgument.NewSetJsonEvents(serializedData))
+                ));
             }
 
             agent.ConvertToJson += Agent_ConvertToJson;
@@ -570,12 +648,18 @@ namespace CloudWeaver.AWS.Test
             var result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestOpenLogFormatFilePath)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetFilePath(logFilePath))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new StandardRequestIntraModule(StandardRequest.RequestOpenLogFormatFilePath),
+                new StandardShareIntraModule(StandardArgument.NewSetFilePath(logFilePath))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
             CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestSaveJsonFilePath)" });
-            agent.AddArgument(TaskResponse.NewSetArgument(new StandardShareIntraModule(StandardArgument.NewSetFilePath(jsonFilePath))));
+            agent.AddArgument(TaskResponse.NewSetArgument(
+                new StandardRequestIntraModule(StandardRequest.RequestSaveJsonFilePath),
+                new StandardShareIntraModule(StandardArgument.NewSetFilePath(jsonFilePath))
+            ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 2);

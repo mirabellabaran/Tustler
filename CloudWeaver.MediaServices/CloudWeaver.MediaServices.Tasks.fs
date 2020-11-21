@@ -27,7 +27,7 @@ module public Tasks =
             seq {
                 yield! getNotificationResponse notifications
                 if not (isNull codecPair) then
-                    yield (AVArgument.SetCodecInfo codecPair).toSetArgumentTaskResponse()
+                    yield (AVArgument.SetCodecInfo codecPair).toTaskResponse(AVRequestIntraModule(AVRequest.RequestCodecInfo))
                 yield TaskResponse.TaskComplete ("Task complete", DateTime.Now)
             }
 
@@ -71,7 +71,7 @@ module public Tasks =
             seq {
                 yield! getNotificationResponse notifications
                 if not (isNull mediaInfo) then
-                    yield (AVArgument.SetMediaInfo mediaInfo).toSetArgumentTaskResponse()
+                    yield (AVArgument.SetMediaInfo mediaInfo).toTaskResponse(AVRequestIntraModule(AVRequest.RequestMediaInfo))
                 yield TaskResponse.TaskComplete ("Task complete", DateTime.Now)
             }
 
@@ -120,7 +120,7 @@ module public Tasks =
                     // get the mimetype (used for S3 file classification)
                     let mimeType = FileServices.GetMimeType(outputFilePath.Path)
                     let fileReference = FileMediaReference(outputFilePath.Path, mimeType, outputFilePath.Extension)
-                    yield (StandardArgument.SetFileMediaReference fileReference).toTaskResponse()
+                    yield (StandardArgument.SetFileMediaReference fileReference).toTaskResponse(StandardRequestIntraModule(StandardRequest.RequestFileMediaReference))
                     yield TaskResponse.TaskComplete ("Audio stripping and transcoding completed successfully", DateTime.Now)
                 else
                     yield TaskResponse.TaskComplete ("Audio stripping and transcoding failed", DateTime.Now)

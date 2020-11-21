@@ -15,6 +15,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using TustlerUIShared;
 using TustlerModels;
+using CloudWeaver.AWS;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
@@ -178,7 +179,8 @@ namespace Tustler.UserControls.TaskMemberControls
             var jsonSerializerOptions = Converters.CreateSerializerOptions();
             var data = SerializableTypeGenerator.CreateTranslationTargetLanguageCodes(targetLanguageCodes, jsonSerializerOptions);
 
-            CommandParameter = new UITaskArguments(UITaskMode.SetArgument, "AWSShareIntraModule", "SetTranslationTargetLanguages", data);
+            var mode = UITaskMode.NewSetArgument(new AWSRequestIntraModule(AWSRequest.RequestTranslationTargetLanguages));
+            CommandParameter = new UITaskArguments(mode, "AWSShareIntraModule", "SetTranslationTargetLanguages", data);
 
             ExecuteCommand();
         }
