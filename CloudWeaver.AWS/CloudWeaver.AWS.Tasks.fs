@@ -292,28 +292,29 @@ module public Tasks =
             seq {
                 // note: the task name may be used as the output S3 key
                 let callSuceeded, jobsModel = Transcribe.startTranscriptionJob awsInterface notifications jobName s3Media.BucketName s3Media.Key (languageCode.Code) vocabularyName |> Async.RunSynchronously
+
+                let result =
+                    if callSuceeded && jobsModel.Contains(jobName) then
+                        let job = jobsModel.[jobName]
+                        match job.TranscriptionJobStatus with
+                        | "QUEUED" ->   // Amazon.TranscribeService.TranscriptionJobStatus.QUEUED
+                            "Job is queued"
+                        | "IN_PROGRESS" ->
+                            "Job in progress"
+                        | "COMPLETED" ->
+                            "Job has completed"
+                        | "FAILED" ->
+                            let message = sprintf "Job failed: %s" job.FailureReason 
+                            notifications.HandleError ("StartTranscription", message, null)
+                            message
+                        | _ -> "Received unknown status"
+                    else
+                        "Call failure on StartTranscription"
+
                 yield! getNotificationResponse notifications
-
-                if callSuceeded then
-                    let job = jobsModel.[jobName]
-                    match job.TranscriptionJobStatus with
-                    | "QUEUED" ->   // Amazon.TranscribeService.TranscriptionJobStatus.QUEUED
-                        yield TaskResponse.TaskInfo "Job is queued"
-                    | "IN_PROGRESS" ->
-                        yield TaskResponse.TaskInfo "Job in progress"
-                    | "COMPLETED" ->
-                        yield TaskResponse.TaskComplete ("Job has completed", DateTime.Now)
-                    | "FAILED" ->
-                        let message = sprintf "Job failed: %s" job.FailureReason 
-                        notifications.HandleError ("StartTranscription", message, null)
-                        yield! getNotificationResponse notifications
-                    | _ -> ()
-                else
-                    yield TaskResponse.TaskInfo "StartTranscription: Call failure"
-
                 yield (AWSArgument.SetTranscriptionJobName jobName).toTaskResponse(AWSRequestIntraModule(AWSRequest.RequestTranscriptionJobName))
                 yield TaskResponse.ShowValue (AWSShowIntraModule(AWSDisplayValue.DisplayTranscriptionJobsModel jobsModel))
-                yield TaskResponse.TaskComplete ("", DateTime.Now)
+                yield TaskResponse.TaskComplete (result, DateTime.Now)
             }
 
         let inputs = [|

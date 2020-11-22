@@ -38,6 +38,8 @@ namespace Tustler.Helpers
         {
             get
             {
+                // Note that ShowValue and SetArgument can share the same arguments (e.g. TranscriptionJobsViewModel) and the same WPF templates
+                // therefore, for ease of use, ShowValue responses are transformed to the same shape (Item1, Item2) as SetArgument responses
                 return this.TaskResponse switch
                 {
                     TaskResponse.TaskDescription response => response.Item,
@@ -53,7 +55,7 @@ namespace Tustler.Helpers
                     TaskResponse.TaskConvertToJson response => response.Item,
                     TaskResponse.Notification response => response.Item,
                     TaskResponse.BeginLoopSequence response => new Tuple<IConsumable, IEnumerable<TaskItem>>(response.Item1, response.Item2),
-                    TaskResponse.ShowValue response => response.Item,
+                    TaskResponse.ShowValue response => new Tuple<IRequestIntraModule, IShowValue>(null, response.Item),
                     TaskResponse.SetArgument response => new Tuple<IRequestIntraModule, IShareIntraModule>(response.Item1, response.Item2),
                     TaskResponse.RequestArgument response => response.Item,
 

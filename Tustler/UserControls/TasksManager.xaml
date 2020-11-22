@@ -183,7 +183,7 @@
         <DataTemplate x:Key="BucketItemsModelTemplate" DataType="{x:Type helpers:IResponseWrapper}">
             <Border Name="border" BorderBrush="{StaticResource ContrastingBackground}" Height="200" BorderThickness="10" Padding="5" Margin="5">
                 <DockPanel LastChildFill="True">
-                    <DataGrid x:Name="dgBucketItemsModelTemplate" DockPanel.Dock="Left" AutoGenerateColumns="False" CanUserAddRows="false" ItemsSource="{Binding Item.Argument.Item.BucketItems}">
+                    <DataGrid x:Name="dgBucketItemsModelTemplate" DockPanel.Dock="Left" AutoGenerateColumns="False" CanUserAddRows="false" ItemsSource="{Binding Item.Item2.Argument.Item.BucketItems}">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Item Name" Width="280" IsReadOnly="True" Binding="{Binding Path=Key}" />
                         </DataGrid.Columns>
@@ -302,43 +302,43 @@
 
                         <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
                             <Label Content="Job Name:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.TranscriptionJobName}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Item2.Argument.Item.TranscriptionJobName}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0">
                             <Label Content="Job Status:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.TranscriptionJobStatus}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Item2.Argument.Item.TranscriptionJobStatus}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.Column="0">
                             <Label Content="Created:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.CreationTime, StringFormat=at {0:MMMM dd HH:mm}}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Item2.Argument.Item.CreationTime, StringFormat=at {0:MMMM dd HH:mm}}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="3" Grid.Column="0">
                             <Label Content="Started:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.StartTime, StringFormat=at {0:MMMM dd HH:mm}}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Item2.Argument.Item.StartTime, StringFormat=at {0:MMMM dd HH:mm}}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="4" Grid.Column="0">
                             <Label Content="Completed:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.CompletionTime, StringFormat=at {0:MMMM dd HH:mm}}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Item2.Argument.Item.CompletionTime, StringFormat=at {0:MMMM dd HH:mm}}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2">
                             <Label Content="Language Code:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.LanguageCode}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Item2.Argument.Item.LanguageCode}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2">
                             <Label Content="Failure Reason:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.FailureReason}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Item2.Argument.Item.FailureReason}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2">
                             <Label Content="Media Format:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.MediaFormat}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Item2.Argument.Item.MediaFormat}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2">
                             <Label Content="Media Sample Rate (Hz):" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.MediaSampleRateHertz}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Item2.Argument.Item.MediaSampleRateHertz}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2">
                             <Label Content="Output URI:" Style="{StaticResource transcriptionJobLabelStyle}" />
-                            <TextBlock Text="{Binding Path=Item.Argument.Item.OutputURI}" Style="{StaticResource TaskInfoTextStyle}" />
+                            <TextBlock Text="{Binding Path=Item.Item2.Argument.Item.OutputURI}" Style="{StaticResource TaskInfoTextStyle}" />
                         </StackPanel>
                     </UniformGrid>
                 </StackPanel>
@@ -400,7 +400,7 @@
                 <StackPanel>
                     <Label Foreground="#637074" Background="#BDD4AA" FontWeight="Bold" Margin="1" Content="Translation segments:" />
                     <ScrollViewer MaxHeight="100" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding Path=Item.Argument.Item.Summary}" Background="{StaticResource NormalBackground}">
+                        <ItemsControl ItemsSource="{Binding Path=Item.Item2.Argument.Item.Summary}" Background="{StaticResource NormalBackground}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid ShowGridLines="False">

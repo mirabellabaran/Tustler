@@ -35,6 +35,11 @@ namespace TustlerModels
             }
         }
 
+        public bool Contains(string jobName)
+        {
+            return jobLookup.ContainsKey(jobName);
+        }
+
         public TranscriptionJobsViewModel()
         {
             this.jobLookup = new Dictionary<string, TranscriptionJob>();

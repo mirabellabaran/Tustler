@@ -71,14 +71,14 @@ namespace CloudWeaver.AWS.Test
             var jsonFilePath = Path.Combine(WorkingDirectory, "test.json");
             var jsonData = File.ReadAllBytes(jsonFilePath);
             IShareIntraModule jsonEventsModule = new StandardShareIntraModule(StandardArgument.NewSetJsonEvents(jsonData));
-            Assert.IsTrue(jsonEventsModule.Description().StartsWith("JsonEvents: 10044 bytes"));
-            Assert.IsTrue(StringifyBytes(jsonEventsModule, options).StartsWith("{\r\n  \"Items\": [\r\n    {\r\n      \"Tag\": \"StandardShareIntraModule\",\r\n      \"TaskEvent.SetArgument\":"));
+            Assert.IsTrue(jsonEventsModule.Description().StartsWith("JsonEvents: 12918 bytes"));
+            Assert.IsTrue(StringifyBytes(jsonEventsModule, options).StartsWith("{\r\n  \"Items\": [\r\n    {\r\n      \"TaskEvent.ForEachTask\": {\r\n        \"Ordering\": \"Sequential\""));
 
             var binaryFilePath = Path.Combine(WorkingDirectory, "test.bin");
             var binaryData = File.ReadAllBytes(binaryFilePath);
             IShareIntraModule logFormatEventsModule = new StandardShareIntraModule(StandardArgument.NewSetLogFormatEvents(binaryData));
-            Assert.IsTrue(logFormatEventsModule.Description().StartsWith("LogFormatEvents: 7219 bytes"));
-            Assert.IsTrue(StringifyBytes(logFormatEventsModule, options).StartsWith("\"2AAAAHsiVGFnIjoiU3RhbmRhcmRTaGFyZUludHJhTW9kdWxlIiwiVGFza0V2ZW50LlNldEFyZ3VtZW50Ijp7IlNldFNhdmVGbGFncyI6IlN0YW5kY"));
+            Assert.IsTrue(logFormatEventsModule.Description().StartsWith("LogFormatEvents: 9439 bytes"));
+            Assert.IsTrue(StringifyBytes(logFormatEventsModule, options).StartsWith("\"EQEAAHsiVGFza0V2ZW50LkZvckVhY2hUYXNrIjp7Ik9yZGVyaW5nIjoiU2VxdWVudGlhbCIsIklkZW50aWZpZXIiOiI5ZTEzOTY0Ni01YmM1LTQ"));
 
             var path = Path.Combine(WorkingDirectory, "SallyRide d2a8856b.json");
             IShareIntraModule openJsonFilePathModule = new StandardShareIntraModule(StandardArgument.NewSetFilePath(new FilePickerPath(path, "json", FilePickerMode.Open)));

@@ -87,8 +87,8 @@ namespace CloudWeaver.MediaServices.Test
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 4);
             Assert.IsTrue(CheckAllStartWith(result, new string[] {
-                    "RequestArgument: StandardRequestIntraModule(RequestNotifications)",
-                    "RequestArgument: AVRequestIntraModule(RequestAVInterface)",
+                    "RequestArgument: StandardRequestIntraModule.RequestNotifications",
+                    "RequestArgument: AVRequestIntraModule.RequestAVInterface",
                     "Notification: Context=GetCodecInfo; Message=Codec not found",
                     "TaskComplete: Task complete"
                 }));
@@ -106,7 +106,7 @@ namespace CloudWeaver.MediaServices.Test
 
             var result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AVRequestIntraModule(RequestOpenMediaFilePath)" });
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AVRequestIntraModule.RequestOpenMediaFilePath" });
             agent.AddArgument(TaskResponse.NewSetArgument(
                 new AVRequestIntraModule(AVRequest.RequestOpenMediaFilePath),
                 new StandardShareIntraModule(StandardArgument.NewSetFilePath(fileMediaReference))
@@ -115,9 +115,9 @@ namespace CloudWeaver.MediaServices.Test
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 4);
             Assert.IsTrue(CheckAllStartWith(result, new string[] {
-                    "RequestArgument: StandardRequestIntraModule(RequestNotifications)",
-                    "RequestArgument: AVRequestIntraModule(RequestAVInterface)",
-                    "SetArgument: AVShareIntraModule.SetMediaInfo: TustlerFFMPEG.Types.MediaInfo.MediaInfo)",
+                    "RequestArgument: StandardRequestIntraModule.RequestNotifications",
+                    "RequestArgument: AVRequestIntraModule.RequestAVInterface",
+                    "SetArgument: AVRequestIntraModule.RequestMediaInfo -> AVShareIntraModule(SetMediaInfo: TustlerFFMPEG.Types.MediaInfo.MediaInfo)",
                     "TaskComplete: Task complete"
                 }));
 
@@ -141,21 +141,21 @@ namespace CloudWeaver.MediaServices.Test
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, null);
             agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.MediaServices", "CloudWeaver.MediaServices.Tasks", taskName, false, true));
 
-            var fileMediaReference = new FileMediaReference(@"C:\temp\temp.avi", "", "");
+            var fileMediaReference = new FilePickerPath(@"C:\temp\temp.avi", "", FilePickerMode.Open);
 
             var result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 1);
-            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: StandardRequestIntraModule(RequestFileMediaReference)" });
+            CollectionAssert.AreEqual(result, new string[] { "RequestArgument: AVRequestIntraModule.RequestOpenMediaFilePath" });
             agent.AddArgument(TaskResponse.NewSetArgument(
                 new AVRequestIntraModule(AVRequest.RequestOpenMediaFilePath),
-                new StandardShareIntraModule(StandardArgument.NewSetFileMediaReference(fileMediaReference))
+                new StandardShareIntraModule(StandardArgument.NewSetFilePath(fileMediaReference))
             ));
 
             result = await CallTaskAsync(agent);
             Assert.IsTrue(result.Length == 4);
             Assert.IsTrue(CheckAllStartWith(result, new string[] {
-                    "RequestArgument: StandardRequestIntraModule(RequestNotifications)",
-                    "RequestArgument: AVRequestIntraModule(RequestAVInterface)",
+                    "RequestArgument: StandardRequestIntraModule.RequestNotifications",
+                    "RequestArgument: AVRequestIntraModule.RequestAVInterface",
                     "Notification: Context=GetMediaInfo; Message=Path argument must exist",
                     "TaskComplete: Task complete"
                 }));

@@ -700,9 +700,9 @@ namespace Tustler.UserControls
                     agent.PushTask(this.RootTaskSpecifier);
                 }
 
-                // Add a SetArgument event to the events list and reinvoke the function
-                if (parameterInfo.TaskMode is UITaskMode.SetArgument arg)
+                if (parameterInfo.TaskMode is UITaskMode.RestartTask arg)
                 {
+                    // Add a SetArgument event to the events list and reinvoke the function
                     var request = arg.Item;
                     agent.AddArgument(request, parameterInfo.ModuleName, parameterInfo.PropertyName, parameterInfo.SerializedArgument);
 
