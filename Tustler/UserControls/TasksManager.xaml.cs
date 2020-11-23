@@ -41,7 +41,8 @@ namespace Tustler.UserControls
         {
             Init,
             Running,
-            Stopped
+            Stopped,
+            Ended
         }
 
         private const string EventStackArgumentRestoreName = "defaultargs.json";
@@ -91,18 +92,9 @@ namespace Tustler.UserControls
 
             this.taskResponses = new ObservableCollection<IResponseWrapper>();
 
-            KnownArgumentsCollection knownArguments = new KnownArgumentsCollection();
-            knownArguments.AddModule(new AWSKnownArguments(awsInterface));
-            knownArguments.AddModule(new AVKnownArguments(avInterface));
+            this.runMode = RunMode.Init;
 
-            agent = new Agent(knownArguments, taskFunctionResolver, logger, false);
-
-            agent.TaskComplete += Agent_TaskComplete;
-            agent.NewUIResponse += Agent_NewUIResponse;
-            agent.SaveEvents += Agent_SaveEvents;
-            agent.ConvertToJson += Agent_ConvertToJson;
-            agent.ConvertToBinary += Agent_ConvertToBinary;
-            agent.Error += Agent_Error;
+            this.agent = CreateAgent(taskFunctionResolver, awsInterface, avInterface, logger);
         }
 
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
@@ -110,6 +102,48 @@ namespace Tustler.UserControls
             ShowGlobalMessage("Parameter set", $"Task name set to {RootTaskSpecifier.TaskName}");
 
             rbRunLog.IsEnabled = this.RootTaskSpecifier.IsLoggingEnabled;
+        }
+
+        private Agent CreateAgent(TaskFunctionResolver taskFunctionResolver, AmazonWebServiceInterface awsInterface, FFMPEGServiceInterface avInterface, TaskLogger logger)
+        {
+            KnownArgumentsCollection knownArguments = new KnownArgumentsCollection();
+            knownArguments.AddModule(new AWSKnownArguments(awsInterface));
+            knownArguments.AddModule(new AVKnownArguments(avInterface));
+
+            return CreateAgent(taskFunctionResolver, knownArguments, logger);
+        }
+
+        private Agent CreateAgent(TaskFunctionResolver taskFunctionResolver, KnownArgumentsCollection knownArguments, TaskLogger logger)
+        {
+            var agent = new Agent(knownArguments, taskFunctionResolver, logger, false);
+
+            agent.TaskComplete += Agent_TaskComplete;
+            agent.NewUIResponse += Agent_NewUIResponse;
+            agent.SaveEvents += Agent_SaveEvents;
+            agent.ConvertToJson += Agent_ConvertToJson;
+            agent.ConvertToBinary += Agent_ConvertToBinary;
+            agent.Error += Agent_Error;
+
+            return agent;
+        }
+
+        /// <summary>
+        /// Create a new agent instance from an existing one
+        /// </summary>
+        /// <param name="agent"></param>
+        /// <returns></returns>
+        private Agent RecreateAgent(Agent agent)
+        {
+            agent.TaskComplete -= Agent_TaskComplete;
+            agent.NewUIResponse -= Agent_NewUIResponse;
+            agent.SaveEvents -= Agent_SaveEvents;
+            agent.ConvertToJson -= Agent_ConvertToJson;
+            agent.ConvertToBinary -= Agent_ConvertToBinary;
+            agent.Error -= Agent_Error;
+
+            var logger = (Application.Current as App)!.ServiceProvider.GetRequiredService<TaskLogger>();
+
+            return CreateAgent(this.taskFunctionResolver, agent.KnownArguments, logger);
         }
 
         private void LogFiles_DropDownOpened(object sender, EventArgs e)
@@ -195,13 +229,6 @@ namespace Tustler.UserControls
             var blocks = EventLoggingUtilities.ByteArrayToBlockArray(data);
             var loggedEvents = Serialization.DeserializeEventsFromBytes(blocks);
             agent.ContinueWith(loggedEvents);
-        }
-
-        private void StartTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
-        {
-            var isNewRunMode = rbNewTaskRun.IsChecked.HasValue && rbNewTaskRun.IsChecked.Value;
-            var isRunLogMode = (rbRunLog.IsChecked.HasValue && rbRunLog.IsChecked.Value) && (lbLogFiles.SelectedItem is object);
-            e.CanExecute = (isNewRunMode || isRunLogMode);
         }
 
         private static TaskEvent[] ReadDefaultArguments(string taskFolderPath)
@@ -345,6 +372,13 @@ namespace Tustler.UserControls
             }
         }
 
+        private void StartTask_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            var isNewRunMode = rbNewTaskRun.IsChecked.HasValue && rbNewTaskRun.IsChecked.Value;
+            var isRunLogMode = (rbRunLog.IsChecked.HasValue && rbRunLog.IsChecked.Value) && (lbLogFiles.SelectedItem is object);
+            e.CanExecute = (runMode != RunMode.Ended) && (isNewRunMode || isRunLogMode);
+        }
+
         private async void StartTask_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             // In Stopped mode, a new Agent instance is created and that last log file is run (assuming logging is enabled)
@@ -353,6 +387,8 @@ namespace Tustler.UserControls
             {
                 case RunMode.Init:
                     // Start the task
+                    rbRetainEvents.IsEnabled = false;
+                    rbDeleteEvents.IsEnabled = false;
                     btnStartTask.Content = "Stop";
                     runMode = RunMode.Running;
                     await FirstRun().ConfigureAwait(false);
@@ -367,10 +403,6 @@ namespace Tustler.UserControls
                         // log any unlogged events and close the log file in preparation for reopening
                         agent.CloseLog();
                     }
-                    //else
-                    //{
-                    //    btnStartTask.IsEnabled = false;         // no log file to restart
-                    //}
                     break;
                 case RunMode.Stopped:
                     // Restart the task
@@ -414,8 +446,15 @@ namespace Tustler.UserControls
         {
             await Dispatcher.InvokeAsync(() =>
             {
+                runMode = RunMode.Ended;
+                CommandManager.InvalidateRequerySuggested();
                 btnStartTask.Content = "Run Task";
-                btnStartTask.IsEnabled = false;
+
+                rbRetainEvents.IsChecked = null;
+                rbDeleteEvents.IsChecked = null;
+
+                rbRetainEvents.IsEnabled = true;
+                rbDeleteEvents.IsEnabled = true;
             });
         }
 
@@ -857,6 +896,19 @@ namespace Tustler.UserControls
             var radioButton = e.OriginalSource as RadioButton;
 
             lbLogFiles.IsEnabled = (radioButton!.Name == "rbRunLog");
+        }
+
+        private void EventsState_Checked(object sender, RoutedEventArgs e)
+        {
+            if (rbDeleteEvents.IsChecked.HasValue && rbDeleteEvents.IsChecked.Value)
+            {
+                RecreateAgent(this.agent);
+            }
+
+            // clear the observable collection of responses bound to the task response list
+            taskResponses.Clear();
+
+            runMode = RunMode.Init;
         }
     }
 

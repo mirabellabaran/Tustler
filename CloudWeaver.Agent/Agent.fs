@@ -439,6 +439,10 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
     /// Restart logging on the current task (if supported)
     member this.RestartLogging () = taskLogger.RestartLogging()
 
+    member this.KnownArguments with get() = knownArguments
+
+    //member this.TaskLogger with get() = taskLogger
+
     /// Returns the full path of the log file (this will only exist if IsLoggingEnabled is true and StartLogging() has been called)
     member this.LogFilePath with get() = taskLogger.LogFilePath
 
