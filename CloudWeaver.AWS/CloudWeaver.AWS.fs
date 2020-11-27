@@ -362,6 +362,33 @@ type AWSRequestIntraModule(awsRequest: AWSRequest) =
     member this.Request with get() = awsRequest
     static member FromString(label: string): IRequestIntraModule = AWSRequestIntraModule(AWSRequest.fromString(label)) :> IRequestIntraModule
 
+/// Helper type for the type resolver
+type TypeResolverHelper () =
+
+    static let getRequest (request: IRequestIntraModule) =
+        match request with
+        | :? AWSRequestIntraModule as awsRequestIntraModule -> awsRequestIntraModule.Request
+        | _ -> invalidArg "request" "The request does not belong to this module"
+
+    /// Get the string representation of the argument type that matches this request
+    static member GetMatchingArgument(request: IRequestIntraModule) = "AWSShareIntraModule"
+
+    /// Get the string representation of the specified request type
+    static member GetRequestAsString(request: IRequestIntraModule) = (getRequest request).ToString()
+
+    /// Generate a serialized representation of the underlying type for a Request
+    static member GenerateTypeRepresentation (request: IRequestIntraModule, generator: Func<string, string, string, Action<Utf8JsonWriter>, string, string>) =
+        match (getRequest request) with
+        | _ -> invalidArg "awsRequestIntraModule.Request" "No generator for this request"
+
+    /// Get the underlying type of an argument
+    static member UnwrapInstance (intraModule: IShareIntraModule) =
+        match intraModule with
+        | :? AWSShareIntraModule as awsRequestIntraModule ->
+            match awsRequestIntraModule.Argument with
+            | _ -> invalidArg "awsRequestIntraModule.Argument" (sprintf "Unexpected AWS Module Response Argument: %s" (awsRequestIntraModule.Argument.ToString()))
+        | _ -> invalidArg "intraModule" "The intraModule type does not belong to this module"
+
 /// Wrapper for the pre-assigned values used by this module
 /// (values that are known in advance by the user interface layer)
 type AWSKnownArguments(awsInterface) =

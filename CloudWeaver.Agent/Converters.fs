@@ -5,7 +5,7 @@ open System.Text.Json
 open System.Text.Json.Serialization
 open CloudWeaver.Types
 open CloudWeaver.AWS
-open CloudWeaver.MediaServices
+//open CloudWeaver.MediaServices
 open System.Collections.Generic
 open TustlerModels
 open System.Globalization
@@ -80,7 +80,7 @@ module public Converters =
             | JsonSerializedValue.Requests requests -> requests
             | _ -> raise (JsonException("Expecting the name of an array of sub-task requests (IRequestIntraModule)"))
 
-    let private read (reader: byref<Utf8JsonReader>) (arrayKind: JsonSerializedArrayKind) =
+    let private read (reader: byref<Utf8JsonReader>) (typeResolver: TypeResolver) (arrayKind: JsonSerializedArrayKind) =
         let dict = System.Collections.Generic.Dictionary<string, JsonSerializedValue>()
         if reader.TokenType = JsonTokenType.StartObject then
             while reader.Read() && reader.TokenType <> JsonTokenType.EndObject do
@@ -129,11 +129,14 @@ module public Converters =
                                         JsonSerializer.Deserialize<IEnumerable<string>>(&reader)
                                         |> Seq.map (fun label ->
                                             let moduleName, request = BaseUtilities.deStringifyRequest label
-                                            match moduleName with
-                                            | "StandardRequestIntraModule" -> StandardRequestIntraModule.FromString(request)
-                                            | "AWSRequestIntraModule" -> AWSRequestIntraModule.FromString(request)
-                                            | "AVRequestIntraModule" -> AVRequestIntraModule.FromString(request)
-                                            | _ -> invalidArg "label" (sprintf "Unknown request label: %s" label)
+                                            let typeName =
+                                                match moduleName with
+                                                | "StandardRequestIntraModule" -> "CloudWeaver.Types.StandardRequestIntraModule"
+                                                | "AWSRequestIntraModule" -> "CloudWeaver.AWS.AWSRequestIntraModule"
+                                                | "AVRequestIntraModule" -> "CloudWeaver.MediaServices.AVRequestIntraModule"
+                                                | _ -> invalidArg "label" (sprintf "Unknown request label: %s" label)
+                                            let fromString = typeResolver.ResolveStaticCall(typeName, "FromString") :?> Func<string, IRequestIntraModule>
+                                            fromString.Invoke(request)
                                         )
                                         |> Seq.toArray
                                     JsonSerializedValue.Requests data
@@ -147,7 +150,8 @@ module public Converters =
 
         /// Deserialize a RetainingStack (which is an IEnumerable<IShareIterationArgument> with additional attributes)
         override this.Read(reader, _typeToConvert, _options) =
-            let dict = read &reader JsonSerializedArrayKind.IterationArgument
+            let typeResolver = TypeResolver.Create() |> Async.AwaitTask |> Async.RunSynchronously
+            let dict = read &reader typeResolver JsonSerializedArrayKind.IterationArgument
 
             if (dict.ContainsKey "Identifier") && (dict.ContainsKey "ModuleName") && (dict.ContainsKey "Items") then
                 let identifier = JsonSerializedValue.getGuid (dict.["Identifier"])
@@ -177,7 +181,8 @@ module public Converters =
 
         /// Deserialize a TaskSequence (which is an IEnumerable<TaskItem> with additional attributes)
         override this.Read(reader, _typeToConvert, _options) =
-            let dict = read &reader JsonSerializedArrayKind.TaskItem
+            let typeResolver = TypeResolver.Create() |> Async.AwaitTask |> Async.RunSynchronously
+            let dict = read &reader typeResolver JsonSerializedArrayKind.TaskItem
 
             if (dict.ContainsKey "Identifier") && (dict.ContainsKey "Ordering") && (dict.ContainsKey "Tasks") then
                 let identifier = JsonSerializedValue.getGuid (dict.["Identifier"])
@@ -205,7 +210,8 @@ module public Converters =
         inherit JsonConverter<LanguageCodeDomain>()
 
         override this.Read(reader, _typeToConvert, _options) =
-            let dict = read &reader JsonSerializedArrayKind.None
+            let typeResolver = TypeResolver.Create() |> Async.AwaitTask |> Async.RunSynchronously
+            let dict = read &reader typeResolver JsonSerializedArrayKind.None
 
             if (dict.ContainsKey "LanguageDomain") && (dict.ContainsKey "Name") && (dict.ContainsKey "Code") then
                 let languageDomain =
@@ -233,7 +239,8 @@ module public Converters =
         inherit JsonConverter<FilePickerPath>()
 
         override this.Read(reader, _typeToConvert, _options) =
-            let dict = read &reader JsonSerializedArrayKind.None
+            let typeResolver = TypeResolver.Create() |> Async.AwaitTask |> Async.RunSynchronously
+            let dict = read &reader typeResolver JsonSerializedArrayKind.None
 
             if (dict.ContainsKey "Path") && (dict.ContainsKey "Extension") && (dict.ContainsKey "Mode") then
                 let path = JsonSerializedValue.getString (dict.["Path"])
@@ -261,7 +268,8 @@ module public Converters =
         inherit JsonConverter<Bucket>()
 
         override this.Read(reader, _typeToConvert, _options) =
-            let dict = read &reader JsonSerializedArrayKind.None
+            let typeResolver = TypeResolver.Create() |> Async.AwaitTask |> Async.RunSynchronously
+            let dict = read &reader typeResolver JsonSerializedArrayKind.None
 
             if (dict.ContainsKey "Name") && (dict.ContainsKey "CreationDate") then
                 let name = JsonSerializedValue.getString (dict.["Name"])
@@ -282,7 +290,8 @@ module public Converters =
         inherit JsonConverter<VocabularyName>()
 
         override this.Read(reader, _typeToConvert, _options) =
-            let dict = read &reader JsonSerializedArrayKind.None
+            let typeResolver = TypeResolver.Create() |> Async.AwaitTask |> Async.RunSynchronously
+            let dict = read &reader typeResolver JsonSerializedArrayKind.None
 
             if (dict.ContainsKey "VocabularyName") then
                 let name = JsonSerializedValue.getString (dict.["VocabularyName"])
@@ -304,7 +313,8 @@ module public Converters =
         inherit JsonConverter<SubTaskInputs>()
 
         override this.Read(reader, _typeToConvert, _options) =
-            let dict = read &reader JsonSerializedArrayKind.Requests
+            let typeResolver = TypeResolver.Create() |> Async.AwaitTask |> Async.RunSynchronously
+            let dict = read &reader typeResolver JsonSerializedArrayKind.Requests
 
             if (dict.ContainsKey "Requests") then
                 let requests = JsonSerializedValue.getRequests (dict.["Requests"])

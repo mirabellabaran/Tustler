@@ -7,7 +7,7 @@ open CloudWeaver.Types
 open System.IO
 open CloudWeaver.Foundation.Types
 
-type ResolverCachedItem(methodInfo: MethodInfo, taskFunctionSpecifier: TaskFunctionSpecifier) =
+type TaskFunctionResolverCachedItem(methodInfo: MethodInfo, taskFunctionSpecifier: TaskFunctionSpecifier) =
 
     let mutable cachedOutputs : Set<IRequestIntraModule> option = None
 
@@ -22,10 +22,7 @@ type ResolverCachedItem(methodInfo: MethodInfo, taskFunctionSpecifier: TaskFunct
     member this.TaskFunctionSpecifier with get() = taskFunctionSpecifier
 
 
-type TaskFunctionResolver private (pairs: seq<KeyValuePair<string, ResolverCachedItem>>) =
-
-    [<Literal>]
-    static let TaskFunctionModulePrefix = "CloudWeaver*.dll"     // the name prefix of assemblies which can be searched for Task Function modules
+type TaskFunctionResolver private (pairs: seq<KeyValuePair<string, TaskFunctionResolverCachedItem>>) =
 
     let taskLookup = new Dictionary<_,_>(pairs)
 
@@ -41,28 +38,16 @@ type TaskFunctionResolver private (pairs: seq<KeyValuePair<string, ResolverCache
                     let enableLogging = Attribute.IsDefined(mi, typeof<EnableLogging>)
                     let specifier = new TaskFunctionSpecifier(assembly.GetName().Name, currentModule.FullName, mi.Name, isRootTask, enableLogging)
                     let key = specifier.TaskFullPath
-                    new KeyValuePair<string, ResolverCachedItem>(key, ResolverCachedItem(mi, specifier))
+                    new KeyValuePair<string, TaskFunctionResolverCachedItem>(key, TaskFunctionResolverCachedItem(mi, specifier))
                 )
 
-            let loadedAssemblies =
-                AppDomain.CurrentDomain.GetAssemblies()
-                |> Seq.fold (fun accum asm ->
-                    Map.add asm.FullName asm accum
-                ) Map.empty
+            let assemblies =
+                let resolver = TypeResolver.Create() |> Async.AwaitTask |> Async.RunSynchronously
+                resolver.GetAssemblies ()
 
             // task functions must be found in one of these assembly files
-            let assemblyFiles = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, TaskFunctionModulePrefix, SearchOption.TopDirectoryOnly)
-
             // search each assembly for the attribute that marks a module containing task functions
-            assemblyFiles
-            |> Seq.map (fun assemblyFile -> Path.GetFileNameWithoutExtension(assemblyFile))
-            |> Seq.map (fun baseAssemblyName ->  // load assembly if not already loaded
-                let key = loadedAssemblies |> Map.tryFindKey (fun fullName _ -> fullName.StartsWith(baseAssemblyName, StringComparison.InvariantCulture))
-                if key.IsSome then
-                    loadedAssemblies.[key.Value]
-                else
-                    Assembly.Load(baseAssemblyName)
-            )
+            assemblies
             |> Seq.map (fun assembly ->
                 assembly.GetExportedTypes()
                 |> Seq.map (fun exportedType ->
@@ -90,7 +75,7 @@ type TaskFunctionResolver private (pairs: seq<KeyValuePair<string, ResolverCache
         let assembly = functionModule.Assembly
         let taskFunctionSpecifier = new TaskFunctionSpecifier(assembly.FullName, functionModule.FullName, methodinfo.Name, false, false)
 
-        let ri = new ResolverCachedItem(methodinfo, taskFunctionSpecifier)
+        let ri = new TaskFunctionResolverCachedItem(methodinfo, taskFunctionSpecifier)
         taskLookup.Add(taskFunctionSpecifier.TaskFullPath, ri)
         
     member this.FindFunction(methodinfo: MethodInfo) =

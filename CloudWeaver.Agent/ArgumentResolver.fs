@@ -2,7 +2,7 @@
 
 open CloudWeaver.Types
 open CloudWeaver.AWS
-open CloudWeaver.MediaServices
+//open CloudWeaver.MediaServices
 
 module ArgumentResolver =
 

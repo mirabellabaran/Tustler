@@ -1,17 +1,16 @@
 ﻿using CloudWeaver.Foundation.Types;
-using CloudWeaver.MediaServices;
+//using CloudWeaver.MediaServices;
 using CloudWeaver.Types;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using TustlerAWSLib;
 using TustlerFFMPEG.Types.CodecInfo;
+using TustlerFFMPEG.Types.MediaInfo;
 using TustlerInterfaces;
 using TustlerModels;
-using TustlerServicesLib;
 
 namespace CloudWeaver.AWS.Test
 {
@@ -21,6 +20,8 @@ namespace CloudWeaver.AWS.Test
         [TestMethod]
         public async Task TestRequestResponse()
         {
+            var typeResolver = await TypeResolver.Create();
+
             var agent = await InitializeTestAsync();
 
             var serializerOptions = Converters.CreateSerializerOptions();
@@ -33,7 +34,7 @@ namespace CloudWeaver.AWS.Test
             TestRequest(
                 new StandardRequestIntraModule(StandardRequest.RequestSubTaskInputs),
                 JsonSerializer.SerializeToUtf8Bytes(new SubTaskInputs(), serializerOptions),
-                agent);
+                agent, typeResolver);
 
             // Deserialize a SubTaskInputs instance w/ four requests
             TestRequest(
@@ -44,76 +45,76 @@ namespace CloudWeaver.AWS.Test
                     new AWSRequestIntraModule(AWSRequest.RequestBucket),
                     new StandardRequestIntraModule(StandardRequest.RequestFileMediaReference)
                 }), serializerOptions),
-                agent);
+                agent, typeResolver);
 
-            //TestRequest(
-            //    new AVRequestIntraModule(AVRequest.RequestCodecInfo),
-            //    JsonSerializer.SerializeToUtf8Bytes(new CodecInfo(), serializerOptions),
-            //    agent);
+            TestRequest(
+                typeResolver.CreateRequest("CloudWeaver.MediaServices.AVRequestIntraModule", "RequestCodecInfo"),
+                typeResolver.CreateSerializedArgument("CloudWeaver.MediaServices.AVRequestIntraModule", "RequestCodecInfo", new CodecPair()),
+                agent, typeResolver);
 
-            // MG note this should fail
-            //TestRequest(
-            //    new AVRequestIntraModule(AVRequest.RequestMediaInfo),
-            //    JsonSerializer.SerializeToUtf8Bytes(new CodecInfo(), serializerOptions),
-            //    agent);
+            // MG note this should fail because the object instance is of the wrong type
+            TestRequest(
+                typeResolver.CreateRequest("CloudWeaver.MediaServices.AVRequestIntraModule", "RequestMediaInfo"),
+                typeResolver.CreateSerializedArgument("CloudWeaver.MediaServices.AVRequestIntraModule", "RequestMediaInfo", new MediaInfo()),
+                agent, typeResolver);
 
 
 
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestBucket),
                 SerializableTypeGenerator.CreateBucket("test bucket", DateTime.SpecifyKind(new DateTime(2020, 1, 1, 12, 45, 30), DateTimeKind.Local)),
-                agent);
+                agent, typeResolver);
 
             TestRequest(
                 new StandardRequestIntraModule(StandardRequest.RequestFileMediaReference),
                 SerializableTypeGenerator.CreateFileMediaReference("some file path", "audio/x-wav", "wav"),
-                agent);
+                agent, typeResolver);
 
             TestRequest(
                 new StandardRequestIntraModule(StandardRequest.RequestOpenJsonFilePath),
                 SerializableTypeGenerator.CreateFilePath(new System.IO.FileInfo("some path"), "json", FilePickerMode.Open),
-                agent);
+                agent, typeResolver);
 
             TestRequest(
                 new StandardRequestIntraModule(StandardRequest.RequestSaveJsonFilePath),
                 SerializableTypeGenerator.CreateFilePath(new System.IO.FileInfo("some path"), "json", FilePickerMode.Save),
-                agent);
+                agent, typeResolver);
 
             TestRequest(
                 new StandardRequestIntraModule(StandardRequest.RequestOpenLogFormatFilePath),
                 SerializableTypeGenerator.CreateFilePath(new System.IO.FileInfo("some path"), "bin", FilePickerMode.Open),
-                agent);
+                agent, typeResolver);
 
             TestRequest(
                 new StandardRequestIntraModule(StandardRequest.RequestSaveLogFormatFilePath),
                 SerializableTypeGenerator.CreateFilePath(new System.IO.FileInfo("some path"), "bin", FilePickerMode.Save),
-                agent);
+                agent, typeResolver);
 
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestTranscriptionLanguageCode),
                 SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US"),
-                agent);
+                agent, typeResolver);
 
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestTranslationLanguageCodeSource),
                 SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "English", "en"),
-                agent);
+                agent, typeResolver);
 
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestTranscriptionDefaultTranscript),
                 SerializableTypeGenerator.CreateTranscriptionDefaultTranscript("my default transcript"),
-                agent);
+                agent, typeResolver);
 
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestTranscriptionVocabularyName),
                 SerializableTypeGenerator.CreateTranscriptionVocabularyName("my vocabulary", serializerOptions),
-                agent);
+                agent, typeResolver);
 
             // with null
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestTranscriptionVocabularyName),
                 SerializableTypeGenerator.CreateTranscriptionVocabularyName(null, serializerOptions),
-                agent);
+                agent, typeResolver);
 
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestTranslationTargetLanguages),
@@ -122,17 +123,17 @@ namespace CloudWeaver.AWS.Test
                     new TustlerModels.LanguageCode() { Name = "Arabic", Code = "ar" },
                     new TustlerModels.LanguageCode() { Name = "Azerbaijani", Code = "az" }
                 }, serializerOptions),
-                agent);
+                agent, typeResolver);
 
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestTranslationTerminologyNames),
                 SerializableTypeGenerator.CreateTranslationTerminologyNames(new List<string>() { "Bob", "Sally" }),
-                agent);
+                agent, typeResolver);
         }
 
-        private void TestRequest(IRequestIntraModule request, byte[] data, Agent agent)
+        private void TestRequest(IRequestIntraModule request, byte[] data, Agent agent, TypeResolver typeResolver)
         {
-            agent.AddArgument(request, GetModuleName(request), GetPropertyName(request), data);
+            agent.AddArgument(request, GetModuleName(request, typeResolver), GetPropertyName(request, typeResolver), data);
         }
 
         private static async Task<Agent> InitializeTestAsync()
@@ -150,19 +151,20 @@ namespace CloudWeaver.AWS.Test
             return agent;
         }
 
-        private static string GetModuleName(IRequestIntraModule request)
+        private static string GetModuleName(IRequestIntraModule request, TypeResolver typeResolver)
         {
-            return request switch
-            {
-                // map the request to the shareable settable type
-                StandardRequestIntraModule _ => "StandardShareIntraModule",
-                AWSRequestIntraModule _ => "AWSShareIntraModule",
-                AVRequestIntraModule _ => "AVShareIntraModule",
-                _ => throw new ArgumentException()
-            };
+            return typeResolver.GetMatchingArgument(request);
+            //return request switch
+            //{
+            //    // map the request to the shareable settable type
+            //    StandardRequestIntraModule _ => "StandardShareIntraModule",
+            //    AWSRequestIntraModule _ => "AWSShareIntraModule",
+            //    AVRequestIntraModule _ => "AVShareIntraModule",
+            //    _ => throw new ArgumentException()
+            //};
         }
 
-        private static string GetPropertyName(IRequestIntraModule request)
+        private static string GetPropertyName(IRequestIntraModule request, TypeResolver typeResolver)
         {
             string result;
 
@@ -186,13 +188,14 @@ namespace CloudWeaver.AWS.Test
             }
             else
             {
-                var requestAsString = request switch
-                {
-                    StandardRequestIntraModule standardRequest => standardRequest.Request.ToString(),
-                    AWSRequestIntraModule awsRequest => awsRequest.Request.ToString(),
-                    AVRequestIntraModule avRequest => avRequest.Request.ToString(),
-                    _ => throw new ArgumentException()
-                };
+                var requestAsString = typeResolver.GetRequestAsString(request);
+                //var requestAsString = request switch
+                //{
+                //    StandardRequestIntraModule standardRequest => standardRequest.Request.ToString(),
+                //    AWSRequestIntraModule awsRequest => awsRequest.Request.ToString(),
+                //    AVRequestIntraModule avRequest => avRequest.Request.ToString(),
+                //    _ => throw new ArgumentException()
+                //};
 
                 result = $"Set{requestAsString[7..]}";
             }

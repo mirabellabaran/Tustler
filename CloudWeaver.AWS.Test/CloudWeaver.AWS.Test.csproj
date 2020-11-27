@@ -18,6 +18,7 @@
     <ProjectReference Include="..\CloudWeaver.AWS\CloudWeaver.AWS.fsproj" />
     <ProjectReference Include="..\CloudWeaver.Foundation.Types\CloudWeaver.Foundation.Types.csproj" />
     <ProjectReference Include="..\CloudWeaver.Types\CloudWeaver.Types.fsproj" />
+    <ProjectReference Include="..\TustlerFFMPEG\TustlerFFMPEG.csproj" />
     <ProjectReference Include="..\TustlerServicesLib\TustlerServicesLib.csproj" />
   </ItemGroup>
 

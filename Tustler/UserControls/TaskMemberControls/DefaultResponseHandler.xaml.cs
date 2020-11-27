@@ -1,6 +1,6 @@
 ﻿using CloudWeaver;
 using CloudWeaver.AWS;
-using CloudWeaver.MediaServices;
+//using CloudWeaver.MediaServices;
 using CloudWeaver.Types;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -10,6 +10,7 @@ using System.Reflection.Metadata;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -65,7 +66,7 @@ namespace Tustler.UserControls.TaskMemberControls
             InitializeComponent();
         }
 
-        private void UserControl_Loaded(object sender, RoutedEventArgs e)
+        private async void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
             var wrapper = this.DataContext as ResponseWrapper;
             var response = wrapper.TaskResponse;
@@ -76,7 +77,7 @@ namespace Tustler.UserControls.TaskMemberControls
                     HandleRequestArgument(arg);
                     break;
                 case TaskResponse.SetArgument arg:
-                    HandleSetArgument(arg);
+                    await HandleSetArgumentAsync(arg).ConfigureAwait(false);
                     break;
                 default:
                     tbInfo.Text = $"Unknown response: {response}";
@@ -208,40 +209,44 @@ namespace Tustler.UserControls.TaskMemberControls
             }
         }
 
-        private object GetData(IShareIntraModule intraModule)
+        private object GetData(TypeResolver typeResolver, IShareIntraModule intraModule)
         {
             // return either a string error message or a specified object
-            return intraModule switch
-            {
-                StandardShareIntraModule stdModule =>
-                    stdModule.Argument switch
-                    {
-                        StandardArgument.SetFileMediaReference fileReference => fileReference.Item,
-                        _ => $"Unexpected Standard Module Response Argument: {stdModule.Argument}",
-                    },
-                AVShareIntraModule avModule =>
-                    avModule.Argument switch
-                    {
-                        AVArgument.SetCodecInfo codecInfo => codecInfo.Item,
-                        AVArgument.SetMediaInfo mediaInfo => mediaInfo.Item,
-                        _ => $"Unexpected AV Module Response Argument: {avModule.Argument}",
-                    },
-                AWSShareIntraModule awsModule =>
-                    awsModule.Argument switch
-                    {
-                        _ => $"Unexpected AWS Module Response Argument: {awsModule.Argument}",
-                    },
-                _ => $"Unknown module: {nameof(intraModule)}"
-            };
+            return typeResolver.UnwrapArgument(intraModule);
+
+            //return intraModule switch
+            //{
+            //    StandardShareIntraModule stdModule =>
+            //        stdModule.Argument switch
+            //        {
+            //            StandardArgument.SetFileMediaReference fileReference => fileReference.Item,
+            //            _ => $"Unexpected Standard Module Response Argument: {stdModule.Argument}",
+            //        },
+            //    AVShareIntraModule avModule =>
+            //        avModule.Argument switch
+            //        {
+            //            AVArgument.SetCodecInfo codecInfo => codecInfo.Item,
+            //            AVArgument.SetMediaInfo mediaInfo => mediaInfo.Item,
+            //            _ => $"Unexpected AV Module Response Argument: {avModule.Argument}",
+            //        },
+            //    AWSShareIntraModule awsModule =>
+            //        awsModule.Argument switch
+            //        {
+            //            _ => $"Unexpected AWS Module Response Argument: {awsModule.Argument}",
+            //        },
+            //    _ => $"Unknown module: {nameof(intraModule)}"
+            //};
         }
 
         /// <summary>
         /// Display the serialized response as a tree of properties
         /// </summary>
         /// <param name="response"></param>
-        private void HandleSetArgument(TaskResponse.SetArgument response)
+        private async Task HandleSetArgumentAsync(TaskResponse.SetArgument response)
         {
-            object data = GetData(response.Item2);
+            var typeResolver = await TypeResolver.Create().ConfigureAwait(false);
+
+            object data = GetData(typeResolver, response.Item2);
 
             if (data is string)
             {

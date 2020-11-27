@@ -4,9 +4,10 @@ open System.Collections.Generic
 open System
 open CloudWeaver.Types
 open CloudWeaver.AWS
-open CloudWeaver.MediaServices
+//open CloudWeaver.MediaServices
 open Converters
 open TustlerServicesLib
+open System.Text.Json
 
 
 /// <summary>
@@ -88,9 +89,13 @@ type ModuleResolver (serializerOptions, flagSetLookup: Dictionary<string, Func<s
                 Dictionary<string, (Func<string, Dictionary<string, ISaveFlagSet>, Dictionary<string, ISaveFlagSet>>)>(pairs)
             ModuleResolver(serializerOptions, flagSetLookup).Deserialize
 
+        let typeResolver = TypeResolver.Create() |> Async.AwaitTask |> Async.RunSynchronously
+
         /// Get the deserializer for Standard or AWS modules (wraps the flag module resolver for Standard modules)
         match moduleTag with
         | "StandardShareIntraModule" -> GetStandardResolver ()
         | "AWSShareIntraModule" -> Func<_, _, _>(fun propertyName jsonString -> AWSShareIntraModule.Deserialize propertyName jsonString serializerOptions :> IShareIntraModule)
-        | "AVShareIntraModule" -> Func<_, _, _>(fun propertyName jsonString -> AVShareIntraModule.Deserialize propertyName jsonString serializerOptions :> IShareIntraModule)
+        | "AVShareIntraModule" ->
+            let deserialize = typeResolver.ResolveStaticCall("CloudWeaver.MediaServices.AVShareIntraModule", "Deserialize") :?> Func<string, string, JsonSerializerOptions, IShareIntraModule>
+            Func<_, _, _>(fun propertyName jsonString -> deserialize.Invoke(propertyName, jsonString, serializerOptions))
         | _ -> invalidArg "moduleTag" (sprintf "Unexpected module tag (%s) in ModuleLookup" moduleTag)

@@ -551,6 +551,33 @@ type StandardRequestIntraModule(stdRequest: StandardRequest) =
     member this.Request with get() = stdRequest
     static member FromString(label: string): IRequestIntraModule = StandardRequestIntraModule(StandardRequest.fromString(label)) :> IRequestIntraModule
 
+/// Helper type for the type resolver
+type TypeResolverHelper () =
+
+    static let getRequest (request: IRequestIntraModule) =
+        match request with
+        | :? StandardRequestIntraModule as stdRequestIntraModule -> stdRequestIntraModule.Request
+        | _ -> invalidArg "request" "The request does not belong to this module"
+
+    /// Get the string representation of the argument type that matches this request
+    static member GetMatchingArgument(request: IRequestIntraModule) = "StandardShareIntraModule"
+
+    /// Get the string representation of the specified request type
+    static member GetRequestAsString(request: IRequestIntraModule) = (getRequest request).ToString()
+
+    /// Generate a serialized representation of the underlying type for a Request
+    static member GenerateTypeRepresentation (request: IRequestIntraModule, generator: Func<string, string, string, Action<Utf8JsonWriter>, string, string>) =
+        match (getRequest request) with
+        | _ -> invalidArg "stdRequestIntraModule.Request" "No generator for this request"
+
+    /// Get the underlying type of an argument
+    static member UnwrapInstance (intraModule: IShareIntraModule) =
+        match intraModule with
+        | :? StandardShareIntraModule as stdShareIntraModule ->
+            match stdShareIntraModule.Argument with
+            | _ -> invalidArg "stdShareIntraModule.Argument" (sprintf "Unexpected Standard Module Response Argument: %s" (stdShareIntraModule.Argument.ToString()))
+        | _ -> invalidArg "intraModule" "The intraModule type does not belong to this module"
+
 /// Arguments whose values are known in advance (and are shared across task function modules)
 type StandardKnownArguments(notificationsList) =
 

@@ -223,15 +223,15 @@ namespace Tustler.UserControls
             }
         }
 
-        private void UnLogEvents(string logFilePath)
+        private void UnLogEvents(string logFilePath, TypeResolver typeResolver)
         {
             var data = File.ReadAllBytes(logFilePath);
             var blocks = EventLoggingUtilities.ByteArrayToBlockArray(data);
-            var loggedEvents = Serialization.DeserializeEventsFromBytes(blocks);
+            var loggedEvents = Serialization.DeserializeEventsFromBytes(blocks, typeResolver);
             agent.ContinueWith(loggedEvents);
         }
 
-        private static TaskEvent[] ReadDefaultArguments(string taskFolderPath)
+        private static TaskEvent[] ReadDefaultArguments(string taskFolderPath, TypeResolver typeResolver)
         {
             TaskEvent[] taskEvents;
 
@@ -246,7 +246,7 @@ namespace Tustler.UserControls
 
                 using var stream = File.OpenRead(serializedDataPath);
                 using JsonDocument document = JsonDocument.Parse(stream, options);
-                taskEvents = Serialization.DeserializeEventsFromJSON(document);
+                taskEvents = Serialization.DeserializeEventsFromJSON(document, typeResolver);
             }
             else
             {
@@ -282,13 +282,13 @@ namespace Tustler.UserControls
             agent.SetSaveFlags(saveFlags);
         }
 
-        private bool PrepareTaskFirstRun(string taskFolderPath)
+        private bool PrepareTaskFirstRun(string taskFolderPath, TypeResolver typeResolver)
         {
             var runImmediately = true;
 
             if (Directory.Exists(taskFolderPath))
             {
-                var taskEvents = ReadDefaultArguments(taskFolderPath);
+                var taskEvents = ReadDefaultArguments(taskFolderPath, typeResolver);
                 if (taskEvents.Length > 0)
                 {
                     // create a list of descriptions for each SetArgument
@@ -322,9 +322,9 @@ namespace Tustler.UserControls
             return runImmediately;
         }
 
-        async Task StartNewAsync(string taskFolderPath)
+        async Task StartNewAsync(string taskFolderPath, TypeResolver typeResolver)
         {
-            var runImmediately = PrepareTaskFirstRun(taskFolderPath);
+            var runImmediately = PrepareTaskFirstRun(taskFolderPath, typeResolver);
 
             if (runImmediately)
             {
@@ -332,7 +332,7 @@ namespace Tustler.UserControls
             }
         }
 
-        private async Task FirstRun()
+        private async Task FirstRun(TypeResolver typeResolver)
         {
             try
             {
@@ -347,7 +347,7 @@ namespace Tustler.UserControls
                 {
                     if (lbLogFiles.SelectedItem is LogFile selectedLogFile && File.Exists(selectedLogFile.FilePath))
                     {
-                        UnLogEvents(selectedLogFile.FilePath);
+                        UnLogEvents(selectedLogFile.FilePath, typeResolver);
                         SetStandardVariables(taskFolderPath);
 
                         // check the queue for new task function specifiers
@@ -355,12 +355,12 @@ namespace Tustler.UserControls
                     }
                     else
                     {
-                        await StartNewAsync(taskFolderPath).ConfigureAwait(false);
+                        await StartNewAsync(taskFolderPath, typeResolver).ConfigureAwait(false);
                     }
                 }
                 else
                 {
-                    await StartNewAsync(taskFolderPath).ConfigureAwait(false);
+                    await StartNewAsync(taskFolderPath, typeResolver).ConfigureAwait(false);
                 }
             }
             finally
@@ -381,7 +381,7 @@ namespace Tustler.UserControls
 
         private async void StartTask_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            // In Stopped mode, a new Agent instance is created and that last log file is run (assuming logging is enabled)
+            var typeResolver = await TypeResolver.Create().ConfigureAwait(false);
 
             switch (runMode)
             {
@@ -391,7 +391,7 @@ namespace Tustler.UserControls
                     rbDeleteEvents.IsEnabled = false;
                     btnStartTask.Content = "Stop";
                     runMode = RunMode.Running;
-                    await FirstRun().ConfigureAwait(false);
+                    await FirstRun(typeResolver).ConfigureAwait(false);
                     break;
                 case RunMode.Running:
                     // Stop the task
@@ -489,9 +489,11 @@ namespace Tustler.UserControls
 
         private async void Agent_ConvertToBinary(object? sender, JsonDocument document)
         {
-            await Dispatcher.InvokeAsync(() =>
+            await Dispatcher.InvokeAsync(async () =>
             {
-                var taskEvents = Serialization.DeserializeEventsFromJSON(document);
+                var typeResolver = await TypeResolver.Create().ConfigureAwait(false);
+
+                var taskEvents = Serialization.DeserializeEventsFromJSON(document, typeResolver);
                 var blocks = Serialization.SerializeEventsAsBytes(taskEvents, 0);
                 var data = EventLoggingUtilities.BlockArrayToByteArray(blocks);
                 agent.AddArgument(TaskResponse.NewSetArgument(
@@ -503,10 +505,12 @@ namespace Tustler.UserControls
 
         private async void Agent_ConvertToJson(object? sender, byte[] data)
         {
-            await Dispatcher.InvokeAsync(() =>
+            await Dispatcher.InvokeAsync(async () =>
             {
+                var typeResolver = await TypeResolver.Create().ConfigureAwait(false);
+
                 var blocks = EventLoggingUtilities.ByteArrayToBlockArray(data);
-                var taskEvents = Serialization.DeserializeEventsFromBytes(blocks);
+                var taskEvents = Serialization.DeserializeEventsFromBytes(blocks, typeResolver);
                 var serializedData = Serialization.SerializeEventsAsJSON(taskEvents);
                 agent.AddArgument(TaskResponse.NewSetArgument(
                     new StandardRequestIntraModule(StandardRequest.RequestJsonEvents),
@@ -677,8 +681,9 @@ namespace Tustler.UserControls
                 var selectedArguments = JsonSerializer.Deserialize<IEnumerable<bool>>(new ReadOnlySpan<byte>(parameterInfo.SerializedArgument)).ToArray();
 
                 // re-read the default arguments list and add only the user-selected items to the agent
+                var typeResolver = await TypeResolver.Create().ConfigureAwait(false);
                 var taskFolderPath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.RootTaskSpecifier.TaskName);
-                var taskEvents = ReadDefaultArguments(taskFolderPath);
+                var taskEvents = ReadDefaultArguments(taskFolderPath, typeResolver);
 
                 if (taskEvents.Length > 0)
                 {

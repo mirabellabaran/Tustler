@@ -566,9 +566,11 @@ namespace CloudWeaver.AWS.Test
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, null);
             agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, false, true));
 
-            void Agent_ConvertToBinary(object sender, System.Text.Json.JsonDocument document)
+            async void Agent_ConvertToBinary(object sender, System.Text.Json.JsonDocument document)
             {
-                var taskEvents = Serialization.DeserializeEventsFromJSON(document);
+                var typeResolver = await TypeResolver.Create();
+
+                var taskEvents = Serialization.DeserializeEventsFromJSON(document, typeResolver);
                 var blocks = Serialization.SerializeEventsAsBytes(taskEvents, 0);
                 var data = EventLoggingUtilities.BlockArrayToByteArray(blocks);
                 agent.AddArgument(TaskResponse.NewSetArgument(
@@ -624,10 +626,12 @@ namespace CloudWeaver.AWS.Test
             var agent = await InitializeTestAsync(taskName, WorkingDirectory, null);
             agent.PushTask(new TaskFunctionSpecifier("CloudWeaver.AWS", "CloudWeaver.AWS.Tasks", taskName, false, true));
 
-            void Agent_ConvertToJson(object sender, byte[] data)
+            async void Agent_ConvertToJson(object sender, byte[] data)
             {
+                var typeResolver = await TypeResolver.Create();
+
                 var blocks = EventLoggingUtilities.ByteArrayToBlockArray(data);
-                var taskEvents = Serialization.DeserializeEventsFromBytes(blocks);
+                var taskEvents = Serialization.DeserializeEventsFromBytes(blocks, typeResolver);
                 var serializedData = Serialization.SerializeEventsAsJSON(taskEvents);
                 agent.AddArgument(TaskResponse.NewSetArgument(
                     new StandardRequestIntraModule(StandardRequest.RequestJsonEvents),

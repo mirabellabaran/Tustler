@@ -5,6 +5,7 @@ open TustlerFFMPEG
 open CloudWeaver.Types
 open TustlerFFMPEG.Types.CodecInfo
 open TustlerFFMPEG.Types.MediaInfo
+open System
 
 /// Arguments used by this module.
 type AVArgument =
@@ -109,6 +110,58 @@ type AVRequestIntraModule(avRequest: AVRequest) =
 
     member this.Request with get() = avRequest
     static member FromString(label: string): IRequestIntraModule = AVRequestIntraModule(AVRequest.fromString(label)) :> IRequestIntraModule
+
+/// Helper type for the type resolver
+type TypeResolverHelper () =
+
+    static let getRequest (request: IRequestIntraModule) =
+        match request with
+        | :? AVRequestIntraModule as avRequestIntraModule -> avRequestIntraModule.Request
+        | _ -> invalidArg "request" "The request does not belong to this module"
+
+    /// Get the string representation of the argument type that matches this request
+    static member GetMatchingArgument(request: IRequestIntraModule) = "AVShareIntraModule"
+
+    /// Get the string representation of the specified request type
+    static member GetRequestAsString(request: IRequestIntraModule) = (getRequest request).ToString()
+
+    /// Construct a request from the specified request type
+    static member CreateRequest(requestType: string) =
+        match requestType with
+        | "RequestAVInterface" -> AVRequestIntraModule(AVRequest.RequestAVInterface) :> IRequestIntraModule
+        | "RequestCodecName" -> AVRequestIntraModule(AVRequest.RequestCodecName) :> IRequestIntraModule
+        | "RequestCodecInfo" -> AVRequestIntraModule(AVRequest.RequestCodecInfo) :> IRequestIntraModule
+        | "RequestMediaInfo" -> AVRequestIntraModule(AVRequest.RequestMediaInfo) :> IRequestIntraModule
+        | "RequestOpenMediaFilePath" -> AVRequestIntraModule(AVRequest.RequestOpenMediaFilePath) :> IRequestIntraModule
+        | "RequestSaveMediaFilePath" -> AVRequestIntraModule(AVRequest.RequestSaveMediaFilePath) :> IRequestIntraModule
+        | _ -> invalidArg "requestType" (sprintf "Unknown request type: %s" requestType)
+
+    /// Generate a serialized representation of the underlying type for a Request
+    // e.g. RequestCodecName requires a string so that a UI fulfilling this request would need to display a textbox
+    static member GenerateTypeRepresentation (request: IRequestIntraModule, generator: Func<string, string, string, Action<Utf8JsonWriter>, string, string>) =
+        match (getRequest request) with
+        | AVRequest.RequestCodecName ->
+            let writeValue = new Action<Utf8JsonWriter>(fun writer -> writer.WriteString("value", ""))
+            generator.Invoke("AVShareIntraModule", "RequestCodecName", "SetCodecName", writeValue, "Enter a codec name (e.g. flac):")
+        | _ -> invalidArg "avRequestIntraModule.Request" "No generator for this request"
+
+    /// Return a serialized instance of the argument corresponding to the specified request type
+    static member CreateSerializedArgument(requestType: string, arg: obj) =
+        match requestType with
+        | "RequestCodecName" -> (AVShareIntraModule(AVArgument.SetCodecName (arg :?> string)) :> IShareIntraModule).AsBytes(null)
+        | "RequestCodecInfo" -> (AVShareIntraModule(AVArgument.SetCodecInfo (arg :?> CodecPair)) :> IShareIntraModule).AsBytes(null)
+        | "RequestMediaInfo" -> (AVShareIntraModule(AVArgument.SetMediaInfo (arg :?> MediaInfo)) :> IShareIntraModule).AsBytes(null)
+        | _ -> invalidArg "requestType" (sprintf "Unknown request type or unable to create instance for this request: %s" requestType)
+
+    /// Get the underlying type of an argument
+    static member UnwrapInstance (intraModule: IShareIntraModule) =
+        match intraModule with
+        | :? AVShareIntraModule as avShareIntraModule ->
+            match avShareIntraModule.Argument with
+            | AVArgument.SetCodecInfo codecInfo -> codecInfo :> obj
+            | AVArgument.SetMediaInfo mediaInfo -> mediaInfo :> obj
+            | _ -> invalidArg "avShareIntraModule.Argument" (sprintf "Unexpected AV Module Response Argument: %s" (avShareIntraModule.Argument.ToString()))
+        | _ -> invalidArg "intraModule" "The intraModule type does not belong to this module"
 
 /// Wrapper for the pre-assigned values used by this module
 /// (values that are known in advance by the user interface layer)

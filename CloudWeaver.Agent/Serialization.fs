@@ -8,8 +8,7 @@ open System.Collections.Generic
 open TustlerServicesLib
 open System.Text.Json.Serialization
 open CloudWeaver.AWS
-open Converters
-open CloudWeaver.MediaServices
+//open CloudWeaver.MediaServices
 
 module public Serialization =
 
@@ -40,7 +39,7 @@ module public Serialization =
 
         writer.WriteEndObject()
 
-    let private DeserializeEvent (serializedTaskEvent: JsonElement) serializerOptions =
+    let private DeserializeEvent (typeResolver: TypeResolver) (serializedTaskEvent: JsonElement) serializerOptions =
         let mutable taskEvent: TaskEvent option = None
 
         serializedTaskEvent.EnumerateObject()
@@ -54,21 +53,22 @@ module public Serialization =
                 if acc.IsSome then
                     let resolveProperty = ModuleResolver.ModuleLookup(acc.Value)
                     let wrappedArg =
-                        //property.Value.EnumerateObject()
-                        //|> Seq.map (fun property -> resolveProperty.Invoke(property.Name, property.Value.GetRawText()))
-                        //|> Seq.exactlyOne
                         let request, response =
                             property.Value.EnumerateObject()
                             |> Seq.fold (fun (request: IRequestIntraModule option, responseArg: IShareIntraModule option) property ->
                                 if property.Name = "Request" then
                                     let request =
                                         let label = property.Value.GetString()
-                                        let moduleName, request = BaseUtilities.deStringifyRequest label
-                                        match moduleName with
-                                        | "StandardRequestIntraModule" -> StandardRequestIntraModule.FromString(request)
-                                        | "AWSRequestIntraModule" -> AWSRequestIntraModule.FromString(request)
-                                        | "AVRequestIntraModule" -> AVRequestIntraModule.FromString(request)
-                                        | _ -> invalidArg "label" (sprintf "Unknown request label: %s" label)
+                                        let moduleName, requestName = BaseUtilities.deStringifyRequest label
+                                        let typeName =
+                                            match moduleName with
+                                            | "StandardRequestIntraModule" -> "CloudWeaver.Types.StandardRequestIntraModule"
+                                            | "AWSRequestIntraModule" -> "CloudWeaver.AWS.AWSRequestIntraModule"
+                                            | "AVRequestIntraModule" -> "CloudWeaver.MediaServices.AVRequestIntraModule"
+                                            | _ -> invalidArg "label" (sprintf "Unknown request label: %s" label)
+
+                                        let fromString = typeResolver.ResolveStaticCall(typeName, "FromString") :?> Func<string, IRequestIntraModule>
+                                        fromString.Invoke(requestName)
                                     (Some(request), None)
                                 else
                                     let arg = resolveProperty.Invoke(property.Name, property.Value.GetRawText())
@@ -158,7 +158,7 @@ module public Serialization =
         |> Seq.toArray
 
     /// Serialize the provided events as a JSON document
-    let DeserializeEventsFromJSON (document:JsonDocument) =
+    let DeserializeEventsFromJSON (document:JsonDocument) typeResolver =
 
         let serializerOptions = Converters.CreateSerializerOptions()
         serializerOptions.Converters.Add(SentenceChunkerConverter())
@@ -169,7 +169,7 @@ module public Serialization =
             | "Items" ->
                 childProperty.Value.EnumerateArray()
                 |> Seq.map (fun arrayItem ->
-                    DeserializeEvent arrayItem serializerOptions
+                    DeserializeEvent typeResolver arrayItem serializerOptions
                 )
                 |> Seq.choose id
             | _ -> invalidOp "Expecting an Items array as first property of the root object"
@@ -179,7 +179,7 @@ module public Serialization =
 
     /// Deserialize the provided events using the specified module resolver to locate the correct Derserialization functions
     /// Note that each block of bytes encodes a standalone JSON document
-    let DeserializeEventsFromBytes (blocks: List<byte[]>) =
+    let DeserializeEventsFromBytes (blocks: List<byte[]>) typeResolver =
         
         let documentOptions = new JsonDocumentOptions(AllowTrailingCommas = true)
         let serializerOptions = Converters.CreateSerializerOptions()
@@ -191,7 +191,7 @@ module public Serialization =
             use document = JsonDocument.Parse(sequence, documentOptions)
 
             // expecting a single child object
-            DeserializeEvent (document.RootElement) serializerOptions
+            DeserializeEvent typeResolver (document.RootElement) serializerOptions
         )
         |> Seq.choose id
         |> Seq.toArray
