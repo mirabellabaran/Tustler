@@ -11,6 +11,7 @@ using TustlerServicesLib;
 using System.Text;
 using System.Text.Json;
 using CloudWeaver.Foundation.Types;
+using System.Linq;
 
 namespace CloudWeaver.AWS.Test
 {
@@ -29,7 +30,7 @@ namespace CloudWeaver.AWS.Test
         public void TestDescription()
         {
             var options = new JsonSerializerOptions();
-            options.Converters.Add(new Converters.FilePickerPathConverter());
+            options.Converters.Add(new CloudWeaver.Converters.FilePickerPathConverter());
 
             IShareIntraModule notificationsListModule = new StandardShareIntraModule(StandardArgument.NewSetNotificationsList(new NotificationsList()));
             Assert.IsTrue(notificationsListModule.Description().StartsWith("NotificationsList: 0 notifications"));
@@ -105,6 +106,7 @@ namespace CloudWeaver.AWS.Test
         {
             var awsInterface = new AmazonWebServiceInterface( new TustlerInterfaces.RuntimeOptions() { IsMocked = true } );
             var options = new JsonSerializerOptions();
+            options.Converters.Add(new CloudWeaver.Converters.StandardConverter());
             options.Converters.Add(new Converters.LanguageCodeDomainConverter());
 
             IShareIntraModule awsInterfaceModule = new AWSShareIntraModule(AWSArgument.NewSetAWSInterface(awsInterface));
@@ -174,7 +176,7 @@ namespace CloudWeaver.AWS.Test
             var languageCode = JsonSerializer.Deserialize<LanguageCodeDomain>(new ReadOnlySpan<byte>(languageCodeDomainModule.AsBytes(options)), options);
             Assert.IsTrue((languageCode.LanguageDomain == LanguageDomain.Transcription) && (languageCode.Name == "American English") && (languageCode.Code == "en-US"));
 
-            var items = new IShareIterationArgument[]
+            var items = new AWSShareIterationArgument[]
             {
                 new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(new TustlerModels.LanguageCode() { Name="Arabic", Code="ar" })),
                 new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(new TustlerModels.LanguageCode() { Name="Azerbaijani", Code="az" }))

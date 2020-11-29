@@ -196,7 +196,7 @@ namespace Tustler.UserControls
         /// <summary>
         /// Serialize all events (or just all SetArgument events) on the event stack for later restore
         /// </summary>
-        private void SaveArgumentsAsJSON(TaskEvent[] events)
+        private async Task SaveArgumentsAsJSONAsync(TaskEvent[] events)
         {
             var taskFolderPath = Path.Combine(TustlerServicesLib.ApplicationSettings.FileCachePath, this.RootTaskSpecifier.TaskName);
             if (!Directory.Exists(taskFolderPath))
@@ -204,7 +204,8 @@ namespace Tustler.UserControls
                 Directory.CreateDirectory(taskFolderPath);
             }
 
-            var newData = Serialization.SerializeEventsAsJSON(events);
+            var typeResolver = await TypeResolver.Create().ConfigureAwait(false);
+            var newData = Serialization.SerializeEventsAsJSON(events, typeResolver);
 
             // compare current version (if any)
             var serializedDataPath = Path.Combine(taskFolderPath, EventStackArgumentRestoreName);
@@ -470,11 +471,11 @@ namespace Tustler.UserControls
 
         private async void Agent_SaveEvents(object? sender, TaskEvent[] events)
         {
-            await Dispatcher.InvokeAsync(() =>
+            await Dispatcher.InvokeAsync(async () =>
             {
                 // by the time this is invoked, the events stack may be in the process of being modified via new incoming responses
                 // therefore pass a copy to iterate over
-                SaveArgumentsAsJSON(events);
+                await SaveArgumentsAsJSONAsync(events).ConfigureAwait(false);
             });
         }
 
@@ -494,7 +495,7 @@ namespace Tustler.UserControls
                 var typeResolver = await TypeResolver.Create().ConfigureAwait(false);
 
                 var taskEvents = Serialization.DeserializeEventsFromJSON(document, typeResolver);
-                var blocks = Serialization.SerializeEventsAsBytes(taskEvents, 0);
+                var blocks = Serialization.SerializeEventsAsBytes(taskEvents, 0, typeResolver);
                 var data = EventLoggingUtilities.BlockArrayToByteArray(blocks);
                 agent.AddArgument(TaskResponse.NewSetArgument(
                     new StandardRequestIntraModule(StandardRequest.RequestLogFormatEvents),
@@ -511,7 +512,7 @@ namespace Tustler.UserControls
 
                 var blocks = EventLoggingUtilities.ByteArrayToBlockArray(data);
                 var taskEvents = Serialization.DeserializeEventsFromBytes(blocks, typeResolver);
-                var serializedData = Serialization.SerializeEventsAsJSON(taskEvents);
+                var serializedData = Serialization.SerializeEventsAsJSON(taskEvents, typeResolver);
                 agent.AddArgument(TaskResponse.NewSetArgument(
                     new StandardRequestIntraModule(StandardRequest.RequestJsonEvents),
                     new StandardShareIntraModule(StandardArgument.NewSetJsonEvents(serializedData))

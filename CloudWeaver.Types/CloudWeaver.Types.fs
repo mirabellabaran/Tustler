@@ -164,8 +164,8 @@ type StandardShareIterationArgument(arg: StandardIterationArgument) =
         StandardShareIterationArgument(iterationArgument) :> IShareIterationArgument
 
 /// An iteration argument stack (IConsumable) for StandardIterationArgument types
-type StandardIterationStack(uid: Guid, items: IEnumerable<IShareIterationArgument>) =
-    inherit RetainingStack(uid, items)
+type StandardIterationStack(uid: Guid, items: IEnumerable<StandardShareIterationArgument>) =
+    inherit RetainingStack(uid, items |> Seq.cast)
 
     override this.ModuleName with get() = "StandardShareIterationArgument"
 
@@ -565,10 +565,31 @@ type TypeResolverHelper () =
     /// Get the string representation of the specified request type
     static member GetRequestAsString(request: IRequestIntraModule) = (getRequest request).ToString()
 
+    /// Construct a request from the specified request type
+    static member CreateRequest(requestType: string) = StandardRequestIntraModule(StandardRequest.fromString(requestType)) :> IRequestIntraModule
+
     /// Generate a serialized representation of the underlying type for a Request
     static member GenerateTypeRepresentation (request: IRequestIntraModule, generator: Func<string, string, string, Action<Utf8JsonWriter>, string, string>) =
         match (getRequest request) with
         | _ -> invalidArg "stdRequestIntraModule.Request" "No generator for this request"
+
+    /// Return a serialized instance of the argument corresponding to the specified request type
+    static member CreateSerializedArgument(requestType: string, arg: obj) =
+        match requestType with
+        | "RequestNotifications" -> (StandardShareIntraModule(StandardArgument.SetNotificationsList (arg :?> NotificationsList)) :> IShareIntraModule).AsBytes(null)
+        | "RequestTaskIdentifier" -> (StandardShareIntraModule(StandardArgument.SetTaskIdentifier (arg :?> string option)) :> IShareIntraModule).AsBytes(null)
+        | "RequestTaskItem" -> (StandardShareIntraModule(StandardArgument.SetTaskItem (arg :?> TaskItem option)) :> IShareIntraModule).AsBytes(null)
+        | "RequestWorkingDirectory" -> (StandardShareIntraModule(StandardArgument.SetWorkingDirectory (arg :?> DirectoryInfo option)) :> IShareIntraModule).AsBytes(null)
+        | "RequestSaveFlags" -> (StandardShareIntraModule(StandardArgument.SetSaveFlags (arg :?> SaveFlags option)) :> IShareIntraModule).AsBytes(null)
+        | "RequestJsonEvents" -> (StandardShareIntraModule(StandardArgument.SetJsonEvents (arg :?> byte[])) :> IShareIntraModule).AsBytes(null)
+        | "RequestFileMediaReference" -> (StandardShareIntraModule(StandardArgument.SetFileMediaReference (arg :?> FileMediaReference)) :> IShareIntraModule).AsBytes(null)
+        | "RequestLogFormatEvents" -> (StandardShareIntraModule(StandardArgument.SetLogFormatEvents (arg :?> byte[])) :> IShareIntraModule).AsBytes(null)
+        | "RequestOpenJsonFilePath" -> (StandardShareIntraModule(StandardArgument.SetFilePath (arg :?> FilePickerPath)) :> IShareIntraModule).AsBytes(null)
+        | "RequestSaveJsonFilePath" -> (StandardShareIntraModule(StandardArgument.SetFilePath (arg :?> FilePickerPath)) :> IShareIntraModule).AsBytes(null)
+        | "RequestOpenLogFormatFilePath" -> (StandardShareIntraModule(StandardArgument.SetFilePath (arg :?> FilePickerPath)) :> IShareIntraModule).AsBytes(null)
+        | "RequestSaveLogFormatFilePath" -> (StandardShareIntraModule(StandardArgument.SetFilePath (arg :?> FilePickerPath)) :> IShareIntraModule).AsBytes(null)
+        | "RequestSubTaskInputs" -> (StandardShareIntraModule(StandardArgument.SetSubTaskInputs (arg :?> SubTaskInputs)) :> IShareIntraModule).AsBytes(null)
+        | _ -> invalidArg "requestType" (sprintf "Unknown request type or unable to create instance for this request: %s" requestType)
 
     /// Get the underlying type of an argument
     static member UnwrapInstance (intraModule: IShareIntraModule) =
@@ -577,6 +598,29 @@ type TypeResolverHelper () =
             match stdShareIntraModule.Argument with
             | _ -> invalidArg "stdShareIntraModule.Argument" (sprintf "Unexpected Standard Module Response Argument: %s" (stdShareIntraModule.Argument.ToString()))
         | _ -> invalidArg "intraModule" "The intraModule type does not belong to this module"
+
+    /// Create a retaining stack that wraps iteration arguments
+    static member CreateRetainingStack(identifier: Guid, items: seq<IShareIterationArgument>) =
+        StandardIterationStack(identifier, items |> Seq.cast) :> RetainingStack
+
+    /// Add a module-specific flag to the specified flag dictionary
+    static member AddFlag(serializedFlagItem: string, source: Dictionary<string, ISaveFlagSet>) =
+        if StandardFlagItem.GetNames() |> Seq.contains(serializedFlagItem) then
+            let flagItem = StandardFlagItem.Create(serializedFlagItem)
+            let standardFlag = StandardFlag(flagItem)
+
+            let standardFlagSet =
+                if source.ContainsKey("StandardFlagSet") then
+                    (source.["StandardFlagSet"]) :?> StandardFlagSet
+                else
+                    let flagSet = new StandardFlagSet()
+                    source.Add("StandardFlagSet", flagSet)
+                    flagSet
+            
+            standardFlagSet.SetFlag(standardFlag)
+        else
+            invalidArg "serializedFlagItem" (sprintf "Flag is not a StandardFlagItem: %s" serializedFlagItem)
+        source
 
 /// Arguments whose values are known in advance (and are shared across task function modules)
 type StandardKnownArguments(notificationsList) =

@@ -6,9 +6,6 @@ open CloudWeaver.Types
 open System
 open System.Collections.Generic
 open TustlerServicesLib
-open System.Text.Json.Serialization
-open CloudWeaver.AWS
-//open CloudWeaver.MediaServices
 
 module public Serialization =
 
@@ -109,10 +106,10 @@ module public Serialization =
         taskEvent
 
     /// Serialize the provided events as a JSON document
-    let SerializeEventsAsJSON events =
+    let SerializeEventsAsJSON events typeResolver =
 
         let writerOptions = JsonWriterOptions(Indented = true)
-        let serializerOptions = Converters.CreateSerializerOptions()
+        let serializerOptions = Converters.CreateSerializerOptions(typeResolver)
         serializerOptions.Converters.Add(SentenceChunkerConverter())
 
         use stream = new MemoryStream()
@@ -134,10 +131,10 @@ module public Serialization =
 
     /// Serialize the provided events into blocks of bytes, skipping past the specified number of previously logged events
     /// Note that each block of bytes encodes a standalone JSON document
-    let SerializeEventsAsBytes events skipCount =
+    let SerializeEventsAsBytes events skipCount typeResolver =
         
         let writerOptions = JsonWriterOptions(Indented = false)
-        let serializerOptions = Converters.CreateSerializerOptions()
+        let serializerOptions = Converters.CreateSerializerOptions(typeResolver)
         serializerOptions.Converters.Add(SentenceChunkerConverter())
 
         events
@@ -160,7 +157,7 @@ module public Serialization =
     /// Serialize the provided events as a JSON document
     let DeserializeEventsFromJSON (document:JsonDocument) typeResolver =
 
-        let serializerOptions = Converters.CreateSerializerOptions()
+        let serializerOptions = Converters.CreateSerializerOptions(typeResolver)
         serializerOptions.Converters.Add(SentenceChunkerConverter())
 
         document.RootElement.EnumerateObject()
@@ -182,7 +179,7 @@ module public Serialization =
     let DeserializeEventsFromBytes (blocks: List<byte[]>) typeResolver =
         
         let documentOptions = new JsonDocumentOptions(AllowTrailingCommas = true)
-        let serializerOptions = Converters.CreateSerializerOptions()
+        let serializerOptions = Converters.CreateSerializerOptions(typeResolver)
         serializerOptions.Converters.Add(SentenceChunkerConverter())
 
         blocks

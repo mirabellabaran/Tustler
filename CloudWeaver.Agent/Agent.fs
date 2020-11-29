@@ -314,7 +314,8 @@ type public Agent(knownArguments:KnownArgumentsCollection, taskFunctionResolver:
     /// log any unlogged events
     let logEvents () =
         if taskLogger.IsLoggingEnabled then
-            let unloggedSerializedData = CloudWeaver.Serialization.SerializeEventsAsBytes events loggedCount
+            let typeResolver = TypeResolver.Create() |> Async.AwaitTask |> Async.RunSynchronously
+            let unloggedSerializedData = CloudWeaver.Serialization.SerializeEventsAsBytes events loggedCount typeResolver
             loggedCount <- events.Count
             let data = EventLoggingUtilities.BlockArrayToByteArray(unloggedSerializedData)
             taskLogger.AddToLog(data);

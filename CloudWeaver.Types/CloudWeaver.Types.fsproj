@@ -11,6 +11,7 @@
     <Compile Include="SaveFlags.fs" />
     <Compile Include="CloudWeaver.Types.fs" />
     <Compile Include="CommonUtilities.fs" />
+    <Compile Include="Serialization.fs" />
   </ItemGroup>
 
   <ItemGroup>

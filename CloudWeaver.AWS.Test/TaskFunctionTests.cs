@@ -571,7 +571,7 @@ namespace CloudWeaver.AWS.Test
                 var typeResolver = await TypeResolver.Create();
 
                 var taskEvents = Serialization.DeserializeEventsFromJSON(document, typeResolver);
-                var blocks = Serialization.SerializeEventsAsBytes(taskEvents, 0);
+                var blocks = Serialization.SerializeEventsAsBytes(taskEvents, 0, typeResolver);
                 var data = EventLoggingUtilities.BlockArrayToByteArray(blocks);
                 agent.AddArgument(TaskResponse.NewSetArgument(
                 new StandardRequestIntraModule(StandardRequest.RequestLogFormatEvents),
@@ -632,7 +632,7 @@ namespace CloudWeaver.AWS.Test
 
                 var blocks = EventLoggingUtilities.ByteArrayToBlockArray(data);
                 var taskEvents = Serialization.DeserializeEventsFromBytes(blocks, typeResolver);
-                var serializedData = Serialization.SerializeEventsAsJSON(taskEvents);
+                var serializedData = Serialization.SerializeEventsAsJSON(taskEvents, typeResolver);
                 agent.AddArgument(TaskResponse.NewSetArgument(
                     new StandardRequestIntraModule(StandardRequest.RequestJsonEvents),
                     new StandardShareIntraModule(StandardArgument.NewSetJsonEvents(serializedData))

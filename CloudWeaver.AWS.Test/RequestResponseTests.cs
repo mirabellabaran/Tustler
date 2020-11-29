@@ -4,6 +4,7 @@ using CloudWeaver.Types;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using TustlerAWSLib;
@@ -11,6 +12,7 @@ using TustlerFFMPEG.Types.CodecInfo;
 using TustlerFFMPEG.Types.MediaInfo;
 using TustlerInterfaces;
 using TustlerModels;
+using static CloudWeaver.AWS.Converters;
 
 namespace CloudWeaver.AWS.Test
 {
@@ -24,8 +26,8 @@ namespace CloudWeaver.AWS.Test
 
             var agent = await InitializeTestAsync();
 
-            var serializerOptions = Converters.CreateSerializerOptions();
-            Assert.IsTrue(serializerOptions.Converters.Count == 7);
+            var serializerOptions = CloudWeaver.Converters.CreateSerializerOptions(typeResolver);
+            Assert.IsTrue(serializerOptions.Converters.Count == 8);
 
             // Test type serialization and deserialization: each of the following will throw if not correct
             // each call tests that the second argument can be deserialized into the type requested by the first argument
@@ -92,12 +94,12 @@ namespace CloudWeaver.AWS.Test
 
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestTranscriptionLanguageCode),
-                SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US"),
+                JsonSerializer.SerializeToUtf8Bytes(new LanguageCodeDomain(LanguageDomain.Transcription, "American English", "en-US"), serializerOptions),
                 agent, typeResolver);
 
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestTranslationLanguageCodeSource),
-                SerializableTypeGenerator.CreateLanguageCodeDomain(LanguageDomain.Transcription, "English", "en"),
+                JsonSerializer.SerializeToUtf8Bytes(new LanguageCodeDomain(LanguageDomain.Transcription, "English", "en"), serializerOptions),
                 agent, typeResolver);
 
             TestRequest(
@@ -107,22 +109,26 @@ namespace CloudWeaver.AWS.Test
 
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestTranscriptionVocabularyName),
-                SerializableTypeGenerator.CreateTranscriptionVocabularyName("my vocabulary", serializerOptions),
+                JsonSerializer.SerializeToUtf8Bytes(new VocabularyName("my vocabulary"), serializerOptions),
                 agent, typeResolver);
 
             // with null
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestTranscriptionVocabularyName),
-                SerializableTypeGenerator.CreateTranscriptionVocabularyName(null, serializerOptions),
+                JsonSerializer.SerializeToUtf8Bytes(new VocabularyName(null), serializerOptions),
                 agent, typeResolver);
 
             TestRequest(
                 new AWSRequestIntraModule(AWSRequest.RequestTranslationTargetLanguages),
-                SerializableTypeGenerator.CreateTranslationTargetLanguageCodes(new LanguageCode[]
+                SerializableTypeGenerator.CreateTranslationTargetLanguageCodes("AWSShareIterationArgument",
+                new LanguageCode[]
                 {
                     new TustlerModels.LanguageCode() { Name = "Arabic", Code = "ar" },
                     new TustlerModels.LanguageCode() { Name = "Azerbaijani", Code = "az" }
-                }, serializerOptions),
+                }
+                .Cast<LanguageCode>()
+                .Select(lc => new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(lc))),
+                serializerOptions),
                 agent, typeResolver);
 
             TestRequest(

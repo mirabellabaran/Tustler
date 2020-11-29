@@ -4,7 +4,7 @@ open System
 open System.Text.Json
 open System.Text.Json.Serialization
 open CloudWeaver.Types
-open CloudWeaver.AWS
+//open CloudWeaver.AWS
 //open CloudWeaver.MediaServices
 open System.Collections.Generic
 open TustlerModels
@@ -12,13 +12,14 @@ open System.Globalization
 
 module public Converters =
 
-    let CreateSerializerOptions () =
+    let CreateSerializerOptions (typeResolver: TypeResolver) =
         let addConverters (options: JsonSerializerOptions) =
-            let assembly = System.Reflection.Assembly.GetExecutingAssembly();
-            assembly.GetExportedTypes()
-            |> Seq.filter (fun exportedType ->
-                exportedType.BaseType.Name = "JsonConverter`1"
-            )
+            typeResolver.GetAllConverters()
+            //let assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            //assembly.GetExportedTypes()
+            //|> Seq.filter (fun exportedType ->
+            //    exportedType.BaseType.Name = "JsonConverter`1"
+            //)
             |> Seq.map (fun converter ->
                 Activator.CreateInstance(converter) :?> JsonConverter
             )
@@ -35,50 +36,6 @@ module public Converters =
     | IterationArgument
     | TaskItem
     | Requests
-
-    type JsonSerializedValue =
-    | Identifier of Guid
-    | Int of int
-    | String of string
-    | DateTime of DateTime
-    | Array of IShareIterationArgument[]
-    | Tasks of TaskItem[]
-    | Requests of IRequestIntraModule[]
-    with
-        static member getGuid value =
-            match value with
-            | JsonSerializedValue.Identifier guid -> guid
-            | _ -> raise (JsonException("Expecting the name of a Guid value"))
-
-        static member getInteger value =
-            match value with
-            | JsonSerializedValue.Int i -> i
-            | _ -> raise (JsonException("Expecting the name of an integer value"))
-
-        static member getString value =
-            match value with
-            | JsonSerializedValue.String str -> str
-            | _ -> raise (JsonException("Expecting the name of a string value"))
-
-        static member getDatetime value =
-            match value with
-            | JsonSerializedValue.DateTime dt -> dt
-            | _ -> raise (JsonException("Expecting the name of a DateTime value"))
-
-        static member getArguments value =
-            match value with
-            | JsonSerializedValue.Array arr -> arr
-            | _ -> raise (JsonException("Expecting the name of an array value"))
-
-        static member getTasks value =
-            match value with
-            | JsonSerializedValue.Tasks tasks -> tasks
-            | _ -> raise (JsonException("Expecting the name of an array of TaskItems"))
-
-        static member getRequests value =
-            match value with
-            | JsonSerializedValue.Requests requests -> requests
-            | _ -> raise (JsonException("Expecting the name of an array of sub-task requests (IRequestIntraModule)"))
 
     let private read (reader: byref<Utf8JsonReader>) (typeResolver: TypeResolver) (arrayKind: JsonSerializedArrayKind) =
         let dict = System.Collections.Generic.Dictionary<string, JsonSerializedValue>()
@@ -110,10 +67,14 @@ module public Converters =
                                             let jsonDocument = JsonDocument.ParseValue (&reader)
                                             jsonDocument.RootElement.EnumerateArray()
                                             |> Seq.map (fun arrayItem ->
-                                                match moduleName with
-                                                | "StandardShareIterationArgument" -> StandardShareIterationArgument.Deserialize arrayItem
-                                                | "AWSShareIterationArgument" -> AWSShareIterationArgument.Deserialize arrayItem
-                                                | _ -> raise (JsonException(sprintf "Unexpected ModuleName: %s" moduleName))
+                                                let typeName =
+                                                    match moduleName with
+                                                    | "StandardShareIterationArgument" -> "CloudWeaver.Types.StandardShareIterationArgument"
+                                                    | "AWSShareIterationArgument" -> "CloudWeaver.AWS.AWSShareIterationArgument"
+                                                    | _ -> raise (JsonException(sprintf "Unexpected ModuleName: %s" moduleName))
+
+                                                let deserialize = typeResolver.ResolveStaticCall(typeName, "Deserialize") :?> Func<JsonElement, IShareIterationArgument>
+                                                deserialize.Invoke(arrayItem)
                                             )
                                             |> Seq.toArray
                                         JsonSerializedValue.Array data
@@ -134,7 +95,8 @@ module public Converters =
                                                 | "StandardRequestIntraModule" -> "CloudWeaver.Types.StandardRequestIntraModule"
                                                 | "AWSRequestIntraModule" -> "CloudWeaver.AWS.AWSRequestIntraModule"
                                                 | "AVRequestIntraModule" -> "CloudWeaver.MediaServices.AVRequestIntraModule"
-                                                | _ -> invalidArg "label" (sprintf "Unknown request label: %s" label)
+                                                | _ -> raise (JsonException(sprintf "Unknown request label: %s" label))
+
                                             let fromString = typeResolver.ResolveStaticCall(typeName, "FromString") :?> Func<string, IRequestIntraModule>
                                             fromString.Invoke(request)
                                         )
@@ -145,6 +107,19 @@ module public Converters =
                 | _ -> ()
         dict
 
+    /// Returns a standard conversion dictionary that other converters can make use of without needing a type converter
+    type StandardConverter() =
+        inherit JsonConverter<Dictionary<string, JsonSerializedValue>>()
+
+        /// Deserialize a RetainingStack (which is an IEnumerable<IShareIterationArgument> with additional attributes)
+        override this.Read(reader, typeToConvert, _options) =
+            let typeResolver = TypeResolver.Create() |> Async.AwaitTask |> Async.RunSynchronously
+            let dict = read &reader typeResolver JsonSerializedArrayKind.None
+            dict
+
+        override this.Write(writer, instance, _options) = ()
+
+
     type RetainingStackConverter() =
         inherit JsonConverter<RetainingStack>()
 
@@ -153,13 +128,11 @@ module public Converters =
             let typeResolver = TypeResolver.Create() |> Async.AwaitTask |> Async.RunSynchronously
             let dict = read &reader typeResolver JsonSerializedArrayKind.IterationArgument
 
-            if (dict.ContainsKey "Identifier") && (dict.ContainsKey "ModuleName") && (dict.ContainsKey "Items") then
+            if (dict.ContainsKey "ModuleName") && (dict.ContainsKey "Identifier") && (dict.ContainsKey "Items") then
+                let moduleName = JsonSerializedValue.getString (dict.["ModuleName"])
                 let identifier = JsonSerializedValue.getGuid (dict.["Identifier"])
                 let items = JsonSerializedValue.getArguments (dict.["Items"])
-                match (JsonSerializedValue.getString (dict.["ModuleName"])) with
-                | "StandardShareIterationArgument" -> StandardIterationStack(identifier, items) :> RetainingStack
-                | "AWSShareIterationArgument" -> AWSIterationStack(identifier, items) :> RetainingStack
-                | _ -> raise (JsonException("Expecting a ModuleName property"))
+                typeResolver.CreateRetainingStack(moduleName, identifier, items)
             else                
                 raise (JsonException("Error parsing RetainingStack type"))
 
@@ -205,34 +178,6 @@ module public Converters =
             JsonSerializer.Serialize(writer, (instance :> IEnumerable<TaskItem>))
             writer.WriteEndObject()
 
-    /// Json converter for LanguageCodeDomain (contains an enum-like union type)
-    type LanguageCodeDomainConverter() =
-        inherit JsonConverter<LanguageCodeDomain>()
-
-        override this.Read(reader, _typeToConvert, _options) =
-            let typeResolver = TypeResolver.Create() |> Async.AwaitTask |> Async.RunSynchronously
-            let dict = read &reader typeResolver JsonSerializedArrayKind.None
-
-            if (dict.ContainsKey "LanguageDomain") && (dict.ContainsKey "Name") && (dict.ContainsKey "Code") then
-                let languageDomain =
-                    let strValue = JsonSerializedValue.getString (dict.["LanguageDomain"])
-                    match strValue with
-                    | "Transcription" -> LanguageDomain.Transcription
-                    | "Translation" -> LanguageDomain.Translation
-                    | _ -> invalidArg "LanguageDomain" "Value not set"
-                let name = JsonSerializedValue.getString (dict.["Name"])
-                let code = JsonSerializedValue.getString (dict.["Code"])
-                LanguageCodeDomain(languageDomain, name, code)
-            else                
-                raise (JsonException("Error parsing LanguageCodeDomain"))
-
-
-        override this.Write(writer, instance, _options) =
-            writer.WriteStartObject()
-            writer.WriteString("LanguageDomain", instance.LanguageDomain.ToString())
-            writer.WriteString("Name", instance.Name)
-            writer.WriteString("Code", instance.Code)
-            writer.WriteEndObject()
 
     /// Json converter for FilePickerPath (contains an enum-like union type)
     type FilePickerPathConverter() =
@@ -283,29 +228,6 @@ module public Converters =
             writer.WriteStartObject()
             writer.WriteString("Name", instance.Name)
             writer.WriteString("CreationDate", instance.CreationDate)
-            writer.WriteEndObject()
-
-    /// Json converter for VocabularyName
-    type VocabularyNameConverter() =
-        inherit JsonConverter<VocabularyName>()
-
-        override this.Read(reader, _typeToConvert, _options) =
-            let typeResolver = TypeResolver.Create() |> Async.AwaitTask |> Async.RunSynchronously
-            let dict = read &reader typeResolver JsonSerializedArrayKind.None
-
-            if (dict.ContainsKey "VocabularyName") then
-                let name = JsonSerializedValue.getString (dict.["VocabularyName"])
-                VocabularyName(name)
-            else
-                raise (JsonException("Error parsing VocabularyName"))
-
-
-        override this.Write(writer, instance, _options) =
-            writer.WriteStartObject()
-            if instance.VocabularyName.IsSome then
-                writer.WriteString("VocabularyName", instance.VocabularyName.Value)
-            else
-                writer.WriteNull("VocabularyName")
             writer.WriteEndObject()
 
     /// Json converter for SubTaskInputs

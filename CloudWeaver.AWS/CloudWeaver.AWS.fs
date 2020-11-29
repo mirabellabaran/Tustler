@@ -111,8 +111,8 @@ type AWSShareIterationArgument(arg: AWSIterationArgument) =
         AWSShareIterationArgument(iterationArgument) :> IShareIterationArgument
 
 /// An iteration argument stack (IConsumable) for AWSIterationArgument types
-type AWSIterationStack(uid: Guid, items: IEnumerable<IShareIterationArgument>) =
-    inherit RetainingStack(uid, items)
+type AWSIterationStack(uid: Guid, items: IEnumerable<AWSShareIterationArgument>) =
+    inherit RetainingStack(uid, items |> Seq.cast)
 
     override this.ModuleName with get() = "AWSShareIterationArgument"
 
@@ -362,33 +362,6 @@ type AWSRequestIntraModule(awsRequest: AWSRequest) =
     member this.Request with get() = awsRequest
     static member FromString(label: string): IRequestIntraModule = AWSRequestIntraModule(AWSRequest.fromString(label)) :> IRequestIntraModule
 
-/// Helper type for the type resolver
-type TypeResolverHelper () =
-
-    static let getRequest (request: IRequestIntraModule) =
-        match request with
-        | :? AWSRequestIntraModule as awsRequestIntraModule -> awsRequestIntraModule.Request
-        | _ -> invalidArg "request" "The request does not belong to this module"
-
-    /// Get the string representation of the argument type that matches this request
-    static member GetMatchingArgument(request: IRequestIntraModule) = "AWSShareIntraModule"
-
-    /// Get the string representation of the specified request type
-    static member GetRequestAsString(request: IRequestIntraModule) = (getRequest request).ToString()
-
-    /// Generate a serialized representation of the underlying type for a Request
-    static member GenerateTypeRepresentation (request: IRequestIntraModule, generator: Func<string, string, string, Action<Utf8JsonWriter>, string, string>) =
-        match (getRequest request) with
-        | _ -> invalidArg "awsRequestIntraModule.Request" "No generator for this request"
-
-    /// Get the underlying type of an argument
-    static member UnwrapInstance (intraModule: IShareIntraModule) =
-        match intraModule with
-        | :? AWSShareIntraModule as awsRequestIntraModule ->
-            match awsRequestIntraModule.Argument with
-            | _ -> invalidArg "awsRequestIntraModule.Argument" (sprintf "Unexpected AWS Module Response Argument: %s" (awsRequestIntraModule.Argument.ToString()))
-        | _ -> invalidArg "intraModule" "The intraModule type does not belong to this module"
-
 /// Wrapper for the pre-assigned values used by this module
 /// (values that are known in advance by the user interface layer)
 type AWSKnownArguments(awsInterface) =
@@ -463,6 +436,81 @@ type AWSFlagSet(flags: AWSFlagItem[]) =
         override this.ToString(): string = System.String.Join(", ", (_set |> Seq.map(fun flag -> sprintf "%s.%s" this.Identifier flag.Identifier)))
         member this.ToArray(): string [] = (_set |> Seq.map(fun flag -> sprintf "%s.%s" this.Identifier flag.Identifier) |> Seq.toArray)
 
+
+/// Helper type for the type resolver
+type TypeResolverHelper () =
+
+    static let getRequest (request: IRequestIntraModule) =
+        match request with
+        | :? AWSRequestIntraModule as awsRequestIntraModule -> awsRequestIntraModule.Request
+        | _ -> invalidArg "request" "The request does not belong to this module"
+
+    /// Get the string representation of the argument type that matches this request
+    static member GetMatchingArgument(request: IRequestIntraModule) = "AWSShareIntraModule"
+
+    /// Get the string representation of the specified request type
+    static member GetRequestAsString(request: IRequestIntraModule) = (getRequest request).ToString()
+
+    /// Construct a request from the specified request type
+    static member CreateRequest(requestType: string) = AWSRequestIntraModule(AWSRequest.fromString(requestType)) :> IRequestIntraModule
+
+    /// Generate a serialized representation of the underlying type for a Request
+    static member GenerateTypeRepresentation (request: IRequestIntraModule, generator: Func<string, string, string, Action<Utf8JsonWriter>, string, string>) =
+        match (getRequest request) with
+        | _ -> invalidArg "awsRequestIntraModule.Request" "No generator for this request"
+
+    /// Return a serialized instance of the argument corresponding to the specified request type
+    static member CreateSerializedArgument(requestType: string, arg: obj) =
+        match requestType with
+        | "RequestAWSInterface" -> (AWSShareIntraModule(AWSArgument.SetAWSInterface (arg :?> AmazonWebServiceInterface)) :> IShareIntraModule).AsBytes(null)
+        | "RequestBucket" -> (AWSShareIntraModule(AWSArgument.SetBucket (arg :?> Bucket)) :> IShareIntraModule).AsBytes(null)
+        | "RequestBucketsModel" -> (AWSShareIntraModule(AWSArgument.SetBucketsModel (arg :?> BucketViewModel)) :> IShareIntraModule).AsBytes(null)
+        | "RequestS3MediaReference" -> (AWSShareIntraModule(AWSArgument.SetS3MediaReference (arg :?> S3MediaReference)) :> IShareIntraModule).AsBytes(null)
+        | "RequestTranscriptionJobName" -> (AWSShareIntraModule(AWSArgument.SetTranscriptionJobName (arg :?> string)) :> IShareIntraModule).AsBytes(null)
+        | "RequestTranscriptJSON" -> (AWSShareIntraModule(AWSArgument.SetTranscriptJSON (arg :?> byte[])) :> IShareIntraModule).AsBytes(null)
+        | "RequestTranscriptionJobsModel" -> (AWSShareIntraModule(AWSArgument.SetTranscriptionJobsModel (arg :?> TranscriptionJobsViewModel)) :> IShareIntraModule).AsBytes(null)
+        | "RequestTranscriptionDefaultTranscript" -> (AWSShareIntraModule(AWSArgument.SetTranscriptionDefaultTranscript (arg :?> string)) :> IShareIntraModule).AsBytes(null)
+        | "RequestTranscriptURI" -> (AWSShareIntraModule(AWSArgument.SetTranscriptURI (arg :?> string)) :> IShareIntraModule).AsBytes(null)
+        | "RequestTranscriptionLanguageCode" -> (AWSShareIntraModule(AWSArgument.SetLanguage (arg :?> LanguageCodeDomain)) :> IShareIntraModule).AsBytes(null)
+        | "RequestTranscriptionVocabularyName" -> (AWSShareIntraModule(AWSArgument.SetTranscriptionVocabularyName (arg :?> string)) :> IShareIntraModule).AsBytes(null)
+        | "RequestTranslationLanguageCodeSource" -> (AWSShareIntraModule(AWSArgument.SetLanguage (arg :?> LanguageCodeDomain)) :> IShareIntraModule).AsBytes(null)
+        | "RequestTranslationTargetLanguages" -> (AWSShareIntraModule(AWSArgument.SetTranslationTargetLanguages (arg :?> IConsumable)) :> IShareIntraModule).AsBytes(null)
+        | "RequestTranslationTerminologyNames" -> (AWSShareIntraModule(AWSArgument.SetTranslationTerminologyNames (arg :?> List<string>)) :> IShareIntraModule).AsBytes(null)
+        | "RequestTranslationSegments" -> (AWSShareIntraModule(AWSArgument.SetTranslationSegments (arg :?> SentenceChunker)) :> IShareIntraModule).AsBytes(null)
+        | "RequestSubtitleFilePath" -> (AWSShareIntraModule(AWSArgument.SetSubtitleFilePath (arg :?> FileInfo)) :> IShareIntraModule).AsBytes(null)
+        | _ -> invalidArg "requestType" (sprintf "Unknown request type or unable to create instance for this request: %s" requestType)
+
+    /// Get the underlying type of an argument
+    static member UnwrapInstance (intraModule: IShareIntraModule) =
+        match intraModule with
+        | :? AWSShareIntraModule as awsRequestIntraModule ->
+            match awsRequestIntraModule.Argument with
+            | _ -> invalidArg "awsRequestIntraModule.Argument" (sprintf "Unexpected AWS Module Response Argument: %s" (awsRequestIntraModule.Argument.ToString()))
+        | _ -> invalidArg "intraModule" "The intraModule type does not belong to this module"
+
+    /// Create a retaining stack that wraps iteration arguments
+    static member CreateRetainingStack(identifier: Guid, items: seq<IShareIterationArgument>) =
+        AWSIterationStack(identifier, items |> Seq.cast) :> RetainingStack
+
+    /// Add a module-specific flag to the specified flag dictionary
+    static member AddFlag(serializedFlagItem: string, source: Dictionary<string, ISaveFlagSet>) =
+        if AWSFlagItem.GetNames() |> Seq.contains(serializedFlagItem) then
+            let flagItem = AWSFlagItem.Create(serializedFlagItem)
+            let awsFlag = AWSFlag(flagItem)
+            
+            let awsFlagSet =
+                if source.ContainsKey("AWSFlagSet") then
+                    (source.["AWSFlagSet"]) :?> AWSFlagSet
+                else
+                    let flagSet = new AWSFlagSet()
+                    source.Add("AWSFlagSet", flagSet)
+                    flagSet
+
+            awsFlagSet.SetFlag(awsFlag)
+        else
+            invalidArg "serializedFlagItem" (sprintf "Flag is not a AWSFlagItem: %s" serializedFlagItem)
+
+        source
 
 /// a library of active recognizers (active pattern functions) that retrieve strongly typed values from a map of arguments
 // e.g. let (PatternMatchers.AWSInterface awsInterface) = argMap

@@ -3,7 +3,6 @@
 open System.Text.Json
 open System.IO
 open CloudWeaver.Types
-open CloudWeaver.AWS
 open System.Collections.Generic
 open System
 open TustlerModels
@@ -70,12 +69,12 @@ type SerializableTypeGenerator() =
     /// Create a serialized representation of AWS module TranscriptionDefaultTranscript
     static member CreateTranscriptionDefaultTranscript(defaultTranscript: string) = JsonSerializer.SerializeToUtf8Bytes(defaultTranscript)
 
-    /// Create a serialized representation of AWS module TranscriptionVocabularyName
-    static member CreateTranscriptionVocabularyName(name: string, serializerOptions) =
+    ///// Create a serialized representation of AWS module TranscriptionVocabularyName
+    //static member CreateTranscriptionVocabularyName(name: string, serializerOptions) =
     
-        let vocabularyName = VocabularyName(name)
+    //    let vocabularyName = VocabularyName(name)
 
-        JsonSerializer.SerializeToUtf8Bytes(vocabularyName, serializerOptions)
+    //    JsonSerializer.SerializeToUtf8Bytes(vocabularyName, serializerOptions)
 
     /// Create a serialized representation of an AWS module S3 Bucket
     static member CreateBucket(name: string, creationDate: DateTime) =
@@ -114,16 +113,16 @@ type SerializableTypeGenerator() =
 
         SerializableTypeGenerator.CreateJson(new Dictionary<_,_>(items))
 
-    /// Create a serialized representation of an AWS module LanguageCodeDomain
-    static member CreateLanguageCodeDomain(languageDomain: LanguageDomain, name: string, code: string) =
+    ///// Create a serialized representation of an AWS module LanguageCodeDomain
+    //static member CreateLanguageCodeDomain(languageDomain: LanguageCodeDomain) =
 
-        let items = [|
-            KeyValuePair<string, string option>("LanguageDomain", Some(languageDomain.ToString()))
-            KeyValuePair<string, string option>("Name", Some(name))
-            KeyValuePair<string, string option>("Code", Some(code))
-        |]
+    //    let items = [|
+    //        KeyValuePair<string, string option>("LanguageDomain", Some(languageDomain.ToString()))
+    //        KeyValuePair<string, string option>("Name", Some(name))
+    //        KeyValuePair<string, string option>("Code", Some(code))
+    //    |]
 
-        SerializableTypeGenerator.CreateJson(new Dictionary<_,_>(items))
+    //    SerializableTypeGenerator.CreateJson(new Dictionary<_,_>(items))
 
     /// Create a serialized representation of an AWS module VocabularyName
     static member CreateVocabularyName(vocabularyName: string) =
@@ -135,15 +134,11 @@ type SerializableTypeGenerator() =
         SerializableTypeGenerator.CreateJson(new Dictionary<_,_>(items))
 
     /// Create a serialized representation of AWS module TranslationTargetLanguageCodes
-    static member CreateTranslationTargetLanguageCodes(languages: IEnumerable<LanguageCode>, serializerOptions) =
+    static member CreateTranslationTargetLanguageCodes(iterationArgumentTypeName:string, languages: IEnumerable<IShareIterationArgument>, serializerOptions) =
 
-        let languageCodes =
-            languages
-            |> Seq.map (fun language ->
-                AWSShareIterationArgument(AWSIterationArgument.LanguageCode language) :> IShareIterationArgument
-            )
+        let typeResolver = TypeResolver.Create() |> Async.AwaitTask |> Async.RunSynchronously
 
-        let stack = AWSIterationStack(Guid.NewGuid(), languageCodes)
+        let stack = typeResolver.CreateRetainingStack(iterationArgumentTypeName, Guid.NewGuid(), languages)
         JsonSerializer.SerializeToUtf8Bytes<RetainingStack>(stack, serializerOptions)
 
     /// Create a serialized representation of AWS module TranslationTerminologyNames

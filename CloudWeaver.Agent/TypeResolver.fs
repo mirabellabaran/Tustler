@@ -6,6 +6,7 @@ open System.IO
 open System
 open System.Text.Json
 open CloudWeaver.Types
+open System.Text.Json.Serialization
 
 type TypeResolverKnownMethod(delegateType: Type) =
 
@@ -34,6 +35,12 @@ type TypeResolverCachedItem(cachedType: Type, interfaceType: Type) =
                 |]
             );
             (
+                "IShareIterationArgument",
+                [|
+                    ("Deserialize", typeof<Func<JsonElement, IShareIterationArgument>>)
+                |]
+            );
+            (
                 "TypeResolverHelper",
                 [|
                     ("GetMatchingArgument", typeof<Func<IRequestIntraModule, string>>);
@@ -42,6 +49,8 @@ type TypeResolverCachedItem(cachedType: Type, interfaceType: Type) =
                     ("GenerateTypeRepresentation", typeof<Func<IRequestIntraModule, Func<string, string, string, Action<Utf8JsonWriter>, string, string>, string>>);
                     ("CreateSerializedArgument", typeof<Func<string, obj, byte[]>>)
                     ("UnwrapInstance", typeof<Func<IShareIntraModule, obj>>)
+                    ("CreateRetainingStack", typeof<Func<Guid, seq<IShareIterationArgument>, RetainingStack>>)
+                    ("AddFlag", typeof<Func<string, Dictionary<string, ISaveFlagSet>, Dictionary<string, ISaveFlagSet>>>)
                 |]
             )
         }
@@ -65,6 +74,11 @@ type TypeResolverCachedItem(cachedType: Type, interfaceType: Type) =
     member this.CachedMethods with get() = cachedMethods and set(value) = cachedMethods <- value
 
     member this.CachedType with get() = cachedType
+
+    member this.IsConverter with get() =
+        match cachedType.BaseType.Name with
+        | "JsonConverter`1" -> true
+        | _ -> false
 
 type TypeResolver private (typeMap: KeyValuePair<string, TypeResolverCachedItem> list) =
 
@@ -91,6 +105,9 @@ type TypeResolver private (typeMap: KeyValuePair<string, TypeResolverCachedItem>
 
     [<Literal>]
     static let MethodNameUnwrapInstance = "UnwrapInstance"
+
+    [<Literal>]
+    static let MethodNameCreateRetainingStack = "CreateRetainingStack"
 
     let typeLookup = new Dictionary<string, TypeResolverCachedItem>(typeMap)
 
@@ -121,16 +138,6 @@ type TypeResolver private (typeMap: KeyValuePair<string, TypeResolverCachedItem>
                 Assembly.Load(baseAssemblyName)
         )
 
-    static let knownInterfaces = lazy (
-
-        seq {
-            typeof<IRequestIntraModule>
-            typeof<IShareIntraModule>
-        }
-        |> Seq.map (fun typeInstance -> typeInstance.FullName, typeInstance)
-        |> Map.ofSeq
-    )
-
     static let instance = lazy (
 
         let isImplementationOf (interfaceType: Type) (exportedType: Type) =
@@ -150,6 +157,23 @@ type TypeResolver private (typeMap: KeyValuePair<string, TypeResolverCachedItem>
             let interfaceType = typeof<CloudWeaver.Types.IShareIntraModule>
             isImplementationOf interfaceType exportedType
 
+        let (|IterationArgument|_|) (exportedType: Type) =
+            let interfaceType = typeof<CloudWeaver.Types.IShareIterationArgument>
+            isImplementationOf interfaceType exportedType
+
+        let (|SaveFlag|_|) (exportedType: Type) =
+            let interfaceType = typeof<CloudWeaver.Types.ISaveFlag>
+            isImplementationOf interfaceType exportedType
+
+        let (|Converter|_|) (exportedType: Type) =
+            if isNull exportedType.BaseType then
+                None
+            else
+                if exportedType.BaseType.Name = "JsonConverter`1" then
+                    Some(exportedType, typeof<JsonConverter>)
+                else
+                    None
+
         let (|Helper|_|) (exportedType: Type) =
             if exportedType.Name = TypeResolverHelper then
                 Some(exportedType, null)
@@ -166,6 +190,9 @@ type TypeResolver private (typeMap: KeyValuePair<string, TypeResolverCachedItem>
                     match exportedType with
                     | Request ti -> Some(ti)
                     | Argument ti -> Some(ti)
+                    | IterationArgument ti -> Some(ti)
+                    | SaveFlag ti -> Some(ti)
+                    | Converter ti -> Some(ti)
                     | Helper ti -> Some(ti)
                     | _ -> None
                 )
@@ -185,30 +212,37 @@ type TypeResolver private (typeMap: KeyValuePair<string, TypeResolverCachedItem>
 
         async { return instance.Force() } |> Async.StartImmediateAsTask
 
-    ///// Get the interfaces known to the TypeResolver
-    //static member private GetKnownInterfaces() = knownInterfaces.Force()
-
     /// Get CloudWeaver assemblies
     member this.GetAssemblies() = loadAssemblies ()
 
-    member this.GetDelegate(request: IRequestIntraModule, methodName: string) =
-        let typeName = request.GetType().FullName
-        this.GetDelegateFromType(typeName, methodName, request.ToString())
+    /// Get all of the cached types of type JsonConverter
+    member this.GetAllConverters() =
+        typeLookup
+        |> Seq.filter (fun kvp -> kvp.Value.IsConverter)
+        |> Seq.map (fun kvp -> kvp.Value.CachedType)
 
-    member this.GetDelegateFromType(typeName: string, methodName: string, argumentType: string) =
+    member this.GetHelperDelegate(request: IRequestIntraModule, methodName: string) =
+        let typeName = request.GetType().FullName
+        this.GetHelperDelegateFromType(typeName, methodName, request.ToString())
+
+    /// For the type name argument, any known type in the same assembly will do
+    member this.GetHelperDelegateFromType(typeName: string, methodName: string, argumentType: string) =
         if typeKeyAssemblyLookup.ContainsKey (typeName) then
             let assemblyName = typeKeyAssemblyLookup.[typeName]
-            let key = sprintf "%s.%s" assemblyName TypeResolverHelper
-            if typeLookup.ContainsKey(key) then
-                let helper = typeLookup.[key].CachedType
-                if typeLookup.[key].KnownMethods.ContainsKey(methodName) then
-                    this.ResolveStaticCall(helper.FullName, methodName)
-                else
-                    invalidArg "methodName" (sprintf "Unknown method name (%s) in module implementing: %s" methodName argumentType)
-            else
-                invalidOp (sprintf "TypeResolverHelper not found in module implementing: %s" argumentType)
+            this.GetHelperDelegateFromAssembly(assemblyName, methodName, argumentType)
         else
             invalidArg "request" (sprintf "Unknown type name (%s) in module implementing: %s" typeName argumentType)
+
+    member this.GetHelperDelegateFromAssembly(assemblyName: string, methodName: string, argumentType: string) =
+        let key = sprintf "%s.%s" assemblyName TypeResolverHelper
+        if typeLookup.ContainsKey(key) then
+            let helper = typeLookup.[key].CachedType
+            if typeLookup.[key].KnownMethods.ContainsKey(methodName) then
+                this.ResolveStaticCall(helper.FullName, methodName)
+            else
+                invalidArg "methodName" (sprintf "Unknown method name (%s) in module implementing: %s" methodName argumentType)
+        else
+            invalidOp (sprintf "TypeResolverHelper not found in module implementing: %s" argumentType)
 
     /// Get a delegate to the given static method within the specified type
     member this.ResolveStaticCall(typeName: string, methodName: string) =
@@ -234,41 +268,70 @@ type TypeResolver private (typeMap: KeyValuePair<string, TypeResolverCachedItem>
         else
             invalidArg "typeName" "Unknown type name"
 
-
     /// Get the string representation of the argument type that matches this request
     member this.GetMatchingArgument(request: IRequestIntraModule) =
 
-        let del = this.GetDelegate(request, MethodNameGetMatchingArgument) :?> Func<IRequestIntraModule, string>
+        let del = this.GetHelperDelegate(request, MethodNameGetMatchingArgument) :?> Func<IRequestIntraModule, string>
         del.Invoke(request)
 
     /// Get the string representation of the specified request type
     member this.GetRequestAsString(request: IRequestIntraModule) =
 
-        let del = this.GetDelegate(request, MethodNameGetRequestAsString) :?> Func<IRequestIntraModule, string>
+        let del = this.GetHelperDelegate(request, MethodNameGetRequestAsString) :?> Func<IRequestIntraModule, string>
         del.Invoke(request)
 
     /// Construct a request of the given type from the specified request module
     // e.g. "CloudWeaver.Types.StandardRequestIntraModule" "RequestTaskIdentifier"
     member this.CreateRequest(requestModuleName: string, requestType: string) =
 
-        let del = this.GetDelegateFromType(requestModuleName, MethodNameCreateRequest, "; module not found") :?> Func<string, IRequestIntraModule>
+        let del = this.GetHelperDelegateFromType(requestModuleName, MethodNameCreateRequest, "; module not found") :?> Func<string, IRequestIntraModule>
         del.Invoke(requestType)
 
     /// Generate a serialized representation of the underlying type for a Request using the specified generator function
     member this.GenerateTypeRepresentation(request: IRequestIntraModule, generator: Func<string, string, string, Action<Utf8JsonWriter>, string, string>) =
 
-        let del = this.GetDelegate(request, MethodNameGenerateTypeRepresentation) :?> Func<IRequestIntraModule, Func<string, string, string, Action<Utf8JsonWriter>, string, string>, string>
+        let del = this.GetHelperDelegate(request, MethodNameGenerateTypeRepresentation) :?> Func<IRequestIntraModule, Func<string, string, string, Action<Utf8JsonWriter>, string, string>, string>
         del.Invoke(request, generator)
 
     /// Return a serialized instance of the argument corresponding to the specified request module and type
     member this.CreateSerializedArgument(requestModuleName: string, requestType: string, arg: obj) =
 
-        let del = this.GetDelegateFromType(requestModuleName, MethodNameCreateSerializedArgument, "; module not found") :?> Func<string, obj, byte[]>
+        let del = this.GetHelperDelegateFromType(requestModuleName, MethodNameCreateSerializedArgument, "; module not found") :?> Func<string, obj, byte[]>
         del.Invoke(requestType, arg)
 
     /// Unwrap an argument type and return the underlying value
     member this.UnwrapArgument(argument: IShareIntraModule) =
         let typeName = argument.GetType().FullName
 
-        let del = this.GetDelegateFromType(typeName, MethodNameUnwrapInstance, argument.ToString()) :?> Func<IShareIntraModule, obj>
+        let del = this.GetHelperDelegateFromType(typeName, MethodNameUnwrapInstance, argument.ToString()) :?> Func<IShareIntraModule, obj>
         del.Invoke(argument)
+
+    /// Create a retaining stack that wraps iteration arguments
+    member this.CreateRetainingStack(iterationArgumentTypeName: string, identifier: Guid, items: seq<IShareIterationArgument>) =
+        let assemblyName =
+            let matchingKeys =
+                typeKeyAssemblyLookup.Keys
+                |> Seq.filter (fun typeFullName -> typeFullName.Contains(iterationArgumentTypeName))
+                |> Seq.toArray
+            match matchingKeys.Length with
+            | 0 -> invalidArg "iterationArgumentTypeName" (sprintf "Iteration argument type not found: %s" iterationArgumentTypeName)
+            | 1 -> typeKeyAssemblyLookup.[matchingKeys.[0]]
+            | _ -> invalidArg "iterationArgumentTypeName" (sprintf "Multiple matches found for iteration argument type: %s" iterationArgumentTypeName)
+
+        let del = this.GetHelperDelegateFromAssembly(assemblyName, MethodNameCreateRetainingStack, iterationArgumentTypeName) :?> Func<Guid, seq<IShareIterationArgument>, RetainingStack>
+        del.Invoke(identifier, items)
+
+    /// Add a module-specific flag to the specified flag dictionary
+    member this.AddFlag(flagTypeName: string, serializedFlagItem: string, source: Dictionary<string, ISaveFlagSet>) =
+        let assemblyName =
+            let matchingKeys =
+                typeKeyAssemblyLookup.Keys
+                |> Seq.filter (fun typeFullName -> typeFullName.Contains(flagTypeName))
+                |> Seq.toArray
+            match matchingKeys.Length with
+            | 0 -> invalidArg "iterationArgumentTypeName" (sprintf "Flag type not found: %s" flagTypeName)
+            | 1 -> typeKeyAssemblyLookup.[matchingKeys.[0]]
+            | _ -> invalidArg "iterationArgumentTypeName" (sprintf "Multiple matches found for flag type: %s" flagTypeName)
+
+        let del = this.GetHelperDelegateFromAssembly(assemblyName, MethodNameCreateRetainingStack, serializedFlagItem) :?> Func<string, Dictionary<string, ISaveFlagSet>, Dictionary<string, ISaveFlagSet>>
+        del.Invoke(serializedFlagItem, source)

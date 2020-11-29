@@ -1,8 +1,6 @@
 ﻿namespace CloudWeaver
 
 open CloudWeaver.Types
-open CloudWeaver.AWS
-//open CloudWeaver.MediaServices
 open System.Text.Json
 open System.IO
 open System.Text

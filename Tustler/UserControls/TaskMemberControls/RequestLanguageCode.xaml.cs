@@ -15,6 +15,8 @@ using TustlerUIShared;
 using TustlerModels;
 using Tustler.Helpers;
 using CloudWeaver.Types;
+using System.Text.Json;
+using CloudWeaver;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
@@ -226,7 +228,7 @@ namespace Tustler.UserControls.TaskMemberControls
             e.CanExecute = cbLanguage.SelectedItem is TustlerModels.LanguageCode _;
         }
 
-        private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
+        private async void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
             if (this.DataContext is ResponseWrapper wrapper)
             {
@@ -239,7 +241,11 @@ namespace Tustler.UserControls.TaskMemberControls
                         _ => null
                     };
 
-                    var data = CloudWeaver.SerializableTypeGenerator.CreateLanguageCodeDomain(domain, languageCode.Name, languageCode.Code);
+                    var lc = new LanguageCodeDomain(domain, languageCode.Name, languageCode.Code);
+
+                    var typeResolver = await TypeResolver.Create().ConfigureAwait(false);
+                    var jsonSerializerOptions = CloudWeaver.Converters.CreateSerializerOptions(typeResolver);
+                    var data = JsonSerializer.SerializeToUtf8Bytes(lc, jsonSerializerOptions);
 
                     // this user control is responding to a RequestArgument
                     if (wrapper.TaskResponse is TaskResponse.RequestArgument arg)

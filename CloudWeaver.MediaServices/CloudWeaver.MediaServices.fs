@@ -6,6 +6,7 @@ open CloudWeaver.Types
 open TustlerFFMPEG.Types.CodecInfo
 open TustlerFFMPEG.Types.MediaInfo
 open System
+open System.Collections.Generic
 
 /// Arguments used by this module.
 type AVArgument =
@@ -126,15 +127,7 @@ type TypeResolverHelper () =
     static member GetRequestAsString(request: IRequestIntraModule) = (getRequest request).ToString()
 
     /// Construct a request from the specified request type
-    static member CreateRequest(requestType: string) =
-        match requestType with
-        | "RequestAVInterface" -> AVRequestIntraModule(AVRequest.RequestAVInterface) :> IRequestIntraModule
-        | "RequestCodecName" -> AVRequestIntraModule(AVRequest.RequestCodecName) :> IRequestIntraModule
-        | "RequestCodecInfo" -> AVRequestIntraModule(AVRequest.RequestCodecInfo) :> IRequestIntraModule
-        | "RequestMediaInfo" -> AVRequestIntraModule(AVRequest.RequestMediaInfo) :> IRequestIntraModule
-        | "RequestOpenMediaFilePath" -> AVRequestIntraModule(AVRequest.RequestOpenMediaFilePath) :> IRequestIntraModule
-        | "RequestSaveMediaFilePath" -> AVRequestIntraModule(AVRequest.RequestSaveMediaFilePath) :> IRequestIntraModule
-        | _ -> invalidArg "requestType" (sprintf "Unknown request type: %s" requestType)
+    static member CreateRequest(requestType: string) = AVRequestIntraModule(AVRequest.fromString(requestType)) :> IRequestIntraModule
 
     /// Generate a serialized representation of the underlying type for a Request
     // e.g. RequestCodecName requires a string so that a UI fulfilling this request would need to display a textbox
@@ -162,6 +155,12 @@ type TypeResolverHelper () =
             | AVArgument.SetMediaInfo mediaInfo -> mediaInfo :> obj
             | _ -> invalidArg "avShareIntraModule.Argument" (sprintf "Unexpected AV Module Response Argument: %s" (avShareIntraModule.Argument.ToString()))
         | _ -> invalidArg "intraModule" "The intraModule type does not belong to this module"
+
+    /// Create a retaining stack that wraps iteration arguments
+    static member CreateRetainingStack(identifier: Guid, items: IShareIterationArgument[]) = invalidOp "This module has no iteration type"
+
+    /// Add a module-specific flag to the specified flag dictionary
+    static member AddFlag(serializedFlagItem: string, source: Dictionary<string, ISaveFlagSet>) = invalidOp "This module has no flags"
 
 /// Wrapper for the pre-assigned values used by this module
 /// (values that are known in advance by the user interface layer)

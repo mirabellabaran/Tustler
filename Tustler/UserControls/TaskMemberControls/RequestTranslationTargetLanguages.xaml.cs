@@ -1,21 +1,14 @@
 ﻿using CloudWeaver;
+using CloudWeaver.AWS;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using TustlerUIShared;
 using TustlerModels;
-using CloudWeaver.AWS;
+using TustlerUIShared;
+using Converters = CloudWeaver.Converters;
 
 namespace Tustler.UserControls.TaskMemberControls
 {
@@ -173,11 +166,15 @@ namespace Tustler.UserControls.TaskMemberControls
             e.CanExecute = lbTargetLanguages.SelectedItems.Count > 0;
         }
 
-        private void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
+        private async void Continue_Executed(object sender, ExecutedRoutedEventArgs e)
         {
-            var targetLanguageCodes = (lbTargetLanguages.SelectedItems as IEnumerable<object>).Cast<LanguageCode>();
-            var jsonSerializerOptions = Converters.CreateSerializerOptions();
-            var data = SerializableTypeGenerator.CreateTranslationTargetLanguageCodes(targetLanguageCodes, jsonSerializerOptions);
+            var targetLanguageCodes = (lbTargetLanguages.SelectedItems as IEnumerable<object>)
+                .Cast<LanguageCode>()
+                .Select(lc => new AWSShareIterationArgument(AWSIterationArgument.NewLanguageCode(lc)));
+
+            var typeResolver = await TypeResolver.Create().ConfigureAwait(false);
+            var jsonSerializerOptions = Converters.CreateSerializerOptions(typeResolver);
+            var data = SerializableTypeGenerator.CreateTranslationTargetLanguageCodes("AWSShareIterationArgument", targetLanguageCodes, jsonSerializerOptions);
 
             var mode = UITaskMode.NewSetArgument(new AWSRequestIntraModule(AWSRequest.RequestTranslationTargetLanguages));
             CommandParameter = new UITaskArguments(mode, "AWSShareIntraModule", "SetTranslationTargetLanguages", data);
