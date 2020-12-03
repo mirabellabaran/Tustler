@@ -131,7 +131,7 @@ type TypeResolverHelper () =
 
     /// Generate a serialized representation of the underlying type for a Request
     // e.g. RequestCodecName requires a string so that a UI fulfilling this request would need to display a textbox
-    static member GenerateTypeRepresentation (request: IRequestIntraModule, generator: Func<string, string, string, Action<Utf8JsonWriter>, string, string>) =
+    static member GenerateTypeRepresentation (request: IRequestIntraModule, generator: Func<string, string, string, Action<Utf8JsonWriter>, string, string>): string =
         match (getRequest request) with
         | AVRequest.RequestCodecName ->
             let writeValue = new Action<Utf8JsonWriter>(fun writer -> writer.WriteString("value", ""))

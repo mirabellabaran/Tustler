@@ -455,9 +455,9 @@ type TypeResolverHelper () =
     static member CreateRequest(requestType: string) = AWSRequestIntraModule(AWSRequest.fromString(requestType)) :> IRequestIntraModule
 
     /// Generate a serialized representation of the underlying type for a Request
-    static member GenerateTypeRepresentation (request: IRequestIntraModule, generator: Func<string, string, string, Action<Utf8JsonWriter>, string, string>) =
+    static member GenerateTypeRepresentation (request: IRequestIntraModule, generator: Func<string, string, string, Action<Utf8JsonWriter>, string, string>): string =
         match (getRequest request) with
-        | _ -> invalidArg "awsRequestIntraModule.Request" "No generator for this request"
+        | _ -> null         // return null to the default handler
 
     /// Return a serialized instance of the argument corresponding to the specified request type
     static member CreateSerializedArgument(requestType: string, arg: obj) =
